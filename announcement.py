@@ -12,18 +12,15 @@ ANNOUNCEMENT_CHANNEL_ID = config.ANNOUNCEMENT_CHANNEL_ID
 
 
 async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
-    print(emoji_id)
-
     today = datetime.date.today()
     sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
     guild_week = (sunday - GUILD_CREATED_ON).days // 7
     leaderboard_week = sunday.strftime('%U')
 
     # Confirmation
-    emoji = next(e for e in bot.emojis if str(e) == emoji_id)
-    print(emoji)
-    print(emoji.id)
-    if emoji is None:
+    try:
+        emoji = next(e for e in bot.emojis if str(e) == emoji_id)
+    except StopIteration:
         await ctx.send('Error - invalid emoji, please use an emoji from this server. Announcement has been cancelled.')
         return
 
