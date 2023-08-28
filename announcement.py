@@ -64,15 +64,14 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     announcement_body = f'<@&922334019146899566>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
     new_members = members.get_new_members()
-    match len(new_members):
-        case 0:
-            None
-        case 1:
-            announcement_body += f'Welcome to our new member this week:\n{new_members[0]}\n\n'
-        case _:
-            announcement_body += 'Welcome to our new members this week:\n'
-            announcement_body = reduce(lambda body, member: body + f'{member}\n', new_members, announcement_body)
-            announcement_body += '\n'
+    if len(new_members) == 0:
+        pass
+    elif len(new_members) == 1:
+        announcement_body += f'Welcome to our new member this week:\n{new_members[0]}\n\n'
+    else:
+        announcement_body += 'Welcome to our new members this week:\n'
+        announcement_body = reduce(lambda body, member: body + f'{member}\n', new_members, announcement_body)
+        announcement_body += '\n'
 
     if custom_message:
         announcement_body += f'{custom_message.content}\n\n'
