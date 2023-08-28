@@ -13,7 +13,7 @@ import config
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
-SHEET_MEMBER_TRACKING = config.SHEET_MEMBER_TRACKING # The ID of the member tracking sheet
+SHEET_MEMBER_TRACKING = config.SHEET_MEMBER_TRACKING  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:E'
 RANGE_LEADERBOARD = 'Weekly Participation!A2:F'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
@@ -51,10 +51,11 @@ def get_sheet():
         print(err)
         return None
 
+
 def is_valid(week, datestr):
     sheet = get_sheet()
     result = sheet.values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                    range=RANGE_WEEK_HEADER).execute()
+                                range=RANGE_WEEK_HEADER).execute()
     values = result.get('values', [])
 
     if not values:
@@ -64,32 +65,34 @@ def is_valid(week, datestr):
     header = values[0][0]
     return f'Week {week}' in header and datestr in header
 
+
 def get_new_members():
     sheet = get_sheet()
     result = sheet.values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                    range=RANGE_MEMBERS).execute()
+                                range=RANGE_MEMBERS).execute()
     values = result.get('values', [])
 
     if not values:
         print('No data found.')
         return []
 
-    new_members = list(filter(lambda l:len(l)==1, values))
-    return [item for sublist in new_members for item in sublist] # flatten
+    new_members = list(filter(lambda l: len(l) == 1, values))
+    return [item for sublist in new_members for item in sublist]  # flatten
+
 
 def get_leaderboard():
     sheet = get_sheet()
     result = sheet.values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                    range=RANGE_LEADERBOARD).execute()
+                                range=RANGE_LEADERBOARD).execute()
     values = result.get('values', [])
 
     if not values:
         print('No data found.')
         return
 
-    filtered = list(filter(lambda l:len(l)==6 and int(l[4]) > 0, values))
-    ordered_list = sorted(filtered, key=lambda l:float(l[0]))
-    sorted_list = sorted(ordered_list, key=lambda l:float(l[4]), reverse=True)
+    filtered = list(filter(lambda l: len(l) == 6 and int(l[4]) > 0, values))
+    ordered_list = sorted(filtered, key=lambda l: float(l[0]))
+    sorted_list = sorted(ordered_list, key=lambda l: float(l[4]), reverse=True)
 
     output = []
     current_score = None
