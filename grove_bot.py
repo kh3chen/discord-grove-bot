@@ -48,6 +48,9 @@ async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Rol
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
     await boss_party.remove(ctx, user, boss_party_role)
 
+@_boss_party.command(name='promote')
+async def boss_party_promote(ctx, role: discord.Role):
+    await role.edit(position=role.position+1)
 
 @_boss_party.command(name='create', brief='Create a new boss party')
 async def boss_party_create(ctx, boss_name):

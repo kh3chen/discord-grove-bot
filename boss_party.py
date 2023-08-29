@@ -1,5 +1,8 @@
 import itertools
+from functools import reduce
 from enum import Enum
+
+import discord
 
 import config
 import sheets
@@ -22,7 +25,7 @@ class PartyStatus(Enum):
 
 
 SHEET_BOSSES_NAME = 0
-SHEET_BOSSES_ROLE_COLOR = 1
+SHEET_BOSSES_ROLE_COLOUR = 1
 
 SHEET_PARTIES_ROLE_ID = 0
 SHEET_PARTIES_BOSS_NAME = 1
@@ -42,60 +45,9 @@ async def sync(ctx):
     await ctx.defer()
 
     bosses = __get_bosses()
+    parties = __get_parties(ctx, bosses)
 
-    # get all boss party roles by matching their names to the bosses
-    parties = []
-    for role in ctx.guild.roles:
-        if role.name.find(' ') == -1 or role.name.find('Practice') != -1:
-            continue
-
-        if role.name[0:role.name.find(' ')] in bosses.keys():
-            parties.append(role)
-
-    parties.reverse()  # Roles are ordered bottom up for some reason
-    print(parties)
-
-    # get list of parties from sheet
-    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
-                                                 range=RANGE_PARTIES).execute()
-    parties_values = result.get('values', [])
-    print(f'Before:\n{parties_values}')
-    parties_values_index = 0
-    for party in parties:
-        role_id = str(party.id)
-        boss_name_first_space = party.name.find(' ')
-        boss_name = party.name[0:boss_name_first_space]
-        party_number = str(
-            party.name[boss_name_first_space + 1 + party.name[boss_name_first_space + 1:].find(' ') + 1:])
-        member_count = str(len(party.members))
-        if party.name.find('Retired') != -1:
-            status = PartyStatus.retired.name
-        elif party.name.find('Fill') != -1:
-            status = PartyStatus.fill.name
-        elif len(party.members) == 6:
-            status = PartyStatus.full.name
-        else:
-            status = PartyStatus.open.name
-
-        if parties_values_index == len(parties_values):  # More party roles than in data
-            parties_values.insert(parties_values_index, [role_id, boss_name, party_number, status, member_count])
-        elif parties_values[parties_values_index][SHEET_PARTIES_ROLE_ID] != role_id:  # Party role doesn't match data
-            parties_values.insert(parties_values_index, [role_id, boss_name, party_number, status, member_count])
-        else:  # Party role data already exists
-            pass
-
-        parties_values_index += 1
-
-    print(f'After:\n{parties_values}')
-
-    body = {
-        'values': parties_values
-    }
-
-    # Update parties
-
-    result = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
-                                                    valueInputOption="RAW", body=body).execute()
+    __update_parties(parties)
 
     # Get list of members from sheet
 
@@ -170,17 +122,10 @@ async def add(ctx, member, party, job):
 async def remove(ctx, member, party):
     await ctx.defer()
 
-    service = sheets.get_service()
-
-    # get list of bosses from sheet
-    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
-                                                 range=RANGE_BOSSES).execute()
-    values = result.get('values', [])
-    bosses = set(list(itertools.chain(*values)))  # flatten and make set
-    print(bosses)
+    bosses = __get_bosses()
 
     # Validate that this is a boss party role
-    if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses:
+    if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses.keys():
         await ctx.send('Error - Invalid role, role must be a boss party.')
         return
 
@@ -238,6 +183,52 @@ async def create(ctx, boss_name):
     # get list of bosses from sheet
     bosses = __get_bosses()
 
+    if boss_name not in bosses.keys():
+        await ctx.send(f'Error - `{boss_name}` is not a valid boss name. Valid boss names are as follows:\n'
+                       f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, list(bosses.keys()))}`')
+        return
+
+    # - Now we create the role, set the colour, set the permissions
+    # - Then we set the position
+
+    parties = __get_parties(ctx, bosses)
+    new_boss_party_index = list(bosses.keys()).index(boss_name)
+    party_number = 1
+    new_boss_party = None
+
+    for party in parties:
+        party_index = list(bosses.keys()).index(party.name[0:party.name.find(' ')])
+        if boss_name in party.name:
+            if 'Fill' in party.name:
+                # Create party
+                print(f'Before position = {party.position}')
+                new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
+                                                             colour=int(bosses[boss_name], 16), mentionable=True)
+                print(f'After position = {party.position}')
+                await new_boss_party.edit(position=party.position)
+                parties.insert(parties.index(party), new_boss_party)
+                break
+            else:
+                party_number += 1
+
+        elif party_index > new_boss_party_index:
+            new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
+                                                         colour=bosses[boss_name], mentionable=True)
+            await new_boss_party.edit_role_positions(position=party.position)
+            parties.insert(parties.index(party), new_boss_party)
+            break
+
+    if not new_boss_party:
+        new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
+                                                     colour=bosses[boss_name], mentionable=True)
+        await new_boss_party.edit(position=parties[-1].position)
+        parties.append(new_boss_party)
+
+    # Update spreadsheet
+    __update_parties(parties)
+
+    await ctx.send(f'Successfully created {new_boss_party.mention}.')
+
 
 def retire():
     pass
@@ -253,6 +244,68 @@ def __get_bosses():
         bosses[bosses_value[0]] = bosses_value[1]
     print(bosses)
     return bosses
+
+
+def __get_parties(ctx, bosses):
+    # get all boss party roles by matching their names to the bosses
+    parties = []
+    for role in ctx.guild.roles:
+        if role.name.find(' ') == -1 or role.name.find('Practice') != -1:
+            continue
+
+        if role.name[0:role.name.find(' ')] in bosses.keys():
+            parties.append(role)
+
+    parties.reverse()  # Roles are ordered bottom up
+    print(parties)
+    return parties
+
+
+def __update_parties(parties):
+    # get list of parties from sheet
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_PARTIES).execute()
+    parties_values = result.get('values', [])
+    print(f'Before:\n{parties_values}')
+    parties_values_index = 0
+    for party in parties:
+        role_id = str(party.id)
+        boss_name_first_space = party.name.find(' ')
+        boss_name = party.name[0:boss_name_first_space]
+        party_number = str(
+            party.name[boss_name_first_space + 1 + party.name[boss_name_first_space + 1:].find(' ') + 1:])
+        member_count = str(len(party.members))
+        if party.name.find('Retired') != -1:
+            status = PartyStatus.retired.name
+            party_number = party_number[0:party_number.find(' ')]  # Remove " (Retired)"
+        elif party.name.find('Fill') != -1:
+            status = PartyStatus.fill.name
+        elif len(party.members) == 6:
+            status = PartyStatus.full.name
+        else:
+            status = PartyStatus.open.name
+
+        if parties_values_index == len(parties_values):
+            # More party roles than in data
+            parties_values.append([role_id, boss_name, party_number, status, member_count])
+        elif parties_values[parties_values_index][SHEET_PARTIES_ROLE_ID] != role_id:
+            # Party role doesn't match data, there must be a new record
+            parties_values.insert(parties_values_index, [role_id, boss_name, party_number, status, member_count])
+        else:  # Party role data already exists
+            pass
+
+        parties_values_index += 1
+
+    print(f'After:\n{parties_values}')
+
+    body = {
+        'values': parties_values
+    }
+
+    # Update parties
+
+    result = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+                                                    valueInputOption="RAW", body=body).execute()
 
 
 def __update_party(party):
