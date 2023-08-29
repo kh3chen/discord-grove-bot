@@ -32,22 +32,21 @@ async def _boss_party(ctx, name):
     pass
 
 
+@_boss_party.command(name='sync')
+async def boss_party_sync(ctx):
+    await boss_party.sync(ctx)
+
+
 @_boss_party.command(name='add', brief='Add a boss party role to a member')
 # @commands.group(name='boss_party')
 @commands.has_role('Junior')
 async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
-    if boss_party.add(user, boss_party_role, job):
-        await user.add_roles(boss_party_role)
+    await boss_party.add(ctx, user, boss_party_role, job)
 
 
 @_boss_party.command(name='remove', brief='Remove a boss party role from a member')
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
     pass
-
-
-@_boss_party.command(name='sync')
-async def boss_party_sync(ctx):
-    boss_party.sync(ctx)
 
 
 bot.run(config.BOT_TOKEN)
