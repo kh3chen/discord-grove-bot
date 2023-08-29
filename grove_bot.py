@@ -57,9 +57,15 @@ async def boss_party_create(ctx, boss_name):
     await ctx.defer()
     await boss_party.create(ctx, boss_name)
 
+
 @_boss_party.command(name='retire', brief='Retire a party, removing all of its party members')
 async def boss_party_retire(ctx, boss_party_role: discord.Role):
     await boss_party.retire(bot, ctx, boss_party_role)
+
+
+@_boss_party.command(name='list_remake', brief='Remake the boss party list')
+async def boss_party_list_make(ctx):
+    await boss_party.list_remake(bot, ctx)
 
 
 bot.run(config.BOT_TOKEN)

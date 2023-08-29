@@ -10,7 +10,7 @@ import sheets
 
 SPREADSHEET_BOSS_PARTIES = config.SPREADSHEET_BOSS_PARTIES  # The ID of the boss parties spreadsheet
 SHEET_BOSS_PARTIES_MEMBERS = config.SHEET_BOSS_PARTIES_MEMBERS  # The ID of the Members sheet
-RANGE_BOSSES = 'Bosses!A2:B'
+RANGE_BOSSES = 'Bosses!A2:C'
 RANGE_PARTIES = 'Parties!A2:H'
 RANGE_MEMBERS = 'Members!A2:C'
 
@@ -27,6 +27,7 @@ class PartyStatus(Enum):
 
 SHEET_BOSSES_NAME = 0
 SHEET_BOSSES_ROLE_COLOUR = 1
+SHEET_BOSSES_HUMAN_READABLE = 2
 
 SHEET_PARTIES_ROLE_ID = 0
 SHEET_PARTIES_BOSS_NAME = 1
@@ -40,6 +41,8 @@ SHEET_PARTIES_BOSS_LIST_MESSAGE_ID = 7
 SHEET_MEMBERS_USER_ID = 0
 SHEET_MEMBERS_PARTY_ROLE_ID = 1
 SHEET_MEMBERS_JOB = 2
+
+BOSS_PARTY_LIST_CHANNEL_ID = config.BOSS_PARTY_LIST_CHANNEL_ID
 
 
 async def sync(ctx):
@@ -64,7 +67,7 @@ async def sync(ctx):
                      members_value[SHEET_MEMBERS_USER_ID] == member_user_id and members_value[
                          SHEET_MEMBERS_PARTY_ROLE_ID] == party_role_id)
             except StopIteration:  # Could not find
-                new_members_values.append([member_user_id, party_role_id])
+                new_members_values.append([member_user_id, party_role_id, ' '])
                 continue
 
     print(f'New members:\n{new_members_values}')
@@ -200,7 +203,8 @@ async def create(ctx, boss_name):
                 # Create party
                 print(f'Before position = {party.position}')
                 new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                             colour=int(bosses[boss_name], 16), mentionable=True)
+                                                             colour=int(bosses[boss_name][SHEET_BOSSES_ROLE_COLOUR],
+                                                                        16), mentionable=True)
                 print(f'After position = {party.position}')
                 await new_boss_party.edit(position=party.position)
                 parties.insert(parties.index(party), new_boss_party)
@@ -210,14 +214,16 @@ async def create(ctx, boss_name):
 
         elif party_index > new_boss_party_index:
             new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                         colour=bosses[boss_name], mentionable=True)
+                                                         colour=int(bosses[boss_name][SHEET_BOSSES_ROLE_COLOUR],
+                                                                    16), mentionable=True)
             await new_boss_party.edit_role_positions(position=party.position)
             parties.insert(parties.index(party), new_boss_party)
             break
 
     if not new_boss_party:
         new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                     colour=bosses[boss_name], mentionable=True)
+                                                     colour=int(bosses[boss_name][SHEET_BOSSES_ROLE_COLOUR],
+                                                                16), mentionable=True)
         await new_boss_party.edit(position=parties[-1].position)
         parties.append(new_boss_party)
 
@@ -275,7 +281,7 @@ def __get_bosses():
     bosses_values = result.get('values', [])
     bosses = {}
     for bosses_value in bosses_values:
-        bosses[bosses_value[0]] = bosses_value[1]
+        bosses[bosses_value[0]] = bosses_value
     print(bosses)
     return bosses
 
@@ -308,7 +314,6 @@ def __update_parties(parties):
         boss_name = party.name[0:boss_name_first_space]
         party_number = str(
             party.name[boss_name_first_space + 1 + party.name[boss_name_first_space + 1:].find(' ') + 1:])
-        member_count = str(len(party.members))
         if party.name.find('Retired') != -1:
             status = PartyStatus.retired.name
             party_number = party_number[0:party_number.find(' ')]  # Remove " (Retired)"
@@ -318,15 +323,17 @@ def __update_parties(parties):
             status = PartyStatus.full.name
         else:
             status = PartyStatus.open.name
+        member_count = str(len(party.members))
 
         if parties_values_index == len(parties_values):
             # More party roles than in data
-            parties_values.append([role_id, boss_name, party_number, status, member_count])
+            parties_values.append([role_id, boss_name, party_number, status, member_count, ' ', ' ', ' '])
         elif parties_values[parties_values_index][SHEET_PARTIES_ROLE_ID] != role_id:
             # Party role doesn't match data, there must be a new record
-            parties_values.insert(parties_values_index, [role_id, boss_name, party_number, status, member_count])
-        else:  # Update existing row
-            parties_values[parties_values_index] = [role_id, boss_name, party_number, status, member_count]
+            parties_values.insert(parties_values_index,
+                                  [role_id, boss_name, party_number, status, member_count, ' ', ' ', ' '])
+        else:  # Data exists
+            pass
 
         parties_values_index += 1
 
@@ -351,12 +358,99 @@ def __update_party(party):
         if parties_value[SHEET_PARTIES_ROLE_ID] == str(party.id):  # The relevant party data
             parties_value[SHEET_PARTIES_MEMBER_COUNT] = str(len(party.members))
             if parties_value[SHEET_PARTIES_STATUS] == PartyStatus.open.name and len(party.members) == 6:
-                # Update to full if it is open. Exclusive status remains
+                # Update to full if it is open
                 parties_value[SHEET_PARTIES_STATUS] = PartyStatus.full.name
             elif parties_value[SHEET_PARTIES_STATUS] == PartyStatus.full.name and len(party.members) < 6:
-                # Update to open if it is full. Exclusive status remains
+                # Update to open if it is full
                 parties_value[SHEET_PARTIES_STATUS] = PartyStatus.open.name
             break
+    body = {
+        'values': parties_values
+    }
+    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+                                           valueInputOption="RAW", body=body).execute()
+
+
+async def list_remake(bot, ctx):
+    # Confirmation
+    confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{BOSS_PARTY_LIST_CHANNEL_ID}?\n'
+    confirmation_message_body += f'\nReact with 👍 to proceed.'
+
+    confirmation_message = await ctx.send(confirmation_message_body)
+    await confirmation_message.add_reaction('👍')
+
+    def check(reaction, user):
+        print(reaction)
+        return user == ctx.author and str(reaction.emoji) == '👍'
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send('Error - confirmation expired. Party retire has been cancelled.')
+        return
+
+    boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_PARTIES).execute()
+    parties_values = result.get('values', [])
+
+    # Delete existing messages
+    deleted_message_ids = []
+    for parties_value in parties_values:
+        if parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID].strip():
+            if parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] not in deleted_message_ids:
+                deleted_message_ids.append(parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID])
+                message = await boss_party_list_channel.fetch_message(parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID])
+                await message.delete()
+            parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
+
+    # Clear the stored message IDs
+    body = {
+        'values': parties_values
+    }
+    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+                                           valueInputOption="RAW", body=body).execute()
+
+    # Build dict of party role IDs to their members
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_MEMBERS).execute()
+    members_values = result.get('values', [])
+    # Key of the following dictionaries is the boss party role ID
+    parties_dict = {}
+    members_dict = {}
+    for parties_value in parties_values:
+        parties_dict[parties_value[SHEET_PARTIES_ROLE_ID]] = parties_value
+        members_dict[parties_value[SHEET_PARTIES_ROLE_ID]] = []
+
+    for members_value in members_values:
+        members_dict[members_value[SHEET_MEMBERS_PARTY_ROLE_ID]].append(members_value)
+
+    # Send the boss party messages
+    bosses = __get_bosses()
+    current_boss_name = None
+    spacer_emoji = next(e for e in bot.emojis if e.name == 'spacer')
+    for parties_value in parties_values:
+        # Send section title
+        if parties_value[SHEET_PARTIES_BOSS_NAME] != current_boss_name:
+            current_boss_name = parties_value[SHEET_PARTIES_BOSS_NAME]
+            section_title_content = f'{spacer_emoji}\n**{bosses[current_boss_name][SHEET_BOSSES_HUMAN_READABLE]}**\n{spacer_emoji}'
+            await boss_party_list_channel.send(section_title_content)
+
+        if parties_value[SHEET_PARTIES_STATUS] == PartyStatus.retired.name:
+            continue
+
+        message_content = f'<@&{parties_value[SHEET_PARTIES_ROLE_ID]}> <#THREAD_ID_HERE>\n*TIMESTAMP_HERE*\n'
+        for members_value in members_dict[parties_value[SHEET_PARTIES_ROLE_ID]]:
+            message_content += f'<@{members_value[SHEET_MEMBERS_USER_ID]}> {members_value[SHEET_MEMBERS_JOB]}\n'
+        message_content += str(spacer_emoji)
+
+        # Placeholder first to avoid mention
+        message = await boss_party_list_channel.send("Placeholder")
+        await message.edit(content=message_content)
+        parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = str(message.id)
+
+    # Save the new message IDs
     body = {
         'values': parties_values
     }
