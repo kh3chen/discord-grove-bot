@@ -34,6 +34,7 @@ async def _boss_party(ctx):
 
 @_boss_party.command(name='sync')
 async def boss_party_sync(ctx):
+    await ctx.defer()
     await boss_party.sync(ctx)
 
 
@@ -41,20 +42,24 @@ async def boss_party_sync(ctx):
 # @commands.group(name='boss_party')
 @commands.has_role('Junior')
 async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
+    await ctx.defer()
     await boss_party.add(ctx, user, boss_party_role, job)
 
 
 @_boss_party.command(name='remove', brief='Remove a boss party role from a member')
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
+    await ctx.defer()
     await boss_party.remove(ctx, user, boss_party_role)
 
-@_boss_party.command(name='promote')
-async def boss_party_promote(ctx, role: discord.Role):
-    await role.edit(position=role.position+1)
 
 @_boss_party.command(name='create', brief='Create a new boss party')
 async def boss_party_create(ctx, boss_name):
+    await ctx.defer()
     await boss_party.create(ctx, boss_name)
+
+@_boss_party.command(name='retire', brief='Retire a party, removing all of its party members')
+async def boss_party_retire(ctx, boss_party_role: discord.Role):
+    await boss_party.retire(bot, ctx, boss_party_role)
 
 
 bot.run(config.BOT_TOKEN)

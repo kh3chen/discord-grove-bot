@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 from functools import reduce
 from enum import Enum
@@ -42,8 +43,6 @@ SHEET_MEMBERS_JOB = 2
 
 
 async def sync(ctx):
-    await ctx.defer()
-
     bosses = __get_bosses()
     parties = __get_parties(ctx, bosses)
 
@@ -79,24 +78,26 @@ async def sync(ctx):
 
 
 async def add(ctx, member, party, job):
-    await ctx.defer()
-
     # get list of bosses from sheet
     bosses = __get_bosses()
 
     # Validate that this is a boss party role
     if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses.keys():
-        await ctx.send('Error - Invalid role, role must be a boss party.')
+        await ctx.send(f'Error - {party.mention} is not a boss party.')
+        return
+
+    if party.name.find('Retired') != -1:
+        await ctx.send(f'Error - {party.mention} is retired.')
         return
 
     # Check if the user is already in the party
     if member in party.members:
-        await ctx.send('Error - Member is already in the boss party.')
+        await ctx.send(f'Error - {member.mention} is already in {party.mention}.')
         return
 
     # Check if the party is already full
     if len(party.members) == 6:
-        await ctx.send('Error - Boss party is already full.')
+        await ctx.send(f'Error - {party.mention} is full.')
         return
 
     # Add member to member sheet
@@ -120,13 +121,11 @@ async def add(ctx, member, party, job):
 
 
 async def remove(ctx, member, party):
-    await ctx.defer()
-
     bosses = __get_bosses()
 
     # Validate that this is a boss party role
     if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses.keys():
-        await ctx.send('Error - Invalid role, role must be a boss party.')
+        await ctx.send(f'Error - {party.mention} is not a boss party.')
         return
 
     # Check if the user is not in the party
@@ -178,8 +177,6 @@ async def remove(ctx, member, party):
 
 
 async def create(ctx, boss_name):
-    await ctx.defer()
-
     # get list of bosses from sheet
     bosses = __get_bosses()
 
@@ -230,8 +227,45 @@ async def create(ctx, boss_name):
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
 
 
-def retire():
-    pass
+async def retire(bot, ctx, party):
+    bosses = __get_bosses()
+
+    # Validate that this is a boss party role
+    if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses.keys():
+        await ctx.send(f'Error - {party.mention} is not a boss party.')
+        return
+
+    if party.name.find('Retired') != -1:
+        await ctx.send(f'Error - {party.mention} is already retired.')
+        return
+
+    # Confirmation
+    confirmation_message_body = f'Are you sure you want to retire {party.mention}? The following {len(party.members)} member(s) will be removed from the party:\n'
+    for member in party.members:
+        confirmation_message_body += f'{member.mention}\n'
+    confirmation_message_body += f'\nReact with 👍 to proceed.'
+
+    confirmation_message = await ctx.send(confirmation_message_body)
+    await confirmation_message.add_reaction('👍')
+
+    def check(reaction, user):
+        print(reaction)
+        return user == ctx.author and str(reaction.emoji) == '👍'
+
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send('Error - confirmation expired. Party retire has been cancelled.')
+        return
+
+    # Remove members from party
+    for member in party.members:
+        await remove(ctx, member, party)
+
+    # Update party status to retired
+    await party.edit(name=f'{party.name} (Retired)')
+    __update_parties(__get_parties(ctx, __get_bosses()))
+    await ctx.send(f'{party.mention} has been retired.')
 
 
 def __get_bosses():
@@ -291,8 +325,8 @@ def __update_parties(parties):
         elif parties_values[parties_values_index][SHEET_PARTIES_ROLE_ID] != role_id:
             # Party role doesn't match data, there must be a new record
             parties_values.insert(parties_values_index, [role_id, boss_name, party_number, status, member_count])
-        else:  # Party role data already exists
-            pass
+        else:  # Update existing row
+            parties_values[parties_values_index] = [role_id, boss_name, party_number, status, member_count]
 
         parties_values_index += 1
 
