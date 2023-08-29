@@ -5,7 +5,8 @@ from enum import Enum
 import config
 import sheets
 
-SHEET_BOSS_PARTIES = config.SHEET_BOSS_PARTIES  # The ID of the boss parties sheet
+SPREADSHEET_BOSS_PARTIES = config.SPREADSHEET_BOSS_PARTIES  # The ID of the boss parties spreadsheet
+SHEET_BOSS_PARTIES_MEMBERS = config.SHEET_BOSS_PARTIES_MEMBERS  # The ID of the Members sheet
 RANGE_BOSSES = 'Bosses!A:A'
 RANGE_PARTIES = 'Parties!A2:H'
 RANGE_MEMBERS = 'Members!A2:C'
@@ -34,10 +35,12 @@ SHEET_MEMBERS_JOB = 2
 
 
 async def sync(ctx):
+    await ctx.defer()
+
     service = sheets.get_service()
 
     # get list of bosses from sheet
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_BOSS_PARTIES,
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_BOSSES).execute()
     values = result.get('values', [])
     bosses = set(list(itertools.chain(*values)))  # flatten and make set
@@ -56,7 +59,7 @@ async def sync(ctx):
     print(parties)
 
     # get list of parties from sheet
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_BOSS_PARTIES,
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_PARTIES).execute()
     parties_data = result.get('values', [])
     print(f'Before:\n{parties_data}')
@@ -67,7 +70,6 @@ async def sync(ctx):
         boss_name = party.name[0:boss_name_first_space]
         party_number = str(
             party.name[boss_name_first_space + 1 + party.name[boss_name_first_space + 1:].find(' ') + 1:])
-        status = ''
         member_count = str(len(party.members))
         if party.name.find('Retired') != -1:
             status = PartyStatus.retired.name
@@ -93,14 +95,14 @@ async def sync(ctx):
         'values': parties_data
     }
 
-    # update parties
+    # Update parties
 
-    result = service.spreadsheets().values().update(spreadsheetId=SHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+    result = service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
                                                     valueInputOption="RAW", body=body).execute()
 
-    # get list of members from sheet
+    # Get list of members from sheet
 
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_BOSS_PARTIES,
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_MEMBERS).execute()
     members_data = result.get('values', [])
     new_members_values = []
@@ -122,16 +124,18 @@ async def sync(ctx):
     body = {
         'values': new_members_values
     }
-    result = service.spreadsheets().values().append(spreadsheetId=SHEET_BOSS_PARTIES, range=RANGE_MEMBERS,
+    result = service.spreadsheets().values().append(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_MEMBERS,
                                                     valueInputOption="RAW", body=body).execute()
     await ctx.send('Sync complete.')
 
 
 async def add(ctx, member, party, job):
+    await ctx.defer()
+
     service = sheets.get_service()
 
     # get list of bosses from sheet
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_BOSS_PARTIES,
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_BOSSES).execute()
     values = result.get('values', [])
     bosses = set(list(itertools.chain(*values)))  # flatten and make set
@@ -156,45 +160,108 @@ async def add(ctx, member, party, job):
     body = {
         'values': [[str(member.id), str(party.id), job]]
     }
-    service = sheets.get_service()
     result = service.spreadsheets().values().append(
-        spreadsheetId=SHEET_BOSS_PARTIES, range=RANGE_MEMBERS,
+        spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_MEMBERS,
         valueInputOption="RAW", body=body).execute()
     print(f"{(result.get('updates').get('updatedCells'))} cells appended.")
     print(body)
 
-    # Update party in parties sheet if party will be full
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_BOSS_PARTIES,
-                                                 range=RANGE_PARTIES).execute()
-    parties_data = result.get('values', [])
-
-    for party_data in parties_data:
-        if party_data[SHEET_PARTIES_ROLE_ID] == str(party.id):  # The relevant party data
-            party_data[SHEET_PARTIES_MEMBER_COUNT] += 1
-            if len(party.members) == 6 and party_data[SHEET_PARTIES_STATUS] == PartyStatus.open.name:
-                # Update to full if it is open. Exclusive status remains
-                party_data[SHEET_PARTIES_STATUS] = PartyStatus.full.name
-            break
-
-    body = {
-        'values': parties_data
-    }
-    result = service.spreadsheets().values().update(spreadsheetId=SHEET_BOSS_PARTIES, range=RANGE_PARTIES,
-                                                    valueInputOption="RAW", body=body).execute()
-
     # Add role to user
     await member.add_roles(party)
 
-    await ctx.send(f'Successfully added {member.mention} {job} to {party.mention}')
+    # Update party data
+    update_party(party)
+
+    # Success
+    await ctx.send(f'Successfully added {member.mention} {job} to {party.mention}.')
 
 
-def remove(ctx, user, role):
-    if user not in role.members:
+async def remove(ctx, member, party):
+    await ctx.defer()
+
+    service = sheets.get_service()
+
+    # get list of bosses from sheet
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_BOSSES).execute()
+    values = result.get('values', [])
+    bosses = set(list(itertools.chain(*values)))  # flatten and make set
+    print(bosses)
+
+    # Validate that this is a boss party role
+    if party.name.find(' ') != -1 and party.name[0:party.name.find(' ')] not in bosses:
+        await ctx.send('Error - Invalid role, role must be a boss party.')
         return
 
-    # remove role from user
-    # remove member from sheet
-    # edit the boss party list message with the new party roster
+    # Check if the user is not in the party
+    # Check if user has the role
+    if member not in party.members:
+        await ctx.send('Error - Member not in boss party.')
+        return
+
+    # Remove member from member sheet
+    result = service.spreadsheets().values().get(
+        spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_MEMBERS).execute()
+    members_data = result.get('values', [])
+
+    delete_index = -1
+    for member_data in members_data:
+        if member_data[SHEET_MEMBERS_USER_ID] == str(member.id) and member_data[SHEET_MEMBERS_PARTY_ROLE_ID] == str(
+                party.id):
+            # Found the entry, remove it
+            delete_index = members_data.index(member_data) + 1
+            break
+
+    if delete_index != -1:
+        update_spreadsheet_data = {
+            "requests": [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": SHEET_BOSS_PARTIES_MEMBERS,
+                            "dimension": "ROWS",
+                            "startIndex": delete_index,
+                            "endIndex": delete_index + 1
+                        }
+                    }
+                }
+            ]
+        }
+        print(update_spreadsheet_data)
+        result = service.spreadsheets().batchUpdate(
+            spreadsheetId=SPREADSHEET_BOSS_PARTIES, body=update_spreadsheet_data).execute()
+
+    # Remove role from user
+    await member.remove_roles(party)
+
+    # Update party data
+    update_party(party)
+
+    # Success
+    await ctx.send(f'Successfully removed {member.mention} from {party.mention}.')
+
+
+def update_party(party):
+    service = sheets.get_service()
+    # Update party in parties sheet if party will be full
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_PARTIES).execute()
+    parties_data = result.get('values', [])
+    for party_data in parties_data:
+        if party_data[SHEET_PARTIES_ROLE_ID] == str(party.id):  # The relevant party data
+            party_data[SHEET_PARTIES_MEMBER_COUNT] = str(len(party.members))
+            if party_data[SHEET_PARTIES_STATUS] == PartyStatus.open.name and len(party.members) == 6:
+                # Update to full if it is open. Exclusive status remains
+                party_data[SHEET_PARTIES_STATUS] = PartyStatus.full.name
+            elif party_data[SHEET_PARTIES_STATUS] == PartyStatus.full.name and len(party.members) < 6:
+                # Update to open if it is full. Exclusive status remains
+                party_data[SHEET_PARTIES_STATUS] = PartyStatus.open.name
+            break
+    body = {
+        'values': parties_data
+    }
+    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+                                           valueInputOption="RAW", body=body).execute()
 
 
 def create_party():

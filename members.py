@@ -3,7 +3,7 @@ import itertools
 import config
 import sheets
 
-SHEET_MEMBER_TRACKING = config.SHEET_MEMBER_TRACKING  # The ID of the member tracking sheet
+SHEET_MEMBER_TRACKING = config.SPREADSHEET_MEMBER_TRACKING  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:E'
 RANGE_LEADERBOARD = 'Weekly Participation!A2:F'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'

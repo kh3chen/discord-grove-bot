@@ -28,7 +28,7 @@ async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
 
 
 @bot.hybrid_group(name="boss_party")
-async def _boss_party(ctx, name):
+async def _boss_party(ctx):
     pass
 
 
@@ -46,7 +46,7 @@ async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Rol
 
 @_boss_party.command(name='remove', brief='Remove a boss party role from a member')
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
-    pass
+    await boss_party.remove(ctx, user, boss_party_role)
 
 
 bot.run(config.BOT_TOKEN)
