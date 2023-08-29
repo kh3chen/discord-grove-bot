@@ -16,6 +16,7 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
     await bot.tree.sync()
+    print('Command tree synced.')
 
 
 @bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
@@ -26,12 +27,12 @@ async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
     await announcement.send_announcement(bot, ctx, emoji, custom_msg_id)
 
 
-@bot.hybrid_group()
-async def boss_party(ctx):
+@bot.hybrid_group(name="boss_party")
+async def _boss_party(ctx, name):
     pass
 
 
-@boss_party.command(name='add', brief='Add a boss party role to a member')
+@_boss_party.command(name='add', brief='Add a boss party role to a member')
 # @commands.group(name='boss_party')
 @commands.has_role('Junior')
 async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
@@ -39,13 +40,14 @@ async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Rol
         await user.add_roles(boss_party_role)
 
 
-@boss_party.command(name='remove', brief='Remove a boss party role from a member')
+@_boss_party.command(name='remove', brief='Remove a boss party role from a member')
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
     pass
 
 
-@boss_party.command(name='sync')
+@_boss_party.command(name='sync')
 async def boss_party_sync(ctx):
     boss_party.sync(ctx)
+
 
 bot.run(config.BOT_TOKEN)
