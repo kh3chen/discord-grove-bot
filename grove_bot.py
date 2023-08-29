@@ -49,4 +49,9 @@ async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.
     await boss_party.remove(ctx, user, boss_party_role)
 
 
+@_boss_party.command(name='create', brief='Create a new boss party')
+async def boss_party_create(ctx, boss_name):
+    await boss_party.create(ctx, boss_name)
+
+
 bot.run(config.BOT_TOKEN)
