@@ -3,8 +3,10 @@ from discord import app_commands
 from discord.ext import commands
 import config
 import announcement
+import boss_party
 
 intents = discord.Intents.default()
+intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix='>', intents=intents)
 
@@ -13,6 +15,7 @@ bot = commands.Bot(command_prefix='>', intents=intents)
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+    await bot.tree.sync()
 
 
 @bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
@@ -22,5 +25,27 @@ async def on_ready():
 async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
     await announcement.send_announcement(bot, ctx, emoji, custom_msg_id)
 
+
+@bot.hybrid_group()
+async def boss_party(ctx):
+    pass
+
+
+@boss_party.command(name='add', brief='Add a boss party role to a member')
+# @commands.group(name='boss_party')
+@commands.has_role('Junior')
+async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
+    if boss_party.add(user, boss_party_role, job):
+        await user.add_roles(boss_party_role)
+
+
+@boss_party.command(name='remove', brief='Remove a boss party role from a member')
+async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
+    pass
+
+
+@boss_party.command(name='sync')
+async def boss_party_sync(ctx):
+    boss_party.sync(ctx)
 
 bot.run(config.BOT_TOKEN)

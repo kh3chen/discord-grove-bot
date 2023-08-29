@@ -1,3 +1,5 @@
+import itertools
+
 import config
 import sheets
 
@@ -24,7 +26,7 @@ def is_valid(week, datestr):
 def get_new_members():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                range=RANGE_MEMBERS).execute()
+                                                 range=RANGE_MEMBERS).execute()
     values = result.get('values', [])
 
     if not values:
@@ -32,13 +34,13 @@ def get_new_members():
         return []
 
     new_members = list(filter(lambda l: len(l) == 1, values))
-    return [item for sublist in new_members for item in sublist]  # flatten
+    return list(itertools.chain(*new_members))  # flatten
 
 
 def get_leaderboard():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                range=RANGE_LEADERBOARD).execute()
+                                                 range=RANGE_LEADERBOARD).execute()
     values = result.get('values', [])
 
     if not values:
