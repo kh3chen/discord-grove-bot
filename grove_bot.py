@@ -67,5 +67,10 @@ async def boss_party_retire(ctx, boss_party_role: discord.Role):
 async def boss_party_list_make(ctx):
     await boss_party.list_remake(bot, ctx)
 
+@_boss_party.command(name='post_test', brief='post test')
+async def boss_party_post_test(ctx):
+    await boss_party.post_test(bot, ctx)
+
+
 
 bot.run(config.BOT_TOKEN)

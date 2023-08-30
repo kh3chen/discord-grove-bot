@@ -11,9 +11,8 @@ import sheets
 SPREADSHEET_BOSS_PARTIES = config.SPREADSHEET_BOSS_PARTIES  # The ID of the boss parties spreadsheet
 SHEET_BOSS_PARTIES_MEMBERS = config.SHEET_BOSS_PARTIES_MEMBERS  # The ID of the Members sheet
 RANGE_BOSSES = 'Bosses!A2:D'
-RANGE_PARTIES = 'Parties!A2:H'
+RANGE_PARTIES = 'Parties!A2:K'
 RANGE_MEMBERS = 'Members!A2:C'
-RANGE_LIST = 'List!A2:A'
 
 service = sheets.get_service()
 
@@ -37,7 +36,10 @@ SHEET_PARTIES_STATUS = 3
 SHEET_PARTIES_MEMBER_COUNT = 4
 SHEET_PARTIES_WEEKDAY = 5
 SHEET_PARTIES_TIME_OF_DAY = 6
-SHEET_PARTIES_BOSS_LIST_MESSAGE_ID = 7
+SHEET_PARTIES_THREAD_ID = 7
+SHEET_PARTIES_MESSAGE_ID = 8
+SHEET_PARTIES_BOSS_LIST_MESSAGE_ID = 9
+SHEET_PARTIES_BOSS_LIST_DECORATOR_ID = 10
 
 SHEET_MEMBERS_USER_ID = 0
 SHEET_MEMBERS_PARTY_ROLE_ID = 1
@@ -50,7 +52,7 @@ async def sync(ctx):
     bosses = __get_bosses()
     parties = __get_parties(ctx, bosses)
 
-    __update_parties(parties)
+    __update_new_parties(parties)
 
     # Get list of members from sheet
 
@@ -118,7 +120,7 @@ async def add(ctx, member, party, job):
     await member.add_roles(party)
 
     # Update party data
-    __update_party(party)
+    __update_existing_party(party)
 
     # Success
     await ctx.send(f'Successfully added {member.mention} {job} to {party.mention}.')
@@ -174,7 +176,7 @@ async def remove(ctx, member, party):
     await member.remove_roles(party)
 
     # Update party data
-    __update_party(party)
+    __update_existing_party(party)
 
     # Success
     await ctx.send(f'Successfully removed {member.mention} from {party.mention}.')
@@ -229,7 +231,7 @@ async def create(ctx, boss_name):
         parties.append(new_boss_party)
 
     # Update spreadsheet
-    __update_parties(parties)
+    __update_new_parties(parties)
 
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
 
@@ -270,14 +272,35 @@ async def retire(bot, ctx, party):
         await remove(ctx, member, party)
 
     # Update party status to retired
-    await party.edit(name=f'{party.name} (Retired)')
-    __update_parties(__get_parties(ctx, __get_bosses()))
-    await ctx.send(f'{party.mention} has been retired.')
+    party = await party.edit(name=f'{party.name} (Retired)', mentionable=False)
+
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_PARTIES).execute()
+    parties_values = result.get('values', [])
+    try:
+        parties_value = next(
+            value for value in parties_values if value[SHEET_PARTIES_ROLE_ID] == str(party.id))
+
+        # Delete boss party list messages
+        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+        if parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID].strip():
+            message = await boss_party_list_channel.fetch_message(parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID])
+            await message.delete()
+        if parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID].strip():
+            message = await boss_party_list_channel.fetch_message(parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID])
+            await message.delete()
+
+        __update_existing_party(party)
+        await ctx.send(f'{party.mention} has been retired.')
+
+    except StopIteration:  # Could not find
+        await ctx.send(f'Error - Unable to find the data for {party.mention} in the sheet.')
+        return
 
 
 async def list_remake(bot, ctx):
     # Confirmation
-    confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{BOSS_PARTY_LIST_CHANNEL_ID}?\n'
+    confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{BOSS_PARTY_LIST_CHANNEL_ID}>?\n'
     confirmation_message_body += f'\nReact with 👍 to proceed.'
 
     confirmation_message = await ctx.send(confirmation_message_body)
@@ -293,34 +316,19 @@ async def list_remake(bot, ctx):
         await ctx.send('Error - confirmation expired. Party retire has been cancelled.')
         return
 
+    # Delete existing messages
     boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
 
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_PARTIES).execute()
     parties_values = result.get('values', [])
 
-    # Delete existing messages
     await ctx.send('Deleting the existing boss party list...')
+    await boss_party_list_channel.purge(limit=len(parties_values) * 2)
 
-    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
-                                                 range=RANGE_LIST).execute()
-    decorator_message_ids = list(itertools.chain(*result.get('values', [])))
-
-    for message_id in decorator_message_ids:
-        message = await boss_party_list_channel.fetch_message(message_id)
-        await message.delete()
-
-    # Clear the stored decorator message IDs
-    service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_LIST).execute()
-
-    deleted_message_ids = []
     for parties_value in parties_values:
-        if parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID].strip():
-            if parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] not in deleted_message_ids:
-                deleted_message_ids.append(parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID])
-                message = await boss_party_list_channel.fetch_message(parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID])
-                await message.delete()
-            parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
+        parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
+        parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = ' '
 
     body = {
         'values': parties_values
@@ -350,7 +358,6 @@ async def list_remake(bot, ctx):
 
     bosses = __get_bosses()
     current_boss = None
-    decorator_message_ids = []
     for parties_value in parties_values:
         if parties_value[SHEET_PARTIES_STATUS] == PartyStatus.retired.name:
             continue
@@ -360,10 +367,10 @@ async def list_remake(bot, ctx):
             current_boss = bosses[parties_value[SHEET_PARTIES_BOSS_NAME]]
             section_title_content = f'_ _\n**{current_boss[SHEET_BOSSES_HUMAN_READABLE]}**\n_ _'
             message = await boss_party_list_channel.send(section_title_content)
-            decorator_message_ids.append([str(message.id)])
+            parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = str(message.id)
         else:
             message = await boss_party_list_channel.send('_ _')
-            decorator_message_ids.append([str(message.id)])
+            parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = str(message.id)
 
         message_content = f'<@&{parties_value[SHEET_PARTIES_ROLE_ID]}> <#THREAD_ID_HERE>\n*TIMESTAMP_HERE*\n'
         for members_value in members_dict[parties_value[SHEET_PARTIES_ROLE_ID]]:
@@ -375,13 +382,6 @@ async def list_remake(bot, ctx):
         await message.edit(content=message_content)
         parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = str(message.id)
 
-    # Save the new message IDs
-    body = {
-        'values': decorator_message_ids
-    }
-    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_LIST,
-                                           valueInputOption="RAW", body=body).execute()
-
     body = {
         'values': parties_values
     }
@@ -389,6 +389,21 @@ async def list_remake(bot, ctx):
                                            valueInputOption="RAW", body=body).execute()
 
     await ctx.send('New boss party list complete.')
+
+
+async def post_test(bot, ctx):
+    test_forum_channel = bot.get_channel(config.TEST_CHANNEL_ID)
+    test_thread_with_message = await test_forum_channel.create_thread(name="this is a test thread",
+                                                                      content="this is the content")
+    await ctx.send(f'made test thread <#{test_thread_with_message.thread.id}>')
+
+    thread = test_forum_channel.get_thread(test_thread_with_message.thread.id)
+    message = await thread.fetch_message(test_thread_with_message.message.id)
+
+    await thread.edit(name='this is the edited name')
+    await ctx.send(f'updated thread name')
+    await message.edit(content='this is the edited message content')
+    await ctx.send(f'updated message content')
 
 
 def __get_bosses():
@@ -404,6 +419,7 @@ def __get_bosses():
 
 
 def __get_parties(ctx, bosses):
+    """Returns the cached [discord.Role] from Discord context. Any recent changes made to roles may not be reflected in the response."""
     # get all boss party roles by matching their names to the bosses
     parties = []
     for role in ctx.guild.roles:
@@ -418,14 +434,14 @@ def __get_parties(ctx, bosses):
     return parties
 
 
-def __update_parties(parties):
+def __update_new_parties(all_parties):
     # get list of parties from sheet
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_PARTIES).execute()
     parties_values = result.get('values', [])
     print(f'Before:\n{parties_values}')
     parties_values_index = 0
-    for party in parties:
+    for party in all_parties:
         role_id = str(party.id)
         boss_name_first_space = party.name.find(' ')
         boss_name = party.name[0:boss_name_first_space]
@@ -466,7 +482,7 @@ def __update_parties(parties):
                                                     valueInputOption="RAW", body=body).execute()
 
 
-def __update_party(party):
+def __update_existing_party(party):
     # Update party in parties sheet if party will be full
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_PARTIES).execute()
@@ -480,6 +496,11 @@ def __update_party(party):
             elif parties_value[SHEET_PARTIES_STATUS] == PartyStatus.full.name and len(party.members) < 6:
                 # Update to open if it is full
                 parties_value[SHEET_PARTIES_STATUS] = PartyStatus.open.name
+            elif party.name.find('Retired') != -1:
+                # Update to retired
+                parties_value[SHEET_PARTIES_STATUS] = PartyStatus.retired.name
+                parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
+                parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = ' '
             break
     body = {
         'values': parties_values
