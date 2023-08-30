@@ -14,7 +14,7 @@ import sheets
 SPREADSHEET_BOSS_PARTIES = config.SPREADSHEET_BOSS_PARTIES  # The ID of the boss parties spreadsheet
 SHEET_BOSS_PARTIES_MEMBERS = config.SHEET_BOSS_PARTIES_MEMBERS  # The ID of the Members sheet
 RANGE_BOSSES = 'Bosses!A2:D'
-RANGE_PARTIES = 'Parties!A2:K'
+RANGE_PARTIES = 'Parties!A2:L'
 RANGE_MEMBERS = 'Members!A2:C'
 
 service = sheets.get_service()
@@ -250,28 +250,32 @@ async def create(ctx, boss_name):
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
 
 
-async def set_time(ctx, party, weekday_str, hour, minute):
+async def set_time(bot, ctx, party, weekday_str, hour, minute):
     weekday = Weekday[weekday_str]
     if not weekday:
         await ctx.send('Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]')
         return
 
     if hour < 0 or hour > 23:
-        await ctx.send('Error - Invalid hour. Hour must be between 0-23.')
+        await ctx.send('Error - Invalid hour. Hour must be from 0-23.')
         return
 
     if minute < 0 or minute > 59:
-        await ctx.send('Error - Invalid minute. Minute must be between 0-59.')
+        await ctx.send('Error - Invalid minute. Minute must be from 0-59.')
         return
 
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_PARTIES).execute()
     parties_values = result.get('values', [])
+    boss_list_message_id = None
+    thread_id = None
     for parties_value in parties_values:
         if parties_value[SHEET_PARTIES_ROLE_ID] == str(party.id):
             parties_value[SHEET_PARTIES_WEEKDAY] = weekday.name
             parties_value[SHEET_PARTIES_HOUR] = hour
             parties_value[SHEET_PARTIES_MINUTE] = minute
+            boss_list_message_id = parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID]
+            thread_id = parties_value[SHEET_PARTIES_THREAD_ID]
             break
 
     body = {
@@ -280,9 +284,36 @@ async def set_time(ctx, party, weekday_str, hour, minute):
     service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
                                            valueInputOption="RAW", body=body).execute()
 
+    next_run_timestamp = __get_next_scheduled_time(weekday.value, hour, minute)
+
     message_content = f'Set <@&{party.id}> party time to {weekday.name} at +{hour}:{minute:02d}.\n'
-    message_content += f'Next run: <t:{__get_next_scheduled_time(weekday.value, hour, minute)}:F>'
+    message_content += f'Next run: <t:{next_run_timestamp}:F>'
     await ctx.send(message_content)
+
+    if boss_list_message_id.strip():
+        # Update boss list message
+        await ctx.send(f'Updating the timestamp in the <#{BOSS_PARTY_LIST_CHANNEL_ID}> message...')
+
+        # Key of the following dictionaries is the boss party role ID
+        members_dict = {}
+        for parties_value in parties_values:
+            members_dict[parties_value[SHEET_PARTIES_ROLE_ID]] = []
+
+        result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                     range=RANGE_MEMBERS).execute()
+        members_values = result.get('values', [])
+
+        for members_value in members_values:
+            members_dict[members_value[SHEET_MEMBERS_PARTY_ROLE_ID]].append(members_value)
+
+        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+        message = await boss_party_list_channel.fetch_message(boss_list_message_id)
+        await __update_boss_party_list_message(message, str(party.id), thread_id, next_run_timestamp,
+                                               members_dict[str(party.id)])
+
+        await ctx.send(
+            content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            suppress_embeds=True)
 
 
 async def retire(bot, ctx, party):
@@ -375,9 +406,13 @@ async def list_remake(bot, ctx):
     await ctx.send('Deleting the existing boss party list...')
     await boss_party_list_channel.purge(limit=len(parties_values) * 2)
 
-    for parties_value in parties_values:
-        parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
-        parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = ' '
+    try:
+        for parties_value in parties_values:
+            print(parties_value)
+            parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = ' '
+            parties_value[SHEET_PARTIES_BOSS_LIST_DECORATOR_ID] = ' '
+    except IndexError:
+        return
 
     body = {
         'values': parties_values
@@ -392,10 +427,8 @@ async def list_remake(bot, ctx):
                                                  range=RANGE_MEMBERS).execute()
     members_values = result.get('values', [])
     # Key of the following dictionaries is the boss party role ID
-    parties_dict = {}
     members_dict = {}
     for parties_value in parties_values:
-        parties_dict[parties_value[SHEET_PARTIES_ROLE_ID]] = parties_value
         members_dict[parties_value[SHEET_PARTIES_ROLE_ID]] = []
 
     for members_value in members_values:
@@ -428,8 +461,20 @@ async def list_remake(bot, ctx):
         # Placeholder first to avoid mention
         message = await boss_party_list_channel.send(
             f'{parties_value[SHEET_PARTIES_BOSS_NAME]} Party {parties_value[SHEET_PARTIES_PARTY_NUMBER]}')
-        await message.edit(content=message_content)
         parties_value[SHEET_PARTIES_BOSS_LIST_MESSAGE_ID] = str(message.id)
+        # TODO remove checks after refactoring data object into class
+        next_run_timestamp = __get_next_scheduled_time(Weekday[parties_value[SHEET_PARTIES_WEEKDAY]].value,
+                                                       int(parties_value[SHEET_PARTIES_HOUR]),
+                                                       int(parties_value[SHEET_PARTIES_MINUTE])) if parties_value[
+                                                                                                        SHEET_PARTIES_WEEKDAY].strip() and \
+                                                                                                    parties_value[
+                                                                                                        SHEET_PARTIES_HOUR].strip() and \
+                                                                                                    parties_value[
+                                                                                                        SHEET_PARTIES_MINUTE].strip() else ''
+
+        await __update_boss_party_list_message(message, parties_value[SHEET_PARTIES_ROLE_ID],
+                                               parties_value[SHEET_PARTIES_THREAD_ID], next_run_timestamp,
+                                               members_dict[parties_value[SHEET_PARTIES_ROLE_ID]])
 
     body = {
         'values': parties_values
@@ -558,9 +603,22 @@ def __update_existing_party(party):
                                            valueInputOption="RAW", body=body).execute()
 
 
+async def __update_boss_party_list_message(message, party_id: str, thread_id: str, timestamp: str,
+                                           members_values: list[str]):
+    message_content = f'<@&{party_id}>'
+    if thread_id.strip():
+        message_content += f'<#{thread_id}>'
+    message_content += '\n'
+    if timestamp.strip():
+        message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n'
+    for members_value in members_values:
+        message_content += f'<@{members_value[SHEET_MEMBERS_USER_ID]}> {members_value[SHEET_MEMBERS_JOB]}\n'
+    await message.edit(content=message_content)
+
+
 def __get_next_scheduled_time(weekday: int, hour: int, minute: int):
     def unix_timestamp(dt: datetime):
-        return int(datetime.timestamp(dt))
+        return str(int(datetime.timestamp(dt)))
 
     now = datetime.now(timezone.utc)
     if now.isoweekday() == weekday:

@@ -63,7 +63,7 @@ async def boss_party_create(ctx, boss_name):
 @app_commands.describe(hour='hour relative to reset: [0-23]')
 @app_commands.describe(minute='minute of the hour: [0-59]')
 async def boss_party_set_time(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
-    await boss_party.set_time(ctx, boss_party_role, weekday, hour, minute)
+    await boss_party.set_time(bot, ctx, boss_party_role, weekday, hour, minute)
 
 
 @_boss_party.command(name='retire', brief='Retire a party, removing all of its party members')
