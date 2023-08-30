@@ -13,6 +13,7 @@ SHEET_BOSS_PARTIES_MEMBERS = config.SHEET_BOSS_PARTIES_MEMBERS  # The ID of the 
 RANGE_BOSSES = 'Bosses!A2:D'
 RANGE_PARTIES = 'Parties!A2:H'
 RANGE_MEMBERS = 'Members!A2:C'
+RANGE_LIST = 'List!A2:A'
 
 service = sheets.get_service()
 
@@ -28,7 +29,6 @@ class PartyStatus(Enum):
 SHEET_BOSSES_NAME = 0
 SHEET_BOSSES_ROLE_COLOUR = 1
 SHEET_BOSSES_HUMAN_READABLE = 2
-SHEET_BOSSES_BOSS_LIST_MESSAGE_ID = 3
 
 SHEET_PARTIES_ROLE_ID = 0
 SHEET_PARTIES_BOSS_NAME = 1
@@ -300,21 +300,18 @@ async def list_remake(bot, ctx):
     parties_values = result.get('values', [])
 
     # Delete existing messages
-    bosses = __get_bosses()
+    await ctx.send('Deleting the existing boss party list...')
 
-    for bosses_value in bosses.values():
-        if bosses_value[SHEET_BOSSES_BOSS_LIST_MESSAGE_ID].strip():
-            message = await boss_party_list_channel.fetch_message(bosses_value[SHEET_BOSSES_BOSS_LIST_MESSAGE_ID])
-            await message.delete()
-            bosses_value[SHEET_BOSSES_BOSS_LIST_MESSAGE_ID] = ' '
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_LIST).execute()
+    decorator_message_ids = list(itertools.chain(*result.get('values', [])))
 
-    # Clear the stored message IDs
-    body = {
-        'values': list(bosses.values())
-    }
-    print(body)
-    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_BOSSES,
-                                           valueInputOption="RAW", body=body).execute()
+    for message_id in decorator_message_ids:
+        message = await boss_party_list_channel.fetch_message(message_id)
+        await message.delete()
+
+    # Clear the stored decorator message IDs
+    service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_LIST).execute()
 
     deleted_message_ids = []
     for parties_value in parties_values:
@@ -331,6 +328,8 @@ async def list_remake(bot, ctx):
     service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
                                            valueInputOption="RAW", body=body).execute()
 
+    await ctx.send('Existing boss party list deleted.')
+
     # Build dict of party role IDs to their members
     result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
                                                  range=RANGE_MEMBERS).execute()
@@ -346,23 +345,29 @@ async def list_remake(bot, ctx):
         members_dict[members_value[SHEET_MEMBERS_PARTY_ROLE_ID]].append(members_value)
 
     # Send the boss party messages
+
+    await ctx.send('Creating the new boss party list...')
+
+    bosses = __get_bosses()
     current_boss = None
-    spacer_emoji = next(e for e in bot.emojis if e.name == 'spacer')
+    decorator_message_ids = []
     for parties_value in parties_values:
+        if parties_value[SHEET_PARTIES_STATUS] == PartyStatus.retired.name:
+            continue
+
         # Send section title
         if not current_boss or current_boss[SHEET_BOSSES_NAME] != parties_value[SHEET_PARTIES_BOSS_NAME]:
             current_boss = bosses[parties_value[SHEET_PARTIES_BOSS_NAME]]
-            section_title_content = f'{spacer_emoji}\n**{current_boss[SHEET_BOSSES_HUMAN_READABLE]}**\n{spacer_emoji}'
+            section_title_content = f'_ _\n**{current_boss[SHEET_BOSSES_HUMAN_READABLE]}**\n_ _'
             message = await boss_party_list_channel.send(section_title_content)
-            current_boss[SHEET_BOSSES_BOSS_LIST_MESSAGE_ID] = str(message.id)
-
-        if parties_value[SHEET_PARTIES_STATUS] == PartyStatus.retired.name:
-            continue
+            decorator_message_ids.append([str(message.id)])
+        else:
+            message = await boss_party_list_channel.send('_ _')
+            decorator_message_ids.append([str(message.id)])
 
         message_content = f'<@&{parties_value[SHEET_PARTIES_ROLE_ID]}> <#THREAD_ID_HERE>\n*TIMESTAMP_HERE*\n'
         for members_value in members_dict[parties_value[SHEET_PARTIES_ROLE_ID]]:
             message_content += f'<@{members_value[SHEET_MEMBERS_USER_ID]}> {members_value[SHEET_MEMBERS_JOB]}\n'
-        message_content += str(spacer_emoji)
 
         # Placeholder first to avoid mention
         message = await boss_party_list_channel.send(
@@ -372,9 +377,9 @@ async def list_remake(bot, ctx):
 
     # Save the new message IDs
     body = {
-        'values': list(bosses.values())
+        'values': decorator_message_ids
     }
-    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_BOSSES,
+    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_LIST,
                                            valueInputOption="RAW", body=body).execute()
 
     body = {
@@ -382,6 +387,8 @@ async def list_remake(bot, ctx):
     }
     service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
                                            valueInputOption="RAW", body=body).execute()
+
+    await ctx.send('New boss party list complete.')
 
 
 def __get_bosses():
