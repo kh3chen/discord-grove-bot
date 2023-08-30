@@ -1,4 +1,7 @@
 import asyncio
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 import itertools
 from functools import reduce
 from enum import Enum
@@ -25,6 +28,16 @@ class PartyStatus(Enum):
     retired = 5
 
 
+class Weekday(Enum):
+    mon = 1
+    tue = 2
+    wed = 3
+    thu = 4
+    fri = 5
+    sat = 6
+    sun = 7
+
+
 SHEET_BOSSES_NAME = 0
 SHEET_BOSSES_ROLE_COLOUR = 1
 SHEET_BOSSES_HUMAN_READABLE = 2
@@ -35,11 +48,12 @@ SHEET_PARTIES_PARTY_NUMBER = 2
 SHEET_PARTIES_STATUS = 3
 SHEET_PARTIES_MEMBER_COUNT = 4
 SHEET_PARTIES_WEEKDAY = 5
-SHEET_PARTIES_TIME_OF_DAY = 6
-SHEET_PARTIES_THREAD_ID = 7
-SHEET_PARTIES_MESSAGE_ID = 8
-SHEET_PARTIES_BOSS_LIST_MESSAGE_ID = 9
-SHEET_PARTIES_BOSS_LIST_DECORATOR_ID = 10
+SHEET_PARTIES_HOUR = 6
+SHEET_PARTIES_MINUTE = 7
+SHEET_PARTIES_THREAD_ID = 8
+SHEET_PARTIES_MESSAGE_ID = 9
+SHEET_PARTIES_BOSS_LIST_MESSAGE_ID = 10
+SHEET_PARTIES_BOSS_LIST_DECORATOR_ID = 11
 
 SHEET_MEMBERS_USER_ID = 0
 SHEET_MEMBERS_PARTY_ROLE_ID = 1
@@ -234,6 +248,41 @@ async def create(ctx, boss_name):
     __update_new_parties(parties)
 
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
+
+
+async def set_time(ctx, party, weekday_str, hour, minute):
+    weekday = Weekday[weekday_str]
+    if not weekday:
+        await ctx.send('Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]')
+        return
+
+    if hour < 0 or hour > 23:
+        await ctx.send('Error - Invalid hour. Hour must be between 0-23.')
+        return
+
+    if minute < 0 or minute > 59:
+        await ctx.send('Error - Invalid minute. Minute must be between 0-59.')
+        return
+
+    result = service.spreadsheets().values().get(spreadsheetId=SPREADSHEET_BOSS_PARTIES,
+                                                 range=RANGE_PARTIES).execute()
+    parties_values = result.get('values', [])
+    for parties_value in parties_values:
+        if parties_value[SHEET_PARTIES_ROLE_ID] == str(party.id):
+            parties_value[SHEET_PARTIES_WEEKDAY] = weekday.name
+            parties_value[SHEET_PARTIES_HOUR] = hour
+            parties_value[SHEET_PARTIES_MINUTE] = minute
+            break
+
+    body = {
+        'values': parties_values
+    }
+    service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
+                                           valueInputOption="RAW", body=body).execute()
+
+    message_content = f'Set <@&{party.id}> party time to {weekday.name} at +{hour}:{minute:02d}.\n'
+    message_content += f'Next run: <t:{__get_next_scheduled_time(weekday.value, hour, minute)}:F>'
+    await ctx.send(message_content)
 
 
 async def retire(bot, ctx, party):
@@ -507,3 +556,20 @@ def __update_existing_party(party):
     }
     service.spreadsheets().values().update(spreadsheetId=SPREADSHEET_BOSS_PARTIES, range=RANGE_PARTIES,
                                            valueInputOption="RAW", body=body).execute()
+
+
+def __get_next_scheduled_time(weekday: int, hour: int, minute: int):
+    def unix_timestamp(dt: datetime):
+        return int(datetime.timestamp(dt))
+
+    now = datetime.now(timezone.utc)
+    if now.isoweekday() == weekday:
+        if now.hour > hour or now.hour == hour and now.minute > minute:
+            next_time = (now + timedelta(days=7)).replace(hour=hour, minute=minute)
+            return unix_timestamp(next_time)
+        else:
+            next_time = now.replace(hour=hour, minute=minute)
+            return unix_timestamp(next_time)
+    else:
+        next_time = (now + timedelta(days=(weekday - now.isoweekday()) % 7)).replace(hour=hour, minute=minute)
+        return unix_timestamp(next_time)
