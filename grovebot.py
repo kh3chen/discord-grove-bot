@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 import config
 import announcement
-import boss_party
+import bossparty
 
 intents = discord.Intents.default()
 intents.members = True

@@ -1,11 +1,9 @@
-import discord
-from discord import app_commands
 import asyncio
 import datetime
 from functools import reduce
 
 import config
-import members
+import sheets_members
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
@@ -52,7 +50,7 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     # await ctx.defer()
 
     # Validate the spreadsheet has a column for this week's announcement
-    if not members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
+    if not sheets_members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
         await ctx.send(
             'Error - unable to find the member tracking data for this week\'s announcement. Announcement has been cancelled.')
         return
@@ -60,7 +58,7 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     # Create and format announcement message
     announcement_body = f'<@&922334019146899566>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
-    new_members = members.get_new_members()
+    new_members = sheets_members.get_new_members()
     if len(new_members) == 0:
         pass
     elif len(new_members) == 1:
@@ -95,7 +93,7 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
 
 async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title):
     await leaderboard_thread.send(f'**{leaderboard_thread_title}**')
-    leaderboard = members.get_leaderboard()
+    leaderboard = sheets_members.get_leaderboard()
     for line in leaderboard:
         await leaderboard_thread.send(line)
     await leaderboard_thread.send(
