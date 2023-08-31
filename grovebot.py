@@ -27,58 +27,64 @@ async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
     await announcement.send_announcement(bot, ctx, emoji, custom_msg_id)
 
 
-@bot.hybrid_group(name="boss_party")
-async def _boss_party(ctx):
+@bot.hybrid_group(name='bossparty')
+async def _bossparty(ctx):
     pass
 
 
-@_boss_party.command(name='sync')
-async def boss_party_sync(ctx):
-    await ctx.defer()
-    await boss_party.sync(ctx)
-
-
-@_boss_party.command(name='add', brief='Add a boss party role to a member')
-# @commands.group(name='boss_party')
+@_bossparty.command(name='sync')
 @commands.has_role('Junior')
-async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
+async def bossparty_sync(ctx):
     await ctx.defer()
-    await boss_party.add(bot, ctx, user, boss_party_role, job)
+    await bossparty.sync(ctx)
 
 
-@_boss_party.command(name='remove', brief='Remove a boss party role from a member')
-async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
+@_bossparty.command(name='add', brief='Add a boss party role to a member')
+@commands.has_role('Junior')
+async def bossparty_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
     await ctx.defer()
-    await boss_party.remove(bot, ctx, user, boss_party_role)
+    await bossparty.add(bot, ctx, user, boss_party_role, job)
 
 
-@_boss_party.command(name='create', brief='Create a new boss party')
-async def boss_party_create(ctx, boss_name):
+@_bossparty.command(name='remove', brief='Remove a boss party role from a member')
+@commands.has_role('Junior')
+async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
     await ctx.defer()
-    await boss_party.create(ctx, boss_name)
+    await bossparty.remove(bot, ctx, user, boss_party_role)
 
 
-@_boss_party.command(name='set_time', brief='Set the boss party time')
+@_bossparty.command(name='create', brief='Create a new boss party')
+@commands.has_role('Junior')
+async def bossparty_create(ctx, boss_name):
+    await ctx.defer()
+    await bossparty.create(ctx, boss_name)
+
+
+@_bossparty.command(name='settime', brief='Set the boss party time')
+@commands.has_role('Junior')
 @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
 @app_commands.describe(hour='hour relative to reset: [0-23]')
 @app_commands.describe(minute='minute of the hour: [0-59]')
-async def boss_party_set_time(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
-    await boss_party.set_time(bot, ctx, boss_party_role, weekday, hour, minute)
+async def bossparty_settime(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
+    await bossparty.set_time(bot, ctx, boss_party_role, weekday, hour, minute)
 
 
-@_boss_party.command(name='retire', brief='Retire a party, removing all of its party members')
-async def boss_party_retire(ctx, boss_party_role: discord.Role):
-    await boss_party.retire(bot, ctx, boss_party_role)
+@_bossparty.command(name='retire', brief='Retire a party, removing all of its party members')
+@commands.has_role('Junior')
+async def bossparty_retire(ctx, boss_party_role: discord.Role):
+    await bossparty.retire(bot, ctx, boss_party_role)
 
 
-@_boss_party.command(name='list_remake', brief='Remake the boss party list')
-async def boss_party_list_make(ctx):
-    await boss_party.list_remake(bot, ctx)
+@_bossparty.command(name='listremake', brief='Remake the boss party list')
+@commands.has_role('Junior')
+async def bossparty_listremake(ctx):
+    await bossparty.list_remake(bot, ctx)
 
 
-@_boss_party.command(name='post_test', brief='post test')
-async def boss_party_post_test(ctx):
-    await boss_party.post_test(bot, ctx)
+@_bossparty.command(name='posttest', brief='post test')
+@commands.has_role('Junior')
+async def bossparty_posttest(ctx):
+    await bossparty.post_test(bot, ctx)
 
 
 bot.run(config.BOT_TOKEN)
