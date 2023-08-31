@@ -101,7 +101,7 @@ class SheetsParty:
             str(self.boss_list_decorator_id)
         ]
 
-    def get_next_scheduled_time(self):
+    def next_scheduled_time(self):
         if not self.weekday or not self.hour or not self.minute:
             return ''
 

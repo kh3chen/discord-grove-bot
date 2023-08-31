@@ -43,13 +43,13 @@ async def boss_party_sync(ctx):
 @commands.has_role('Junior')
 async def boss_party_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
     await ctx.defer()
-    await boss_party.add(ctx, user, boss_party_role, job)
+    await boss_party.add(bot, ctx, user, boss_party_role, job)
 
 
 @_boss_party.command(name='remove', brief='Remove a boss party role from a member')
 async def boss_party_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
     await ctx.defer()
-    await boss_party.remove(ctx, user, boss_party_role)
+    await boss_party.remove(bot, ctx, user, boss_party_role)
 
 
 @_boss_party.command(name='create', brief='Create a new boss party')
