@@ -8,7 +8,7 @@ import config
 import members
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
-ANNOUNCEMENT_CHANNEL_ID = config.ANNOUNCEMENT_CHANNEL_ID
+ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
 
 
 async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):

@@ -3,14 +3,14 @@ import itertools
 import config
 import sheets
 
-SHEET_MEMBER_TRACKING = config.SPREADSHEET_MEMBER_TRACKING  # The ID of the member tracking sheet
+SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:E'
 RANGE_LEADERBOARD = 'Weekly Participation!A2:F'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
 
 def is_valid(week, datestr):
-    service = sheets.get_service()
+    service = sheets.__get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_WEEK_HEADER).execute()
     values = result.get('values', [])
@@ -24,7 +24,7 @@ def is_valid(week, datestr):
 
 
 def get_new_members():
-    service = sheets.get_service()
+    service = sheets.__get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_MEMBERS).execute()
     values = result.get('values', [])
@@ -38,7 +38,7 @@ def get_new_members():
 
 
 def get_leaderboard():
-    service = sheets.get_service()
+    service = sheets.__get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_LEADERBOARD).execute()
     values = result.get('values', [])
