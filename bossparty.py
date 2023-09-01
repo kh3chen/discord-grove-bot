@@ -89,6 +89,7 @@ async def add(bot, ctx, member, discord_party, job):
 
         await ctx.send(
             content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            ephemeral=True,
             suppress_embeds=True)
 
 
@@ -147,6 +148,7 @@ async def remove(bot, ctx, member, discord_party):
 
         await ctx.send(
             content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            ephemeral=True,
             suppress_embeds=True)
 
 
@@ -244,6 +246,7 @@ async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
 
         await ctx.send(
             content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            ephemeral=True,
             suppress_embeds=True)
 
 
@@ -330,6 +333,7 @@ async def exclusive(bot, ctx, discord_party):
 
         await ctx.send(
             content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            ephemeral=True,
             suppress_embeds=True)
 
 
@@ -361,6 +365,7 @@ async def open(bot, ctx, discord_party):
 
         await ctx.send(
             content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            ephemeral=True,
             suppress_embeds=True)
 
 
