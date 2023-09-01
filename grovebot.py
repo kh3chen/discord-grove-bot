@@ -66,7 +66,7 @@ async def bossparty_create(ctx, boss_name):
 @app_commands.describe(hour='hour relative to reset: [0-23]')
 @app_commands.describe(minute='minute of the hour: [0-59]')
 async def bossparty_settime(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
-    await bossparty.set_time(bot, ctx, boss_party_role, weekday, hour, minute)
+    await bossparty.settime(bot, ctx, boss_party_role, weekday, hour, minute)
 
 
 @_bossparty.command(name='retire', brief='Retire a party, removing all of its party members')
@@ -78,7 +78,7 @@ async def bossparty_retire(ctx, boss_party_role: discord.Role):
 @_bossparty.command(name='listremake', brief='Remake the boss party list')
 @commands.has_role('Junior')
 async def bossparty_listremake(ctx):
-    await bossparty.list_remake(bot, ctx)
+    await bossparty.listremake(bot, ctx)
 
 
 @_bossparty.command(name='posttest', brief='post test')

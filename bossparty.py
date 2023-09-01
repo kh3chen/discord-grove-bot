@@ -204,7 +204,7 @@ async def create(ctx, boss_name):
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
 
 
-async def set_time(bot, ctx, discord_party, weekday_str, hour, minute):
+async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
     weekday = sheets_boss.SheetsParty.Weekday[weekday_str]
     if not weekday:
         await ctx.send('Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]')
@@ -307,7 +307,7 @@ async def retire(bot, ctx, discord_party):
         return
 
 
-async def list_remake(bot, ctx):
+async def listremake(bot, ctx):
     # Confirmation
     confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{BOSS_PARTY_LIST_CHANNEL_ID}>?\n'
     confirmation_message_body += f'\nReact with 👍 to proceed.'
@@ -404,6 +404,8 @@ async def post_test(bot, ctx):
     await ctx.send(f'updated thread name')
     await message.edit(content='this is the edited message content')
     await ctx.send(f'updated message content')
+
+
 
 
 def __get_discord_parties(ctx, bosses):
