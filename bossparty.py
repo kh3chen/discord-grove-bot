@@ -392,7 +392,6 @@ async def listremake(bot, ctx):
 
     try:
         for sheets_party in sheets_parties:
-            print(sheets_party)
             sheets_party.boss_list_message_id = ''
             sheets_party.boss_list_decorator_id = ''
     except IndexError:
@@ -563,4 +562,8 @@ async def __update_boss_party_list_message(message, sheets_party: sheets_boss.Sh
         message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n'
     for sheets_member in party_sheets_members:
         message_content += f'<@{sheets_member.user_id}> {sheets_member.job}\n'
+    if sheets_party.status == sheets_boss.SheetsParty.PartyStatus.open.name:
+        for n in range(0, 6 - int(sheets_party.member_count)):
+            message_content += 'Open\n'
+
     await message.edit(content=message_content)
