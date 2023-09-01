@@ -19,6 +19,11 @@ async def on_ready():
     print('Command tree synced.')
 
 
+@bot.command()
+async def ping(ctx):
+    await ctx.send("pong")
+
+
 @bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
 @commands.has_role('Junior')
 @app_commands.describe(emoji='The seasonal Grove tree emoji')
@@ -75,6 +80,18 @@ async def bossparty_retire(ctx, boss_party_role: discord.Role):
     await bossparty.retire(bot, ctx, boss_party_role)
 
 
+@_bossparty.command(name='exclusive', brief='Make a party exclusive')
+@commands.has_role('Junior')
+async def bossparty_exclusive(ctx, boss_party_role: discord.Role):
+    await bossparty.exclusive(bot, ctx, boss_party_role)
+
+
+@_bossparty.command(name='open', brief='Make a party open')
+@commands.has_role('Junior')
+async def bossparty_open(ctx, boss_party_role: discord.Role):
+    await bossparty.open(bot, ctx, boss_party_role)
+
+
 @_bossparty.command(name='listremake', brief='Remake the boss party list')
 @commands.has_role('Junior')
 async def bossparty_listremake(ctx):
@@ -85,6 +102,14 @@ async def bossparty_listremake(ctx):
 @commands.has_role('Junior')
 async def bossparty_posttest(ctx):
     await bossparty.post_test(bot, ctx)
+
+
+@_bossparty.command(name='testedit', brief='test edit')
+@commands.has_role('Junior')
+async def bossparty_testedit(ctx, thread_id: str):
+    channel = bot.get_channel(1146240330405007380)
+    thread = channel.get_thread(int(thread_id))
+    await thread.edit(name="this is the edited name!")
 
 
 bot.run(config.BOT_TOKEN)

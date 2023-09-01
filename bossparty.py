@@ -307,6 +307,63 @@ async def retire(bot, ctx, discord_party):
         return
 
 
+async def exclusive(bot, ctx, discord_party):
+    sheets_parties = sheets_boss.get_parties_list()
+    try:
+        sheets_party = next(
+            sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
+    except StopIteration:
+        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
+        return
+
+    sheets_party.status = sheets_boss.SheetsParty.PartyStatus.exclusive.name
+    sheets_boss.update_parties(sheets_parties)
+
+    await ctx.send(f'<@&{sheets_party.role_id}> is now exclusive.')
+
+    if sheets_party.boss_list_message_id:
+        # Update boss list message
+
+        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+        message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
+        await __update_boss_party_list_message(message, sheets_party)
+
+        await ctx.send(
+            content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            suppress_embeds=True)
+
+
+async def open(bot, ctx, discord_party):
+    sheets_parties = sheets_boss.get_parties_list()
+    try:
+        sheets_party = next(
+            sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
+    except StopIteration:
+        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
+        return
+
+    message_content = f'<@&{sheets_party.role_id}> is now open.'
+    if len(discord_party.members) == 6:
+        message_content += " (Full)"
+        sheets_party.status = sheets_boss.SheetsParty.PartyStatus.full.name
+    else:
+        sheets_party.status = sheets_boss.SheetsParty.PartyStatus.open.name
+    sheets_boss.update_parties(sheets_parties)
+
+    await ctx.send(message_content)
+
+    if sheets_party.boss_list_message_id:
+        # Update boss list message
+
+        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+        message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
+        await __update_boss_party_list_message(message, sheets_party)
+
+        await ctx.send(
+            content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
+            suppress_embeds=True)
+
+
 async def listremake(bot, ctx):
     # Confirmation
     confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{BOSS_PARTY_LIST_CHANNEL_ID}>?\n'
@@ -404,8 +461,6 @@ async def post_test(bot, ctx):
     await ctx.send(f'updated thread name')
     await message.edit(content='this is the edited message content')
     await ctx.send(f'updated message content')
-
-
 
 
 def __get_discord_parties(ctx, bosses):
