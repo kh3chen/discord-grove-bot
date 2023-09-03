@@ -44,7 +44,7 @@ async def add(bot, ctx, member, discord_party, job):
         sheets_party = next(
             sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == str(discord_party.id))
     except StopIteration:
-        raise Exception(f'Error - Unable to find party {discord_party.mention} in the boss parties data.')
+        raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
     # Add member to the party
     try:
@@ -64,7 +64,7 @@ async def add(bot, ctx, member, discord_party, job):
                     sheets_party for sheets_party in sheets_bossing.parties if
                     sheets_party.role_id == fill_party_id)
             except StopIteration:
-                raise Exception(f'Error - Unable to find party {discord_party.mention} in the boss parties data.')
+                raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
             try:
                 await _add(bot, ctx, member, discord_fill_party, job, sheets_fill_party)
@@ -79,7 +79,7 @@ async def add(bot, ctx, member, discord_party, job):
                     sheets_party for sheets_party in sheets_bossing.parties if
                     sheets_party.role_id == fill_party_id)
             except StopIteration:
-                raise Exception(f'Error - Unable to find party {discord_party.mention} in the boss parties data.')
+                raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
             try:
                 await _remove(bot, ctx, member, discord_fill_party, job, sheets_fill_party)
@@ -90,18 +90,18 @@ async def add(bot, ctx, member, discord_party, job):
 
 async def _add(bot, ctx, member, discord_party, job, sheets_party):
     if sheets_party.status == SheetsParty.PartyStatus.retired.name:
-        raise Exception(f'Error - {discord_party.mention} is retired.')
+        raise Exception(f'Error - {discord_party.name} is retired.')
 
     # Check if the party is already full
     if sheets_party.status == SheetsParty.PartyStatus.full.name or len(discord_party.members) == 6:
-        raise Exception(f'Error - {discord_party.mention} is full.')
+        raise Exception(f'Error - {discord_party.name} is full.')
 
     # Check if the user is already in the party
     if member in discord_party.members:
         for sheets_member in sheets_bossing.members_dict[sheets_party.role_id]:
             # Can have multiple characters in fill
             if sheets_member.user_id == str(member.id) and sheets_member.job == job:
-                raise Exception(f'Error - {member.mention} {job} is already in {discord_party.mention}.')
+                raise Exception(f'Error - {member.name} {job} is already in {discord_party.name}.')
 
     # Add role to user
     await member.add_roles(discord_party)
@@ -115,7 +115,7 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
     __update_existing_party(discord_party)
 
     # Success
-    await ctx.send(f'Successfully added {member.mention} {job} to {discord_party.mention}.')
+    await ctx.send(f'Successfully added {member.name} {job} to {discord_party.name}.')
     if sheets_party.boss_list_message_id:
         # Update boss list message
 
@@ -155,7 +155,7 @@ async def remove(bot, ctx, member, discord_party, job):
                     sheets_party for sheets_party in sheets_bossing.parties if
                     sheets_party.role_id == fill_party_id)
             except StopIteration:
-                raise Exception(f'Error - Unable to find party {discord_party.mention} in the boss parties data.')
+                raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
             try:
                 await _remove(bot, ctx, member, discord_fill_party, removed_sheets_member.job, sheets_fill_party)
@@ -167,7 +167,7 @@ async def remove(bot, ctx, member, discord_party, job):
 async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     # Check if user has the role
     if member not in discord_party.members:
-        raise Exception(f'Error - {member.mention} is not in {discord_party.mention}.')
+        raise Exception(f'Error - {member.name} is not in {discord_party.name}.')
 
     if sheets_party.status == SheetsParty.PartyStatus.fill.name and job is not None:
         # Can have multiple characters in fill. Match by job
@@ -188,7 +188,7 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     elif found_character and has_role_count > 1:
         pass
     else:
-        raise Exception(f'Error - {member.mention} {job} is not in {discord_party.mention}.')
+        raise Exception(f'Error - {member.name} {job} is not in {discord_party.name}.')
 
     # Remove member from member sheet
     removed_sheets_member = sheets_bossing.delete_member(
@@ -199,7 +199,7 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     __update_existing_party(discord_party)
 
     # Success
-    await ctx.send(f'Successfully removed {member.mention} {removed_sheets_member.job} from {discord_party.mention}.')
+    await ctx.send(f'Successfully removed {member.name} {removed_sheets_member.job} from {discord_party.name}.')
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -267,7 +267,7 @@ async def create(bot, ctx, boss_name):
     # Update spreadsheet
     __update_with_new_parties(discord_parties)
 
-    await ctx.send(f'Successfully created {new_boss_party.mention}.')
+    await ctx.send(f'Successfully created {new_boss_party.name}.')
 
     # Remake boss party list
     await remake_boss_party_list(bot, ctx)
@@ -320,17 +320,17 @@ async def retire(bot, ctx, discord_party):
     # Validate that this is a boss party role
     if discord_party.name.find(' ') != -1 and discord_party.name[
                                               0:discord_party.name.find(' ')] not in sheets_bossing.get_boss_names():
-        await ctx.send(f'Error - {discord_party.mention} is not a boss party.')
+        await ctx.send(f'Error - {discord_party.name} is not a boss party.')
         return
 
     if discord_party.name.find('Retired') != -1:
-        await ctx.send(f'Error - {discord_party.mention} is already retired.')
+        await ctx.send(f'Error - {discord_party.name} is already retired.')
         return
 
     # Confirmation
-    confirmation_message_body = f'Are you sure you want to retire {discord_party.mention}? The following {len(discord_party.members)} member(s) will be removed from the party:\n'
+    confirmation_message_body = f'Are you sure you want to retire {discord_party.name}? The following {len(discord_party.members)} member(s) will be removed from the party:\n'
     for member in discord_party.members:
-        confirmation_message_body += f'{member.mention}\n'
+        confirmation_message_body += f'{member.name}\n'
     confirmation_message_body += f'\nReact with 👍 to proceed.'
 
     confirmation_message = await ctx.send(confirmation_message_body)
@@ -366,10 +366,10 @@ async def retire(bot, ctx, discord_party):
             await message.delete()
 
         __update_existing_party(discord_party)
-        await ctx.send(f'{discord_party.mention} has been retired.')
+        await ctx.send(f'{discord_party.name} has been retired.')
 
     except StopIteration:  # Could not find
-        await ctx.send(f'Error - Unable to find the data for {discord_party.mention} in the sheet.')
+        await ctx.send(f'Error - Unable to find the data for {discord_party.name} in the sheet.')
         return
 
 
