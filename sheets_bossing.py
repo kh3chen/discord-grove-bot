@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import copy
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
@@ -149,7 +148,7 @@ class Member:
     INDEX_USER_ID = 3
     INDEX_JOB = 4
 
-    def __init__(self, boss_name=None, party_number=None, party_role_id=None, user_id=None, job=None):
+    def __init__(self, boss_name='', party_number='', party_role_id='', user_id='', job=''):
         self.boss_name = str(boss_name)
         self.party_number = str(party_number)
         self.party_role_id = str(party_role_id)
@@ -185,7 +184,7 @@ class Member:
 class SheetsBossing:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the boss parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
-    RANGE_BOSSES = 'Bosses!A2:D'
+    RANGE_BOSSES = 'Bosses!A2:E'
     RANGE_PARTIES = 'Parties!A2:L'
     RANGE_MEMBERS = 'Members!A2:E'
 
@@ -216,24 +215,7 @@ class SheetsBossing:
         members_values = result.get('values', [])
         return list(map(lambda members_value: Member.from_sheets_value(members_value), members_values))
 
-    def __init__(self):
-        self.__bosses_dict = self.__get_bosses_dict()
-        self.__parties = self.__get_parties()
-        self.__members = self.__get_members()
-
-    @property
-    def bosses_dict(self):
-        return copy.deepcopy(self.__bosses_dict)
-
-    @property
-    def parties(self):
-        return copy.deepcopy(self.__parties)
-
-    @property
-    def members(self):
-        return copy.deepcopy(self.__members)
-
-    def get_members_dict(self):
+    def __get_members_dict(self):
         # Key of the following dictionaries is the boss party role ID
         members_dict = {}
         for sheets_party in self.__parties:
@@ -243,6 +225,28 @@ class SheetsBossing:
             members_dict[sheets_member.party_role_id].append(sheets_member)
 
         return members_dict
+
+    def __init__(self):
+        self.__bosses_dict = self.__get_bosses_dict()
+        self.__parties = self.__get_parties()
+        self.__members = self.__get_members()
+        self.__members_dict = self.__get_members_dict()
+
+    @property
+    def bosses_dict(self):
+        return self.__bosses_dict
+
+    @property
+    def parties(self):
+        return self.__parties
+
+    @property
+    def members(self):
+        return self.__members
+
+    @property
+    def members_dict(self):
+        return self.__members_dict
 
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
@@ -274,11 +278,14 @@ class SheetsBossing:
                                                             valueInputOption="RAW", body=body).execute()
 
         self.__members += new_sheets_members
+        for new_sheets_member in new_sheets_members:
+            self.__members_dict[new_sheets_member.party_role_id].append(new_sheets_member)
 
     def delete_member(self, delete_sheets_member: Member):
         delete_index = 0
         for sheets_member in self.__members:
-            if sheets_member.user_id == delete_sheets_member.user_id and sheets_member.party_role_id == delete_sheets_member.party_role_id:
+            if sheets_member.user_id == delete_sheets_member.user_id and sheets_member.party_role_id == delete_sheets_member.party_role_id and (
+                    not delete_sheets_member.job or sheets_member.job == delete_sheets_member.job):
                 # Found the entry
                 break
             delete_index += 1
@@ -305,7 +312,14 @@ class SheetsBossing:
             sheets.get_service().spreadsheets().batchUpdate(
                 spreadsheetId=self.SPREADSHEET_BOSS_PARTIES, body=delete_body).execute()
 
+            deleted_sheets_member = self.__members[delete_index]
             self.__members = self.__members[0:delete_index] + self.__members[delete_index + 1:]
+            for sheets_member in self.__members_dict[delete_sheets_member.party_role_id]:
+                if sheets_member.user_id == delete_sheets_member.user_id and sheets_member.job == delete_sheets_member.job:
+                    self.__members_dict[delete_sheets_member.party_role_id].remove(sheets_member)
+                    break
+
+            return deleted_sheets_member
 
         except HttpError as error:
             print(f"An error occurred: {error}")

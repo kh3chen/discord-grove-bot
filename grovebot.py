@@ -1,9 +1,10 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-import config
+
 import announcement
 import bossparty
+import config
 
 intents = discord.Intents.default()
 intents.members = True
@@ -53,9 +54,9 @@ async def bossparty_add(ctx, user: discord.Member, boss_party_role: discord.Role
 
 @_bossparty.command(name='remove', brief='Remove a boss party role from a member')
 @commands.has_role('Junior')
-async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.Role):
+async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.Role, job=''):
     await ctx.defer()
-    await bossparty.remove(bot, ctx, user, boss_party_role)
+    await bossparty.remove(bot, ctx, user, boss_party_role, job)
 
 
 @_bossparty.command(name='create', brief='Create a new boss party')
