@@ -492,6 +492,8 @@ def __update_with_new_parties(discord_parties):
             new_sheets_party.status = SheetsParty.PartyStatus.fill.name
         elif len(discord_party.members) == 6:
             new_sheets_party.status = SheetsParty.PartyStatus.full.name
+        elif len(discord_party.members) == 0:
+            new_sheets_party.status = SheetsParty.PartyStatus.new.name
         else:
             new_sheets_party.status = SheetsParty.PartyStatus.open.name
         new_sheets_party.member_count = str(len(discord_party.members))

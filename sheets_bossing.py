@@ -49,6 +49,7 @@ class Party:
     INDEX_BOSS_LIST_DECORATOR_ID = 11
 
     class PartyStatus(Enum):
+        new = 0
         open = 1
         full = 2
         exclusive = 3
