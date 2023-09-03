@@ -1,10 +1,9 @@
 import asyncio
 from functools import reduce
 
-from sheets_boss import SheetsBossing
-from sheets_boss import Boss as SheetsBoss
-from sheets_boss import Party as SheetsParty
-from sheets_boss import Member as SheetsMember
+from sheets_bossing import SheetsBossing
+from sheets_bossing import Party as SheetsParty
+from sheets_bossing import Member as SheetsMember
 import config
 
 BOSS_PARTY_LIST_CHANNEL_ID = config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST
