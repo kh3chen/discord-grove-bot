@@ -10,7 +10,7 @@ RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
 
 def is_valid(week, datestr):
-    service = sheets.__get_service()
+    service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_WEEK_HEADER).execute()
     values = result.get('values', [])
@@ -24,7 +24,7 @@ def is_valid(week, datestr):
 
 
 def get_new_members():
-    service = sheets.__get_service()
+    service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_MEMBERS).execute()
     values = result.get('values', [])
@@ -38,7 +38,7 @@ def get_new_members():
 
 
 def get_leaderboard():
-    service = sheets.__get_service()
+    service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_LEADERBOARD).execute()
     values = result.get('values', [])
