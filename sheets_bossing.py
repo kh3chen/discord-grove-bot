@@ -243,7 +243,7 @@ class SheetsBossing:
             members_dict[sheets_member.party_role_id].append(sheets_member)
 
     def get_boss_names(self):
-        return self.__bosses_dict.keys()
+        return list(self.__bosses_dict.keys())
 
     def update_parties(self, new_sheets_parties: list[Party]):
         def party_to_sheets_values(sheets_party: Party):
