@@ -62,7 +62,7 @@ async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.R
 @commands.has_role('Junior')
 async def bossparty_create(ctx, boss_name):
     await ctx.defer()
-    await bossparty.create(ctx, boss_name)
+    await bossparty.create(bot, ctx, boss_name)
 
 
 @_bossparty.command(name='settime', brief='Set the boss party time')

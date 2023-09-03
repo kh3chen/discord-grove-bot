@@ -176,8 +176,8 @@ class Member:
         return [
             str(self.boss_name),
             str(self.party_number),
-            str(self.user_id),
             str(self.party_role_id),
+            str(self.user_id),
             str(self.job)
         ]
 
@@ -187,7 +187,7 @@ class SheetsBossing:
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:D'
     RANGE_PARTIES = 'Parties!A2:L'
-    RANGE_MEMBERS = 'Members!A2:C'
+    RANGE_MEMBERS = 'Members!A2:E'
 
     @staticmethod
     def __get_bosses_dict():
@@ -242,6 +242,8 @@ class SheetsBossing:
         for sheets_member in self.__members:
             members_dict[sheets_member.party_role_id].append(sheets_member)
 
+        return members_dict
+
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
 
@@ -260,6 +262,9 @@ class SheetsBossing:
     def append_members(self, new_sheets_members: list[Member]):
         def member_to_sheets_values(sheets_member: Member):
             return sheets_member.to_sheets_value()
+
+        print(new_sheets_members)
+        print(list(map(member_to_sheets_values, new_sheets_members)))
 
         body = {
             'values': list(map(member_to_sheets_values, new_sheets_members))

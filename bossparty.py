@@ -49,13 +49,21 @@ async def sync(ctx):
 
 async def add(bot, ctx, member, discord_party, job):
     # Validate that this is a boss party role
-    if discord_party.name.find(' ') != -1 and discord_party.name[
-                                              0:discord_party.name.find(' ')] not in sheets_bossing.get_boss_names():
-        await ctx.send(f'Error - {discord_party.mention} is not a boss party.')
+    try:
+        sheets_party = next(
+            sheets_party for sheets_party in sheets_bossing.parties if
+            sheets_party.role_id == str(discord_party.id))
+    except StopIteration:
+        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
         return
 
-    if discord_party.name.find('Retired') != -1:
+    if sheets_party.status == SheetsParty.PartyStatus.retired:
         await ctx.send(f'Error - {discord_party.mention} is retired.')
+        return
+
+    # Check if the party is already full
+    if sheets_party.status == SheetsParty.PartyStatus.full or len(discord_party.members) == 6:
+        await ctx.send(f'Error - {discord_party.mention} is full.')
         return
 
     # Check if the user is already in the party
@@ -63,13 +71,12 @@ async def add(bot, ctx, member, discord_party, job):
         await ctx.send(f'Error - {member.mention} is already in {discord_party.mention}.')
         return
 
-    # Check if the party is already full
-    if len(discord_party.members) == 6:
-        await ctx.send(f'Error - {discord_party.mention} is full.')
-        return
-
     # Add member to member sheet
-    sheets_bossing.append_members([SheetsMember([str(member.id), str(discord_party.id), job])])
+    sheets_bossing.append_members([SheetsMember(boss_name=sheets_party.boss_name,
+                                                party_number=sheets_party.party_number,
+                                                party_role_id=sheets_party.role_id,
+                                                user_id=str(member.id),
+                                                job=job)])
 
     # Add role to user
     await member.add_roles(discord_party)
@@ -79,15 +86,6 @@ async def add(bot, ctx, member, discord_party, job):
 
     # Success
     await ctx.send(f'Successfully added {member.mention} {job} to {discord_party.mention}.')
-
-    # Update boss list message
-    try:
-        sheets_party = next(
-            sheets_party for sheets_party in sheets_bossing.parties if
-            sheets_party.role_id == str(discord_party.id))
-    except StopIteration:
-        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
-        return
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -104,22 +102,24 @@ async def add(bot, ctx, member, discord_party, job):
 
 async def remove(bot, ctx, member, discord_party):
     # Validate that this is a boss party role
-    if discord_party.name.find(' ') != -1 and discord_party.name[
-                                              0:discord_party.name.find(' ')] not in sheets_bossing.get_boss_names():
-        await ctx.send(f'Error - {discord_party.mention} is not a boss party.')
+    try:
+        sheets_party = next(
+            sheets_party for sheets_party in sheets_bossing.parties if
+            sheets_party.role_id == str(discord_party.id))
+    except StopIteration:
+        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
         return
 
-    # Check if the user is not in the party
     # Check if user has the role
     if member not in discord_party.members:
         await ctx.send('Error - Member not in boss party.')
         return
 
     # Remove member from member sheet
-    deleted_member = SheetsMember(discord_party.name[0:discord_party.name.find(' ')],
-                                  discord_party.id,
-                                  member.id)
-    sheets_bossing.delete_member(deleted_member)
+    sheets_bossing.delete_member(SheetsMember(boss_name=sheets_party.boss_name,
+                                              party_number=sheets_party.party_number,
+                                              party_role_id=sheets_party.role_id,
+                                              user_id=str(member.id)))
 
     # Remove role from user
     await member.remove_roles(discord_party)
@@ -129,15 +129,6 @@ async def remove(bot, ctx, member, discord_party):
 
     # Success
     await ctx.send(f'Successfully removed {member.mention} from {discord_party.mention}.')
-
-    # Update boss list message
-    try:
-        sheets_party = next(
-            sheets_party for sheets_party in sheets_bossing.parties if
-            sheets_party.role_id == str(discord_party.id))
-    except StopIteration:
-        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
-        return
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -152,7 +143,7 @@ async def remove(bot, ctx, member, discord_party):
             suppress_embeds=True)
 
 
-async def create(ctx, boss_name):
+async def create(bot, ctx, boss_name):
     # get list of bosses from sheet
     bosses_dict = sheets_bossing.bosses_dict
 
@@ -205,6 +196,9 @@ async def create(ctx, boss_name):
     __update_with_new_parties(discord_parties)
 
     await ctx.send(f'Successfully created {new_boss_party.mention}.')
+
+    # Remake boss party list
+    await remake_boss_party_list(bot, ctx)
 
 
 async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
@@ -385,6 +379,10 @@ async def listremake(bot, ctx):
         await ctx.send('Error - confirmation expired. Party retire has been cancelled.')
         return
 
+    await remake_boss_party_list(bot, ctx)
+
+
+async def remake_boss_party_list(bot, ctx):
     # Delete existing messages
     boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
 
@@ -557,7 +555,7 @@ async def __update_boss_party_list_message(message, sheets_party: SheetsParty,
         message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n'
     for sheets_member in party_sheets_members:
         message_content += f'<@{sheets_member.user_id}> {sheets_member.job}\n'
-    if sheets_party.status == SheetsParty.PartyStatus.open.name:
+    if sheets_party.status == SheetsParty.PartyStatus.open.name or sheets_party.status == SheetsParty.PartyStatus.new.name:
         for n in range(0, 6 - int(sheets_party.member_count)):
             message_content += 'Open\n'
 
