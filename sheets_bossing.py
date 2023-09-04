@@ -126,7 +126,7 @@ class Party:
         hour = int(self.hour)
         minute = int(self.minute)
         now = datetime.now(timezone.utc)
-        if now.isoweekday() == self.weekday:
+        if now.isoweekday() == weekday:
             if now.hour > hour or now.hour == hour and now.minute > minute:
                 next_time = (now + timedelta(days=7)).replace(hour=hour, minute=minute)
                 return str(int(datetime.timestamp(next_time)))
