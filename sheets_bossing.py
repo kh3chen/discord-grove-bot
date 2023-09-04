@@ -269,9 +269,6 @@ class SheetsBossing:
         def member_to_sheets_values(sheets_member: Member):
             return sheets_member.to_sheets_value()
 
-        print(new_sheets_members)
-        print(list(map(member_to_sheets_values, new_sheets_members)))
-
         body = {
             'values': list(map(member_to_sheets_values, new_sheets_members))
         }
@@ -315,14 +312,20 @@ class SheetsBossing:
                 spreadsheetId=self.SPREADSHEET_BOSS_PARTIES, body=delete_body).execute()
 
             deleted_sheets_member = self.__members[delete_index]
+
+            # Remove deleted member from members list
             self.__members = self.__members[0:delete_index] + self.__members[delete_index + 1:]
+
+            # Remove deleted member from members dict
             for sheets_member in self.__members_dict[delete_sheets_member.party_role_id]:
                 if sheets_member.user_id == delete_sheets_member.user_id and sheets_member.job == delete_sheets_member.job:
                     self.__members_dict[delete_sheets_member.party_role_id].remove(sheets_member)
                     break
 
+            print(self.__members)
+
             return deleted_sheets_member
 
         except HttpError as error:
             print(f"An error occurred: {error}")
-            return error
+            raise error

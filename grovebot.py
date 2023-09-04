@@ -74,6 +74,7 @@ async def bossparty_create(ctx, boss_name):
 async def bossparty_settime(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
     await bossparty.settime(bot, ctx, boss_party_role, weekday, hour, minute)
 
+
 @_bossparty.command(name='cleartime', brief='Clear the boss party time')
 @commands.has_role('Junior')
 async def bossparty_cleartime(ctx, boss_party_role: discord.Role):
