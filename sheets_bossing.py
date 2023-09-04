@@ -234,19 +234,19 @@ class SheetsBossing:
 
     @property
     def bosses_dict(self):
-        return copy.deepcopy(self.__bosses_dict)
+        return self.__bosses_dict
 
     @property
     def parties(self):
-        return copy.deepcopy(self.__parties)
+        return self.__parties
 
     @property
     def members(self):
-        return copy.deepcopy(self.__members)
+        return self.__members
 
     @property
     def members_dict(self):
-        return copy.deepcopy(self.__members_dict)
+        return self.__members_dict
 
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())

@@ -97,11 +97,23 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
         raise Exception(f'Error - {discord_party.name} is full.')
 
     # Check if the user is already in the party
-    if member in discord_party.members:
-        for sheets_member in sheets_bossing.members_dict[sheets_party.role_id]:
-            # Can have multiple characters in fill
-            if sheets_member.user_id == str(member.id) and sheets_member.job == job:
-                raise Exception(f'Error - {member.name} {job} is already in {discord_party.name}.')
+    try:
+        found_discord_member = next(
+            discord_member for discord_member in discord_party.members if discord_member.id == member.id)
+    except StopIteration:
+        found_discord_member = None
+
+    if found_discord_member:
+        # Can have multiple characters in fill
+        try:
+            found_sheets_member = next(
+                sheets_member for sheets_member in sheets_bossing.members_dict[sheets_party.role_id] if
+                sheets_member.user_id == str(member.id) and sheets_member.job == job)
+        except StopIteration:
+            found_sheets_member = None
+
+        if found_sheets_member:
+            raise Exception(f'Error - {member.mention} {job} is already in {discord_party.name}.')
 
     # Add role to user
     await member.add_roles(discord_party)
@@ -115,7 +127,7 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
     __update_existing_party(discord_party)
 
     # Success
-    await ctx.send(f'Successfully added {member.name} {job} to {discord_party.name}.')
+    await ctx.send(f'Successfully added {member.mention} {job} to {discord_party.name}.')
     if sheets_party.boss_list_message_id:
         # Update boss list message
 
@@ -166,8 +178,10 @@ async def remove(bot, ctx, member, discord_party, job=''):
 
 async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     # Check if user has the role
-    if member not in discord_party.members:
-        raise Exception(f'Error - {member.name} is not in {discord_party.name}.')
+    try:
+        next(discord_member for discord_member in discord_party.members if discord_member.id == member.id)
+    except StopIteration:
+        raise Exception(f'Error - {member.mention} is not in {discord_party.name}.')
 
     if sheets_party.status == SheetsParty.PartyStatus.fill.name and job is not None:
         # Can have multiple characters in fill. Match by job
@@ -188,7 +202,7 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     elif found_character and has_role_count > 1:
         pass
     else:
-        raise Exception(f'Error - {member.name} {job} is not in {discord_party.name}.')
+        raise Exception(f'Error - {member.mention} {job} is not in {discord_party.name}.')
 
     # Remove member from member sheet
     removed_sheets_member = sheets_bossing.delete_member(
@@ -199,7 +213,7 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
     __update_existing_party(discord_party)
 
     # Success
-    await ctx.send(f'Successfully removed {member.name} {removed_sheets_member.job} from {discord_party.name}.')
+    await ctx.send(f'Successfully removed {member.mention} {removed_sheets_member.job} from {discord_party.name}.')
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -336,7 +350,7 @@ async def retire(bot, ctx, discord_party):
     # Confirmation
     confirmation_message_body = f'Are you sure you want to retire {discord_party.name}? The following {len(discord_party.members)} member(s) will be removed from the party:\n'
     for member in discord_party.members:
-        confirmation_message_body += f'{member.name}\n'
+        confirmation_message_body += f'{member.mention}\n'
     confirmation_message_body += f'\nReact with 👍 to proceed.'
 
     confirmation_message = await ctx.send(confirmation_message_body)
@@ -398,11 +412,35 @@ async def __update_status(bot, ctx, discord_party, status):
         await ctx.send(f'Error - {discord_party.name} is already {status.name}.')
         return
 
-    if status == SheetsParty.PartyStatus.exclusive:
-        sheets_party.status = SheetsParty.PartyStatus.exclusive.name
-    elif status == SheetsParty.PartyStatus.open:
-        sheets_party.status = SheetsParty.PartyStatus.open.name
+    if status != SheetsParty.PartyStatus.exclusive and status != SheetsParty.PartyStatus.open:
+        await ctx.send(f'Error - {discord_party.name} cannot be {status.name}.')
 
+    if sheets_party.status == SheetsParty.PartyStatus.new.name:
+        # Remove fill roles of members if changing status from new
+        fill_party_id = sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
+        if fill_party_id:  # Fill party exists
+            discord_fill_party = ctx.guild.get_role(int(fill_party_id))
+            try:
+                sheets_fill_party = next(
+                    sheets_party for sheets_party in sheets_bossing.parties if
+                    sheets_party.role_id == fill_party_id)
+
+                for discord_member in discord_party.members:
+                    try:
+                        sheets_member = next(
+                            sheets_member for sheets_member in sheets_bossing.members_dict[fill_party_id] if
+                            sheets_member.user_id == str(discord_member.id))
+                        try:
+                            await _remove(bot, ctx, discord_member, discord_fill_party, sheets_member.job,
+                                          sheets_fill_party)
+                        except Exception as e:
+                            await ctx.send(str(e))
+                    except StopIteration:
+                        await ctx.send(f'Error - Unable to find {discord_member.mention} in {discord_party.name}.')
+            except StopIteration:
+                await ctx.send(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
+
+    sheets_party.status = status.name
     sheets_bossing.update_parties(new_sheets_parties)
     await ctx.send(f'{discord_party.name} is now {sheets_party.status}.')
 
