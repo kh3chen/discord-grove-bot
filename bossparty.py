@@ -130,19 +130,18 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
     await ctx.send(f'Successfully added {member.mention} {job} to {discord_party.mention}.', ephemeral=True)
     if sheets_party.boss_list_message_id:
         # Update boss list message
-
         boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
         message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
         await __update_boss_party_list_message(ctx, message, sheets_party)
 
     if sheets_party.party_thread_id:
+        # Update thread title, message, and send update in party thread
         boss_forum = bot.get_channel(int(sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
         party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
         if sheets_party.party_message_id:
             party_message = await party_thread.fetch_message(sheets_party.party_message_id)
         else:
             party_message = None
-
         await __update_thread(ctx, party_thread, party_message, sheets_party)
         await party_thread.send(f'{member.mention} {job} has been added to {discord_party.mention}.')
 
@@ -224,7 +223,6 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
-
         boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
         message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
         await __update_boss_party_list_message(ctx, message, sheets_party)
@@ -237,7 +235,6 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
             party_message = await party_thread.fetch_message(sheets_party.party_message_id)
         else:
             party_message = None
-
         await __update_thread(ctx, party_thread, party_message, sheets_party)
         await party_thread.send(
             f'{member.mention} {removed_sheets_member.job} has been removed from {discord_party.mention}.')
@@ -300,14 +297,12 @@ async def create(bot, ctx, boss_name):
                                                                content=f'{new_boss_party.mention}')
     await ctx.send(f'Created thread {party_thread_with_message.thread.mention} for {new_boss_party.mention}.',
                    ephemeral=True)
-
     sheets_parties = sheets_bossing.parties
     for sheets_party in sheets_parties:
         if sheets_party.role_id == str(new_boss_party.id):
             sheets_party.party_thread_id = party_thread_with_message.thread.id
             sheets_party.party_message_id = party_thread_with_message.message.id
             break
-
     sheets_bossing.update_parties(sheets_parties)
 
     await ctx.send(f'Successfully created {new_boss_party.name}.', ephemeral=True)
@@ -351,10 +346,19 @@ async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
-
         boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
         message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
         await __update_boss_party_list_message(ctx, message, sheets_party)
+
+    if sheets_party.party_thread_id:
+        # Update thread title, message, and send update in party thread
+        boss_forum = bot.get_channel(int(sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
+        party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+        if sheets_party.party_message_id:
+            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+        else:
+            party_message = None
+        await __update_thread(ctx, party_thread, party_message, sheets_party)
 
 
 async def retire(bot, ctx, discord_party):
@@ -406,6 +410,16 @@ async def retire(bot, ctx, discord_party):
         await message.delete()
 
     __update_existing_party(discord_party)
+
+    if sheets_party.party_thread_id:
+        # Update thread title, message, and send update in party thread
+        boss_forum = bot.get_channel(int(sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
+        party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+        if sheets_party.party_message_id:
+            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+        else:
+            party_message = None
+        await __update_thread(ctx, party_thread, party_message, sheets_party)
 
     # Remove members from party
     for member in discord_party.members:
@@ -474,10 +488,19 @@ async def __update_status(bot, ctx, discord_party, status):
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
-
         boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
         message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
         await __update_boss_party_list_message(ctx, message, sheets_party)
+
+    if sheets_party.party_thread_id:
+        # Update thread title, message, and send update in party thread
+        boss_forum = bot.get_channel(int(sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
+        party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+        if sheets_party.party_message_id:
+            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+        else:
+            party_message = None
+        await __update_thread(ctx, party_thread, party_message, sheets_party)
 
 
 async def listremake(bot, ctx):
@@ -645,6 +668,9 @@ def __update_existing_party(discord_party):
             if discord_party.name.find('Retired') != -1:
                 # Update to retired
                 sheets_party.status = SheetsParty.PartyStatus.retired.name
+                sheets_party.weekday = ''
+                sheets_party.hour = ''
+                sheets_party.day = ''
                 sheets_party.boss_list_message_id = ''
                 sheets_party.boss_list_decorator_id = ''
             break
@@ -682,6 +708,8 @@ async def __update_thread(ctx, party_thread: discord.ForumChannel, party_message
     title = f'{sheets_party.boss_name} Party {sheets_party.party_number} - '
     if sheets_party.status == SheetsParty.PartyStatus.new.name:
         title += 'New'
+    elif sheets_party.status == SheetsParty.PartyStatus.retired.name:
+        title += 'Retired'
     elif sheets_party.status == SheetsParty.PartyStatus.exclusive.name or sheets_party.status == SheetsParty.PartyStatus.open.name and sheets_party.member_count == '6':
         title += 'Full'
     else:
