@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import copy
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
@@ -50,10 +51,9 @@ class Party:
     class PartyStatus(Enum):
         new = 0
         open = 1
-        full = 2
-        exclusive = 3
-        fill = 4
-        retired = 5
+        exclusive = 2
+        fill = 3
+        retired = 4
 
     class Weekday(Enum):
         mon = 1
@@ -234,19 +234,19 @@ class SheetsBossing:
 
     @property
     def bosses_dict(self):
-        return self.__bosses_dict
+        return copy.deepcopy(self.__bosses_dict)
 
     @property
     def parties(self):
-        return self.__parties
+        return copy.deepcopy(self.__parties)
 
     @property
     def members(self):
-        return self.__members
+        return copy.deepcopy(self.__members)
 
     @property
     def members_dict(self):
-        return self.__members_dict
+        return copy.deepcopy(self.__members_dict)
 
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())

@@ -71,7 +71,7 @@ async def add(bot, ctx, member, discord_party, job):
             except Exception as e:
                 await ctx.send(str(e))
                 return
-        elif sheets_party.status == SheetsParty.PartyStatus.open.name or sheets_party.status == SheetsParty.PartyStatus.full.name or sheets_party.status == SheetsParty.PartyStatus.exclusive.name:
+        elif sheets_party.status == SheetsParty.PartyStatus.open.name or sheets_party.status == SheetsParty.PartyStatus.exclusive.name:
             # Added party status is not New. Remove from fill
             discord_fill_party = ctx.guild.get_role(int(fill_party_id))
             try:
@@ -93,7 +93,7 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
         raise Exception(f'Error - {discord_party.name} is retired.')
 
     # Check if the party is already full
-    if sheets_party.status == SheetsParty.PartyStatus.full.name or len(discord_party.members) == 6:
+    if sheets_party.member_count == '6':
         raise Exception(f'Error - {discord_party.name} is full.')
 
     # Check if the user is already in the party
@@ -374,32 +374,14 @@ async def retire(bot, ctx, discord_party):
 
 
 async def exclusive(bot, ctx, discord_party):
-    new_sheets_parties = sheets_bossing.parties
-    try:
-        sheets_party = next(
-            sheets_party for sheets_party in new_sheets_parties if sheets_party.role_id == str(discord_party.id))
-    except StopIteration:
-        await ctx.send(f'Error - {discord_party.name} is not a boss party.')
-        return
-
-    sheets_party.status = SheetsParty.PartyStatus.exclusive.name
-    sheets_bossing.update_parties(new_sheets_parties)
-
-    await ctx.send(f'{discord_party.name} is now exclusive.')
-
-    if sheets_party.boss_list_message_id:
-        # Update boss list message
-
-        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
-        message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
-        await __update_boss_party_list_message(message, sheets_party)
-
-        await ctx.send(
-            content=f'Boss party list message updated:\n{config.DISCORD_CHANNELS_URL_PREFIX}{config.GROVE_GUILD_ID}/{BOSS_PARTY_LIST_CHANNEL_ID}/{message.id}.',
-            ephemeral=True, suppress_embeds=True)
+    await __update_status(bot, ctx, discord_party, SheetsParty.PartyStatus.exclusive)
 
 
 async def open(bot, ctx, discord_party):
+    await __update_status(bot, ctx, discord_party, SheetsParty.PartyStatus.open)
+
+
+async def __update_status(bot, ctx, discord_party, status):
     new_sheets_parties = sheets_bossing.parties
     try:
         sheets_party = next(
@@ -408,15 +390,21 @@ async def open(bot, ctx, discord_party):
         await ctx.send(f'Error - {discord_party.name} is not a boss party.')
         return
 
-    message_content = f'{discord_party.name} is now open.'
-    if len(discord_party.members) == 6:
-        message_content += " (Full)"
-        sheets_party.status = SheetsParty.PartyStatus.full.name
-    else:
-        sheets_party.status = SheetsParty.PartyStatus.open.name
-    sheets_bossing.update_parties(new_sheets_parties)
+    if sheets_party.status == SheetsParty.PartyStatus.retired.name:
+        await ctx.send(f'Error - {discord_party.name} is retired and cannot be reopened.')
+        return
 
-    await ctx.send(message_content)
+    if sheets_party.status == status.name:
+        await ctx.send(f'Error - {discord_party.name} is already {status.name}.')
+        return
+
+    if status == SheetsParty.PartyStatus.exclusive:
+        sheets_party.status = SheetsParty.PartyStatus.exclusive.name
+    elif status == SheetsParty.PartyStatus.open:
+        sheets_party.status = SheetsParty.PartyStatus.open.name
+
+    sheets_bossing.update_parties(new_sheets_parties)
+    await ctx.send(f'{discord_party.name} is now {sheets_party.status}.')
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -555,15 +543,12 @@ def __update_with_new_parties(discord_parties):
                                             0:new_sheets_party.party_number.find(' ')]  # Remove " (Retired)"
         elif discord_party.name.find('Fill') != -1:
             new_sheets_party.status = SheetsParty.PartyStatus.fill.name
-        elif len(discord_party.members) == 6:
-            new_sheets_party.status = SheetsParty.PartyStatus.full.name
         elif len(discord_party.members) == 0:
             new_sheets_party.status = SheetsParty.PartyStatus.new.name
         else:
             new_sheets_party.status = SheetsParty.PartyStatus.open.name
         new_sheets_party.member_count = str(len(discord_party.members))
 
-        print(parties_values_index)
         if parties_values_index == len(new_sheets_parties):
             # More party roles than in data
             new_sheets_parties.append(new_sheets_party)
@@ -591,13 +576,7 @@ def __update_existing_party(discord_party):
     for sheets_party in new_sheets_parties:
         if sheets_party.role_id == str(discord_party.id):  # The relevant party data
             sheets_party.member_count = str(len(discord_party.members))
-            if sheets_party.status == SheetsParty.PartyStatus.open.name and len(discord_party.members) == 6:
-                # Update to full if it is open
-                sheets_party.status = SheetsParty.PartyStatus.full.name
-            elif sheets_party.status == SheetsParty.PartyStatus.full.name and len(discord_party.members) < 6:
-                # Update to open if it is full
-                sheets_party.status = SheetsParty.PartyStatus.open.name
-            elif discord_party.name.find('Retired') != -1:
+            if discord_party.name.find('Retired') != -1:
                 # Update to retired
                 sheets_party.status = SheetsParty.PartyStatus.retired.name
                 sheets_party.boss_list_message_id = ''
