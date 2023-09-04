@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import copy
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
@@ -251,7 +250,7 @@ class SheetsBossing:
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
 
-    def update_parties(self, new_sheets_parties: list[Party]):
+    def update_parties(self, new_sheets_parties: list[Party], added_parties: list[Party] = []):
         def party_to_sheets_values(sheets_party: Party):
             return sheets_party.to_sheets_value()
 
@@ -262,6 +261,9 @@ class SheetsBossing:
                                                             range=self.RANGE_PARTIES,
                                                             valueInputOption="RAW", body=body).execute()
         self.__parties = new_sheets_parties
+
+        for added_party in added_parties:
+            self.__members_dict[added_party.role_id] = []
 
     def append_members(self, new_sheets_members: list[Member]):
         def member_to_sheets_values(sheets_member: Member):

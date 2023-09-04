@@ -63,8 +63,7 @@ async def add(bot, ctx, member, discord_party, job):
             discord_fill_party = ctx.guild.get_role(int(fill_party_id))
             try:
                 sheets_fill_party = next(
-                    sheets_party for sheets_party in sheets_bossing.parties if
-                    sheets_party.role_id == fill_party_id)
+                    sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == fill_party_id)
             except StopIteration:
                 raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
@@ -78,8 +77,7 @@ async def add(bot, ctx, member, discord_party, job):
             discord_fill_party = ctx.guild.get_role(int(fill_party_id))
             try:
                 sheets_fill_party = next(
-                    sheets_party for sheets_party in sheets_bossing.parties if
-                    sheets_party.role_id == fill_party_id)
+                    sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == fill_party_id)
             except StopIteration:
                 raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
@@ -173,8 +171,7 @@ async def remove(bot, ctx, member, discord_party, job=''):
             discord_fill_party = ctx.guild.get_role(int(fill_party_id))
             try:
                 sheets_fill_party = next(
-                    sheets_party for sheets_party in sheets_bossing.parties if
-                    sheets_party.role_id == fill_party_id)
+                    sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == fill_party_id)
             except StopIteration:
                 raise Exception(f'Error - Unable to find party {discord_party.name} in the boss parties data.')
 
@@ -249,9 +246,6 @@ async def _remove(bot, ctx, member, discord_party, job, sheets_party):
 
 
 async def create(bot, ctx, boss_name):
-    # get list of bosses from sheet
-    bosses_dict = sheets_bossing.bosses_dict
-
     if boss_name not in sheets_bossing.get_boss_names():
         await ctx.send(f'Error - `{boss_name}` is not a valid boss name. Valid boss names are as follows:\n'
                        f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, sheets_bossing.get_boss_names())}`',
@@ -300,6 +294,22 @@ async def create(bot, ctx, boss_name):
     # Update spreadsheet
     __update_with_new_parties(discord_parties)
 
+    # Create thread
+    boss_forum = bot.get_channel(int(sheets_bossing.bosses_dict[boss_name].forum_channel_id))
+    party_thread_with_message = await boss_forum.create_thread(name=f'{new_boss_party.name} - New',
+                                                               content=f'{new_boss_party.mention}')
+    await ctx.send(f'Created thread {party_thread_with_message.thread.mention} for {new_boss_party.mention}.',
+                   ephemeral=True)
+
+    sheets_parties = sheets_bossing.parties
+    for sheets_party in sheets_parties:
+        if sheets_party.role_id == str(new_boss_party.id):
+            sheets_party.party_thread_id = party_thread_with_message.thread.id
+            sheets_party.party_message_id = party_thread_with_message.message.id
+            break
+
+    sheets_bossing.update_parties(sheets_parties)
+
     await ctx.send(f'Successfully created {new_boss_party.name}.', ephemeral=True)
 
     # Remake boss party list
@@ -309,7 +319,8 @@ async def create(bot, ctx, boss_name):
 async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
     weekday = SheetsParty.Weekday[weekday_str]
     if not weekday:
-        await ctx.send('Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]', ephemeral=True)
+        await ctx.send('Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]',
+                       ephemeral=True)
         return
 
     if hour < 0 or hour > 23:
@@ -411,10 +422,10 @@ async def open(bot, ctx, discord_party):
 
 
 async def __update_status(bot, ctx, discord_party, status):
-    new_sheets_parties = sheets_bossing.parties
+    sheets_parties = sheets_bossing.parties
     try:
         sheets_party = next(
-            sheets_party for sheets_party in new_sheets_parties if sheets_party.role_id == str(discord_party.id))
+            sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
     except StopIteration:
         await ctx.send(f'Error - {discord_party.name} is not a boss party.', ephemeral=True)
         return
@@ -437,8 +448,7 @@ async def __update_status(bot, ctx, discord_party, status):
             discord_fill_party = ctx.guild.get_role(int(fill_party_id))
             try:
                 sheets_fill_party = next(
-                    sheets_party for sheets_party in sheets_bossing.parties if
-                    sheets_party.role_id == fill_party_id)
+                    sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == fill_party_id)
 
                 for discord_member in discord_party.members:
                     try:
@@ -451,12 +461,14 @@ async def __update_status(bot, ctx, discord_party, status):
                         except Exception as e:
                             await ctx.send(str(e), ephemeral=True)
                     except StopIteration:
-                        await ctx.send(f'Error - Unable to find {discord_member.mention} in {discord_party.name}.', ephemeral=True)
+                        await ctx.send(f'Error - Unable to find {discord_member.mention} in {discord_party.name}.',
+                                       ephemeral=True)
             except StopIteration:
-                await ctx.send(f'Error - Unable to find party {discord_party.name} in the boss parties data.', ephemeral=True)
+                await ctx.send(f'Error - Unable to find party {discord_party.name} in the boss parties data.',
+                               ephemeral=True)
 
     sheets_party.status = status.name
-    sheets_bossing.update_parties(new_sheets_parties)
+    sheets_bossing.update_parties(sheets_parties)
     await ctx.send(f'{discord_party.name} is now {sheets_party.status}.', ephemeral=True)
 
     if sheets_party.boss_list_message_id:
@@ -534,7 +546,8 @@ async def remake_boss_party_list(bot, ctx):
         message = await boss_party_list_channel.send(f'{sheets_party.boss_name} Party {sheets_party.party_number}')
         sheets_party.boss_list_message_id = str(message.id)
 
-        await __update_boss_party_list_message(ctx, message, sheets_party, sheets_bossing.members_dict[sheets_party.role_id])
+        await __update_boss_party_list_message(ctx, message, sheets_party,
+                                               sheets_bossing.members_dict[sheets_party.role_id])
 
     sheets_bossing.update_parties(new_sheets_parties)
 
@@ -575,8 +588,9 @@ def __get_discord_parties(ctx, boss_names):
 def __update_with_new_parties(discord_parties):
     parties_pairs = []
     # get list of parties from sheet
-    new_sheets_parties = sheets_bossing.parties
-    print(f'Before:\n{new_sheets_parties}')
+    sheets_parties = sheets_bossing.parties
+    added_sheets_parties = []
+    print(f'Before:\n{sheets_parties}')
     parties_values_index = 0
     for discord_party in discord_parties:
         new_sheets_party = SheetsParty.from_sheets_value([])
@@ -598,23 +612,25 @@ def __update_with_new_parties(discord_parties):
             new_sheets_party.status = SheetsParty.PartyStatus.open.name
         new_sheets_party.member_count = str(len(discord_party.members))
 
-        if parties_values_index == len(new_sheets_parties):
+        if parties_values_index == len(sheets_parties):
             # More party roles than in data
-            new_sheets_parties.append(new_sheets_party)
+            sheets_parties.append(new_sheets_party)
+            added_sheets_parties.append(new_sheets_party)
             parties_pairs.append((discord_party, new_sheets_party))
-        elif new_sheets_parties[parties_values_index].role_id != new_sheets_party.role_id:
+        elif sheets_parties[parties_values_index].role_id != new_sheets_party.role_id:
             # Party role doesn't match data, there must be a new record
-            new_sheets_parties.insert(parties_values_index, new_sheets_party)
+            sheets_parties.insert(parties_values_index, new_sheets_party)
+            added_sheets_parties.append(new_sheets_party)
             parties_pairs.append((discord_party, new_sheets_party))
         else:  # Data exists
-            parties_pairs.append((discord_party, new_sheets_parties[parties_values_index]))
+            parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
 
         parties_values_index += 1
 
-    print(f'After:\n{new_sheets_parties}')
+    print(f'After:\n{sheets_parties}')
 
     # Update parties
-    sheets_bossing.update_parties(new_sheets_parties)
+    sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
 
     return parties_pairs
 
@@ -655,9 +671,8 @@ async def __update_boss_party_list_message(ctx, message: discord.Message, sheets
 
     await message.edit(content=message_content)
 
-    await ctx.send(
-        content=f'Boss party list message updated for <@&{sheets_party.role_id}>:\n{message.jump_url}',
-        ephemeral=True, suppress_embeds=True)
+    await ctx.send(content=f'Boss party list message updated for <@&{sheets_party.role_id}>:\n{message.jump_url}',
+                   ephemeral=True, suppress_embeds=True)
 
 
 async def __update_thread(ctx, party_thread: discord.ForumChannel, party_message: discord.Message,
@@ -679,6 +694,5 @@ async def __update_thread(ctx, party_thread: discord.ForumChannel, party_message
         if timestamp:
             message += f'\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>'
 
-    await ctx.send(
-        content=f'Boss party thread updated for <@&{sheets_party.role_id}>:\n{party_thread.mention}',
-        ephemeral=True, suppress_embeds=True)
+    await ctx.send(content=f'Boss party thread updated for <@&{sheets_party.role_id}>:\n{party_thread.mention}',
+                   ephemeral=True, suppress_embeds=True)
