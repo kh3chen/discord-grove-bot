@@ -41,28 +41,28 @@ async def _bossparty(ctx):
 @_bossparty.command(name='sync')
 @commands.has_role('Junior')
 async def bossparty_sync(ctx):
-    await ctx.defer()
+    await ctx.defer(ephemeral=True)
     await bossparty.sync(ctx)
 
 
 @_bossparty.command(name='add', brief='Add a boss party role to a member')
 @commands.has_role('Junior')
 async def bossparty_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
-    await ctx.defer()
+    await ctx.defer(ephemeral=True)
     await bossparty.add(bot, ctx, user, boss_party_role, job)
 
 
 @_bossparty.command(name='remove', brief='Remove a boss party role from a member')
 @commands.has_role('Junior')
 async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.Role, job=''):
-    await ctx.defer()
+    await ctx.defer(ephemeral=True)
     await bossparty.remove(bot, ctx, user, boss_party_role, job)
 
 
 @_bossparty.command(name='create', brief='Create a new boss party')
 @commands.has_role('Junior')
 async def bossparty_create(ctx, boss_name):
-    await ctx.defer()
+    await ctx.defer(ephemeral=True)
     await bossparty.create(bot, ctx, boss_name)
 
 
