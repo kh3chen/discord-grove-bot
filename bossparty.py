@@ -128,7 +128,7 @@ async def _add(bot, ctx, member, discord_party, job, sheets_party):
             ephemeral=True, suppress_embeds=True)
 
 
-async def remove(bot, ctx, member, discord_party, job):
+async def remove(bot, ctx, member, discord_party, job=''):
     # Validate that this is a boss party role
     try:
         sheets_party = next(
@@ -300,7 +300,7 @@ async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
     sheets_party.minute = str(minute)
     sheets_bossing.update_parties(sheets_parties)
 
-    message_content = f'Set <@&{sheets_party.role_id}> party time to {weekday.name} at +{hour}:{minute:02d}.\n'
+    message_content = f'Set {discord_party.name} time to {weekday.name} at +{hour}:{minute:02d}.\n'
     message_content += f'Next run: <t:{sheets_party.next_scheduled_time()}:F>'
     await ctx.send(message_content)
 
@@ -318,13 +318,19 @@ async def settime(bot, ctx, discord_party, weekday_str, hour, minute):
 
 async def retire(bot, ctx, discord_party):
     # Validate that this is a boss party role
-    if discord_party.name.find(' ') != -1 and discord_party.name[
-                                              0:discord_party.name.find(' ')] not in sheets_bossing.get_boss_names():
+    try:
+        sheets_party = next(
+            sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == str(discord_party.id))
+    except StopIteration:
         await ctx.send(f'Error - {discord_party.name} is not a boss party.')
         return
 
-    if discord_party.name.find('Retired') != -1:
+    if sheets_party.status == SheetsParty.PartyStatus.retired.name:
         await ctx.send(f'Error - {discord_party.name} is already retired.')
+        return
+
+    if sheets_party.status == SheetsParty.PartyStatus.new.name:
+        await ctx.send(f'Error - {discord_party.name} is new, you cannot retire a new party.')
         return
 
     # Confirmation
@@ -346,31 +352,25 @@ async def retire(bot, ctx, discord_party):
         await ctx.send('Error - confirmation expired. Party retire has been cancelled.')
         return
 
+    # Update party status to retired
+    discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
+
+    # Delete boss party list messages
+    boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
+    if sheets_party.boss_list_message_id:
+        message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
+        await message.delete()
+    if sheets_party.boss_list_decorator_id:
+        message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_decorator_id)
+        await message.delete()
+
+    __update_existing_party(discord_party)
+
     # Remove members from party
     for member in discord_party.members:
         await remove(bot, ctx, member, discord_party)
 
-    # Update party status to retired
-    discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
-    try:
-        sheets_party = next(
-            sheets_party for sheets_party in sheets_bossing.parties if sheets_party.role_id == str(discord_party.id))
-
-        # Delete boss party list messages
-        boss_party_list_channel = bot.get_channel(BOSS_PARTY_LIST_CHANNEL_ID)
-        if sheets_party.boss_list_message_id:
-            message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
-            await message.delete()
-        if sheets_party.boss_list_decorator_id:
-            message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_decorator_id)
-            await message.delete()
-
-        __update_existing_party(discord_party)
-        await ctx.send(f'{discord_party.name} has been retired.')
-
-    except StopIteration:  # Could not find
-        await ctx.send(f'Error - Unable to find the data for {discord_party.name} in the sheet.')
-        return
+    await ctx.send(f'{discord_party.name} has been retired.')
 
 
 async def exclusive(bot, ctx, discord_party):
@@ -379,13 +379,13 @@ async def exclusive(bot, ctx, discord_party):
         sheets_party = next(
             sheets_party for sheets_party in new_sheets_parties if sheets_party.role_id == str(discord_party.id))
     except StopIteration:
-        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
+        await ctx.send(f'Error - {discord_party.name} is not a boss party.')
         return
 
     sheets_party.status = SheetsParty.PartyStatus.exclusive.name
     sheets_bossing.update_parties(new_sheets_parties)
 
-    await ctx.send(f'<@&{sheets_party.role_id}> is now exclusive.')
+    await ctx.send(f'{discord_party.name} is now exclusive.')
 
     if sheets_party.boss_list_message_id:
         # Update boss list message
@@ -405,10 +405,10 @@ async def open(bot, ctx, discord_party):
         sheets_party = next(
             sheets_party for sheets_party in new_sheets_parties if sheets_party.role_id == str(discord_party.id))
     except StopIteration:
-        await ctx.send(f'Error - Unable to find party {discord_party.id} in the boss parties data.')
+        await ctx.send(f'Error - {discord_party.name} is not a boss party.')
         return
 
-    message_content = f'<@&{sheets_party.role_id}> is now open.'
+    message_content = f'{discord_party.name} is now open.'
     if len(discord_party.members) == 6:
         message_content += " (Full)"
         sheets_party.status = SheetsParty.PartyStatus.full.name
