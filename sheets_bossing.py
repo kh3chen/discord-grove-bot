@@ -19,8 +19,7 @@ class Boss:
     INDEX_FILL_ROLE_ID = 4
 
     def __init__(self, bosses_value):
-        bosses_value = bosses_value[:Boss.LENGTH] + [''] * (
-                Boss.LENGTH - len(bosses_value))
+        bosses_value = bosses_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(bosses_value))
         self.boss_name = bosses_value[Boss.INDEX_BOSS_NAME]
         self._role_colour = bosses_value[Boss.INDEX_ROLE_COLOUR]
         self.human_readable_name = bosses_value[Boss.INDEX_HUMAN_READABLE_NAME]
@@ -63,8 +62,7 @@ class Party:
         sat = 6
         sun = 7
 
-    def __init__(self, role_id, boss_name, party_number, status, member_count, weekday, hour, minute,
-                 party_thread_id,
+    def __init__(self, role_id, boss_name, party_number, status, member_count, weekday, hour, minute, party_thread_id,
                  party_message_id, boss_list_message_id, boss_list_decorator_id):
         self.role_id = str(role_id)
         self.boss_name = str(boss_name)
@@ -81,20 +79,13 @@ class Party:
 
     @staticmethod
     def from_sheets_value(parties_value: list[str]):
-        parties_value = parties_value[:Party.LENGTH] + [''] * (
-                Party.LENGTH - len(parties_value))
-        return Party(parties_value[Party.INDEX_ROLE_ID],
-                     parties_value[Party.INDEX_BOSS_NAME],
-                     parties_value[Party.INDEX_PARTY_NUMBER],
-                     parties_value[Party.INDEX_STATUS],
-                     parties_value[Party.INDEX_MEMBER_COUNT],
-                     parties_value[Party.INDEX_WEEKDAY],
-                     parties_value[Party.INDEX_HOUR],
-                     parties_value[Party.INDEX_MINUTE],
-                     parties_value[Party.INDEX_PARTY_THREAD_ID],
-                     parties_value[Party.INDEX_PARTY_MESSAGE_ID],
-                     parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
-                     parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID])
+        parties_value = parties_value[:Party.LENGTH] + [''] * (Party.LENGTH - len(parties_value))
+        return Party(parties_value[Party.INDEX_ROLE_ID], parties_value[Party.INDEX_BOSS_NAME],
+                     parties_value[Party.INDEX_PARTY_NUMBER], parties_value[Party.INDEX_STATUS],
+                     parties_value[Party.INDEX_MEMBER_COUNT], parties_value[Party.INDEX_WEEKDAY],
+                     parties_value[Party.INDEX_HOUR], parties_value[Party.INDEX_MINUTE],
+                     parties_value[Party.INDEX_PARTY_THREAD_ID], parties_value[Party.INDEX_PARTY_MESSAGE_ID],
+                     parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID], parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID])
 
     def __str__(self):
         return str(self.to_sheets_value())
@@ -103,20 +94,9 @@ class Party:
         return self.__str__()
 
     def to_sheets_value(self):
-        return [
-            str(self.role_id),
-            str(self.boss_name),
-            str(self.party_number),
-            str(self.status),
-            str(self.member_count),
-            str(self.weekday),
-            str(self.hour),
-            str(self.minute),
-            str(self.party_thread_id),
-            str(self.party_message_id),
-            str(self.boss_list_message_id),
-            str(self.boss_list_decorator_id)
-        ]
+        return [str(self.role_id), str(self.boss_name), str(self.party_number), str(self.status),
+            str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),
+            str(self.party_message_id), str(self.boss_list_message_id), str(self.boss_list_decorator_id)]
 
     def next_scheduled_time(self):
         if not self.weekday or not self.hour or not self.minute:
@@ -128,13 +108,14 @@ class Party:
         now = datetime.now(timezone.utc)
         if now.isoweekday() == weekday:
             if now.hour > hour or now.hour == hour and now.minute > minute:
-                next_time = (now + timedelta(days=7)).replace(hour=hour, minute=minute)
+                next_time = (now + timedelta(days=7)).replace(hour=hour, minute=minute, second=0)
                 return str(int(datetime.timestamp(next_time)))
             else:
-                next_time = now.replace(hour=hour, minute=minute)
+                next_time = now.replace(hour=hour, minute=minute, second=0)
                 return str(int(datetime.timestamp(next_time)))
         else:
-            next_time = (now + timedelta(days=(weekday - now.isoweekday()) % 7)).replace(hour=hour, minute=minute)
+            next_time = (now + timedelta(days=(weekday - now.isoweekday()) % 7)).replace(hour=hour, minute=minute,
+                                                                                         second=0)
             return str(int(datetime.timestamp(next_time)))
 
 
@@ -156,12 +137,9 @@ class Member:
 
     @staticmethod
     def from_sheets_value(members_value: list[str]):
-        members_value = members_value[:Member.LENGTH] + [''] * (
-                Member.LENGTH - len(members_value))
-        return Member(members_value[Member.INDEX_BOSS_NAME],
-                      members_value[Member.INDEX_PARTY_NUMBER],
-                      members_value[Member.INDEX_PARTY_ROLE_ID],
-                      members_value[Member.INDEX_USER_ID],
+        members_value = members_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(members_value))
+        return Member(members_value[Member.INDEX_BOSS_NAME], members_value[Member.INDEX_PARTY_NUMBER],
+                      members_value[Member.INDEX_PARTY_ROLE_ID], members_value[Member.INDEX_USER_ID],
                       members_value[Member.INDEX_JOB])
 
     def __str__(self):
@@ -171,13 +149,7 @@ class Member:
         return self.__str__()
 
     def to_sheets_value(self):
-        return [
-            str(self.boss_name),
-            str(self.party_number),
-            str(self.party_role_id),
-            str(self.user_id),
-            str(self.job)
-        ]
+        return [str(self.boss_name), str(self.party_number), str(self.party_role_id), str(self.user_id), str(self.job)]
 
 
 class SheetsBossing:
@@ -189,8 +161,7 @@ class SheetsBossing:
 
     @staticmethod
     def __get_bosses_dict():
-        result = sheets.get_service().spreadsheets().values().get(
-            spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
             range=SheetsBossing.RANGE_BOSSES).execute()
         bosses_values = result.get('values', [])
         bosses = {}
@@ -200,16 +171,14 @@ class SheetsBossing:
 
     @staticmethod
     def __get_parties():
-        result = sheets.get_service().spreadsheets().values().get(
-            spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
             range=SheetsBossing.RANGE_PARTIES).execute()
         parties_values = result.get('values', [])
         return list(map(lambda parties_value: Party.from_sheets_value(parties_value), parties_values))
 
     @staticmethod
     def __get_members():
-        result = sheets.get_service().spreadsheets().values().get(
-            spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
             range=SheetsBossing.RANGE_MEMBERS).execute()
         members_values = result.get('values', [])
         return list(map(lambda members_value: Member.from_sheets_value(members_value), members_values))
@@ -254,12 +223,10 @@ class SheetsBossing:
         def party_to_sheets_values(sheets_party: Party):
             return sheets_party.to_sheets_value()
 
-        body = {
-            'values': list(map(party_to_sheets_values, new_sheets_parties))
-        }
+        body = {'values': list(map(party_to_sheets_values, new_sheets_parties))}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                                                            range=self.RANGE_PARTIES,
-                                                            valueInputOption="RAW", body=body).execute()
+                                                            range=self.RANGE_PARTIES, valueInputOption="RAW",
+                                                            body=body).execute()
         self.__parties = new_sheets_parties
 
         for added_party in added_parties:
@@ -269,12 +236,10 @@ class SheetsBossing:
         def member_to_sheets_values(sheets_member: Member):
             return sheets_member.to_sheets_value()
 
-        body = {
-            'values': list(map(member_to_sheets_values, new_sheets_members))
-        }
+        body = {'values': list(map(member_to_sheets_values, new_sheets_members))}
         sheets.get_service().spreadsheets().values().append(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                                                            range=self.RANGE_MEMBERS,
-                                                            valueInputOption="RAW", body=body).execute()
+                                                            range=self.RANGE_MEMBERS, valueInputOption="RAW",
+                                                            body=body).execute()
 
         self.__members += new_sheets_members
         for new_sheets_member in new_sheets_members:
@@ -293,23 +258,13 @@ class SheetsBossing:
             # Cannot find delete_member in sheets_members_list
             return
 
-        delete_body = {
-            "requests": [
-                {
-                    "deleteDimension": {
-                        "range": {
-                            "sheetId": self.SHEET_BOSS_PARTIES_MEMBERS,
-                            "dimension": "ROWS",
-                            "startIndex": delete_index + 1,  # Due to header row
-                            "endIndex": delete_index + 2
-                        }
-                    }
-                }
-            ]
-        }
+        delete_body = {"requests": [{"deleteDimension": {
+            "range": {"sheetId": self.SHEET_BOSS_PARTIES_MEMBERS, "dimension": "ROWS", "startIndex": delete_index + 1,
+                # Due to header row
+                "endIndex": delete_index + 2}}}]}
         try:
-            sheets.get_service().spreadsheets().batchUpdate(
-                spreadsheetId=self.SPREADSHEET_BOSS_PARTIES, body=delete_body).execute()
+            sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
+                body=delete_body).execute()
 
             deleted_sheets_member = self.__members[delete_index]
 
