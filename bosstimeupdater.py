@@ -12,6 +12,7 @@ from sheets_bossing import SheetsBossing
 class BossTimeUpdater:
     SEVEN_DAYS_IN_SECONDS = 604800
     ONE_DAY_IN_SECONDS = 86400
+    ONE_HOUR_IN_SECONDS = 3600
 
     class Event:
 
@@ -53,9 +54,16 @@ class BossTimeUpdater:
                 bisect.insort(events,
                               BossTimeUpdater.Event(reminder_time, BossTimeUpdater.Event.Type.reminder, sheets_party),
                               key=lambda e: e.timestamp)
-                update_time = int(next_scheduled_time)
+                # If it is currently less than one hour after a boss run time, an offset of a week is required to get the upcoming update time
+                last_update_time = int(
+                    next_scheduled_time) - BossTimeUpdater.SEVEN_DAYS_IN_SECONDS + BossTimeUpdater.ONE_HOUR_IN_SECONDS
                 bisect.insort(events,
-                              BossTimeUpdater.Event(update_time, BossTimeUpdater.Event.Type.update, sheets_party),
+                              BossTimeUpdater.Event(last_update_time, BossTimeUpdater.Event.Type.update, sheets_party),
+                              key=lambda event: event.timestamp)
+                last_update_time = int(
+                    next_scheduled_time) + BossTimeUpdater.ONE_HOUR_IN_SECONDS
+                bisect.insort(events,
+                              BossTimeUpdater.Event(last_update_time, BossTimeUpdater.Event.Type.update, sheets_party),
                               key=lambda event: event.timestamp)
 
         while True:
@@ -73,7 +81,7 @@ class BossTimeUpdater:
             test_channel = self.bot.get_channel(1148466293637402754)
             if events[0].update_type == BossTimeUpdater.Event.Type.reminder:
                 await test_channel.send(
-                    f'Reminder for <@&{events[0].sheets_party.role_id}>, run is in 24 hours at {events[0].sheets_party.next_scheduled_time()}')
+                    f'Reminder for <@&{events[0].sheets_party.role_id}>, run is in 24 hours at <t:{events[0].sheets_party.next_scheduled_time()}:F>')
             elif events[0].update_type == BossTimeUpdater.Event.Type.update:
                 await self.on_update(events[0].sheets_party)
 
