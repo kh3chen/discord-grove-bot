@@ -47,37 +47,33 @@ class BossTimeUpdater:
 
     async def updater_loop(self):
         events: list[BossTimeUpdater.Event] = []
+        now = int(datetime.timestamp(datetime.now()))
         for sheets_party in self.sheets_bossing.parties:
             next_scheduled_time = sheets_party.next_scheduled_time()
             if next_scheduled_time:
                 reminder_time = int(next_scheduled_time) - BossTimeUpdater.ONE_DAY_IN_SECONDS
+                if reminder_time - now < 0:
+                    # Reminder time is in the past
+                    reminder_time += BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
                 bisect.insort(events,
                               BossTimeUpdater.Event(reminder_time, BossTimeUpdater.Event.Type.reminder, sheets_party),
                               key=lambda e: e.timestamp)
-                # If it is currently less than one hour after a boss run time, an offset of a week is required to get the upcoming update time
-                last_update_time = int(
-                    next_scheduled_time) - BossTimeUpdater.SEVEN_DAYS_IN_SECONDS + BossTimeUpdater.ONE_HOUR_IN_SECONDS
+                update_time = int(next_scheduled_time) + BossTimeUpdater.ONE_HOUR_IN_SECONDS
+                if update_time - now > BossTimeUpdater.SEVEN_DAYS_IN_SECONDS:
+                    # Update time is more than 7 days away, so now is within an hour of the last scheduled run before its corresponding update
+                    update_time -= BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
                 bisect.insort(events,
-                              BossTimeUpdater.Event(last_update_time, BossTimeUpdater.Event.Type.update, sheets_party),
-                              key=lambda event: event.timestamp)
-                last_update_time = int(
-                    next_scheduled_time) + BossTimeUpdater.ONE_HOUR_IN_SECONDS
-                bisect.insort(events,
-                              BossTimeUpdater.Event(last_update_time, BossTimeUpdater.Event.Type.update, sheets_party),
+                              BossTimeUpdater.Event(update_time, BossTimeUpdater.Event.Type.update, sheets_party),
                               key=lambda event: event.timestamp)
 
         while True:
             print(events)
             now = int(datetime.timestamp(datetime.now()))
             sleep_duration = events[0].timestamp - now
-            if sleep_duration < 0:
-                events[0].timestamp += BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
-                events = events[1:] + events[0:1]
-                continue
-
-            print(f'Sleeping for {sleep_duration} seconds.')
-            await asyncio.sleep(sleep_duration)
-            print(f'Woke up!')
+            if sleep_duration > 0:
+                print(f'Sleeping for {sleep_duration} seconds.')
+                await asyncio.sleep(sleep_duration)
+                print(f'Woke up!')
             test_channel = self.bot.get_channel(1148466293637402754)
             if events[0].update_type == BossTimeUpdater.Event.Type.reminder:
                 await test_channel.send(
