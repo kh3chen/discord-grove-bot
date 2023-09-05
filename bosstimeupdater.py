@@ -1,12 +1,9 @@
 import asyncio
-import bisect
-import time
 from datetime import datetime
 from enum import Enum
 from typing import Callable, Coroutine
 
 from sheets_bossing import Party as SheetsParty
-from sheets_bossing import SheetsBossing
 
 
 class BossTimeUpdater:
@@ -53,16 +50,25 @@ class BossTimeUpdater:
                 if reminder_time - now < 0:
                     # Reminder time is in the past
                     reminder_time += BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
-                bisect.insort(events,
-                              BossTimeUpdater.Event(reminder_time, BossTimeUpdater.Event.Type.reminder, sheets_party),
-                              key=lambda e: e.timestamp)
+                index = 0
+                for event in events:
+                    if reminder_time < event.timestamp:
+                        break
+                    index += 1
+                events[index:index] = [
+                    BossTimeUpdater.Event(reminder_time, BossTimeUpdater.Event.Type.reminder, sheets_party)]
+
                 update_time = int(next_scheduled_time) + BossTimeUpdater.ONE_HOUR_IN_SECONDS
                 if update_time - now > BossTimeUpdater.SEVEN_DAYS_IN_SECONDS:
                     # Update time is more than 7 days away, so now is within an hour of the last scheduled run before its corresponding update
                     update_time -= BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
-                bisect.insort(events,
-                              BossTimeUpdater.Event(update_time, BossTimeUpdater.Event.Type.update, sheets_party),
-                              key=lambda event: event.timestamp)
+                index = 0
+                for event in events:
+                    if update_time < event.timestamp:
+                        break
+                    index += 1
+                events[index:index] = [
+                    BossTimeUpdater.Event(update_time, BossTimeUpdater.Event.Type.update, sheets_party)]
 
         while True:
             # Sleep until next event
