@@ -31,24 +31,22 @@ class BossTimeUpdater:
         def __repr__(self):
             return self.__str__()
 
-    def __init__(self, bot, sheets_bossing: SheetsBossing, on_update: Callable[[SheetsParty], Coroutine]):
-        self.bot = bot
-        self.sheets_bossing = sheets_bossing
+    def __init__(self, on_reminder: Callable[[SheetsParty], Coroutine], on_update: Callable[[SheetsParty], Coroutine]):
+        self.on_reminder = on_reminder
         self.on_update = on_update
         self.updater_task: asyncio.Task = None
 
-        self.restart_updater()
-
-    def restart_updater(self):
+    def restart_updater(self, sheets_party: list[SheetsParty]):
         if self.updater_task:
             self.updater_task.cancel()
-        else:
-            self.updater_task = asyncio.create_task(self.updater_loop())
 
-    async def updater_loop(self):
+        self.updater_task = asyncio.create_task(self.updater_loop(sheets_party))
+
+    async def updater_loop(self, sheets_party: list[SheetsParty]):
+        # Create events list
         events: list[BossTimeUpdater.Event] = []
         now = int(datetime.timestamp(datetime.now()))
-        for sheets_party in self.sheets_bossing.parties:
+        for sheets_party in sheets_party:
             next_scheduled_time = sheets_party.next_scheduled_time()
             if next_scheduled_time:
                 reminder_time = int(next_scheduled_time) - BossTimeUpdater.ONE_DAY_IN_SECONDS
@@ -67,19 +65,21 @@ class BossTimeUpdater:
                               key=lambda event: event.timestamp)
 
         while True:
-            print(events)
+            # Sleep until next event
+            print(f'Size {len(events)}: {events}')
             now = int(datetime.timestamp(datetime.now()))
             sleep_duration = events[0].timestamp - now
             if sleep_duration > 0:
                 print(f'Sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
                 print(f'Woke up!')
-            test_channel = self.bot.get_channel(1148466293637402754)
+
+            # Fire event
             if events[0].update_type == BossTimeUpdater.Event.Type.reminder:
-                await test_channel.send(
-                    f'Reminder for <@&{events[0].sheets_party.role_id}>, run is in 24 hours at <t:{events[0].sheets_party.next_scheduled_time()}:F>')
+                await self.on_reminder(events[0].sheets_party)
             elif events[0].update_type == BossTimeUpdater.Event.Type.update:
                 await self.on_update(events[0].sheets_party)
 
+            # Push event to back, 7 days later
             events[0].timestamp += BossTimeUpdater.SEVEN_DAYS_IN_SECONDS
             events = events[1:] + events[0:1]

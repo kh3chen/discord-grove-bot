@@ -93,6 +93,9 @@ class Party:
     def __repr__(self):
         return self.__str__()
 
+    def get_mention(self):
+        return f'<@&{self.role_id}>'
+
     def to_sheets_value(self):
         return [str(self.role_id), str(self.boss_name), str(self.party_number), str(self.status),
             str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),

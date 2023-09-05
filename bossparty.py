@@ -22,13 +22,40 @@ class BossParty:
         self.bot = bot
         self.sheets_bossing = SheetsBossing()
 
-        async def on_update(sheets_party):
-            print("Called on_update!")
-            test_channel = self.bot.get_channel(1148466293637402754)
-            await test_channel.send(
-                f'Update for <@&{sheets_party.role_id}>, next run is at <t:{sheets_party.next_scheduled_time()}:F>')
+        async def on_reminder(sheets_party: SheetsParty):
+            # Send reminder in party thread
+            if sheets_party.party_thread_id:
+                boss_forum = self.bot.get_channel(
+                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
+                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                timestamp = sheets_party.next_scheduled_time()
+                message = f'{sheets_party.get_mention()}\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n\n'
+                message += 'If you are unable to make this run, please act in accordance with Grove\'s bossing etiquette rules. Thank you!'
+                await party_thread.send(message)
 
-        self.boss_reminder = BossTimeUpdater(bot, self.sheets_bossing, on_update)
+        async def on_update(sheets_party: SheetsParty):
+            if sheets_party.boss_list_message_id:
+                # Update boss list message
+                boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+                message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
+                await self.__update_boss_party_list_message(None, message, sheets_party)
+
+            if sheets_party.party_thread_id:
+                # Update thread
+                boss_forum = self.bot.get_channel(
+                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
+                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                if sheets_party.party_message_id:
+                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                else:
+                    party_message = None
+                await self.__update_thread(None, party_thread, party_message, sheets_party)
+
+        self.boss_reminder = BossTimeUpdater(on_reminder, on_update)
+        self.restart_updater()
+
+    def restart_updater(self):
+        self.boss_reminder.restart_updater(self.sheets_bossing.parties)
 
     async def sync(self, ctx):
         discord_parties = self.__get_discord_parties(ctx)
@@ -382,9 +409,11 @@ class BossParty:
         sheets_party.hour = str(hour)
         sheets_party.minute = str(minute)
         self.sheets_bossing.update_parties(sheets_parties)
+        self.restart_updater()
+        timestamp = sheets_party.next_scheduled_time()
 
         message_content = f'Set {discord_party.mention} time to {weekday.name} at +{hour}:{minute:02d}.\n'
-        message_content += f'Next run: <t:{sheets_party.next_scheduled_time()}:F>'
+        message_content += f'Next run: <t:{timestamp}:F>'
         await self.__send(ctx, message_content, ephemeral=True)
 
         if sheets_party.boss_list_message_id:
@@ -403,6 +432,8 @@ class BossParty:
             else:
                 party_message = None
             await self.__update_thread(ctx, party_thread, party_message, sheets_party)
+            await party_thread.send(
+                f'{discord_party.mention} time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
 
     async def cleartime(self, ctx, discord_party):
         sheets_parties = self.sheets_bossing.parties
@@ -418,6 +449,7 @@ class BossParty:
         sheets_party.hour = ''
         sheets_party.minute = ''
         self.sheets_bossing.update_parties(sheets_parties)
+        self.restart_updater()
 
         await self.__send(ctx, f'Cleared {discord_party.mention} time.', ephemeral=True)
 
@@ -437,6 +469,7 @@ class BossParty:
             else:
                 party_message = None
             await self.__update_thread(ctx, party_thread, party_message, sheets_party)
+            await party_thread.send(f'{discord_party.mention} time has been cleared.')
 
     async def retire(self, ctx, discord_party):
         # Validate that this is a boss party role
@@ -492,6 +525,7 @@ class BossParty:
             await message.delete()
 
         self.__update_existing_party(discord_party)
+        self.restart_updater()
 
         if sheets_party.party_thread_id:
             # Update thread title, message, and send update in party thread
