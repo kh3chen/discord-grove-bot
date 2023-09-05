@@ -20,10 +20,21 @@ class BossParty:
             'Blaster', 'Hayato', 'Kanna', 'Mihile', 'Kaiser', 'Kain', 'Cadena', 'Angelic Buster', 'Zero', 'Beast Tamer',
             'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Lara', 'Hoyoung']
 
+
+
     def __init__(self, bot):
         self.bot = bot
         self.sheets_bossing = SheetsBossing()
-        self.boss_reminder = BossTimeUpdater(bot, self.sheets_bossing)
+
+        async def on_update(sheets_party):
+            print("Called on_update!")
+            test_channel = self.bot.get_channel(1148466293637402754)
+            await test_channel.send(
+                f'Update for <@&{sheets_party.role_id}>, next run is at {sheets_party.next_scheduled_time()}')
+
+        self.boss_reminder = BossTimeUpdater(bot, self.sheets_bossing, on_update)
+        
+
 
     async def sync(self, ctx):
         discord_parties = self.__get_discord_parties(ctx, self.sheets_bossing.get_boss_names())
