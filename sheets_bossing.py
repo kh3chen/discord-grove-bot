@@ -198,6 +198,13 @@ class SheetsBossing:
         return members_dict
 
     def __init__(self):
+        self.__bosses_dict = None
+        self.__parties = None
+        self.__members = None
+        self.__members_dict = None
+        self.sync_data()
+
+    def sync_data(self):
         self.__bosses_dict = self.__get_bosses_dict()
         self.__parties = self.__get_parties()
         self.__members = self.__get_members()

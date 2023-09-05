@@ -51,13 +51,14 @@ class BossParty:
                     party_message = None
                 await self.__update_thread(None, party_thread, party_message, sheets_party)
 
-        self.boss_reminder = BossTimeUpdater(on_reminder, on_update)
+        self.boss_time_updater = BossTimeUpdater(on_reminder, on_update)
         self.restart_updater()
 
     def restart_updater(self):
-        self.boss_reminder.restart_updater(self.sheets_bossing.parties)
+        self.boss_time_updater.restart_updater(self.sheets_bossing.parties)
 
-    async def sync(self, ctx):
+    async def scrape(self, ctx):
+        """ Used in the initial set up for the Boss Parties spreadsheet data, this function should no longer have any use."""
         discord_parties = self.__get_discord_parties(ctx)
 
         # Update parties data
@@ -79,6 +80,12 @@ class BossParty:
                     continue
 
         self.sheets_bossing.append_members(new_sheets_members)
+        await self.__send(ctx, 'Scrape complete.', ephemeral=True)
+
+    async def sync(self, ctx):
+        self.sheets_bossing.sync_data()
+        self.restart_updater()
+
         await self.__send(ctx, 'Sync complete.', ephemeral=True)
 
     async def add(self, ctx, member, discord_party, job):
@@ -273,8 +280,7 @@ class BossParty:
             pass
         elif has_role_count > 1 and not found_character and job == '':
             # More than one character with fill role, job must be specified
-            raise Exception(
-                f'Error - {member.mention} has more than one character with this role, please specify job.')
+            raise Exception(f'Error - {member.mention} has more than one character with this role, please specify job.')
         else:
             raise Exception(f'Error - {member.mention} *{job}* is not in {discord_party.mention}.')
 

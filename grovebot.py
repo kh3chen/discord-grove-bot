@@ -47,7 +47,7 @@ async def _bossparty(ctx):
     pass
 
 
-@_bossparty.command(name='sync')
+@_bossparty.command(name='sync', brief="Sync Grove Bot to any manually changed data in the Boss Parties spreadsheet")
 @commands.has_role('Junior')
 async def bossparty_sync(ctx):
     await ctx.defer(ephemeral=True)
