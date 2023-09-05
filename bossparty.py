@@ -745,20 +745,23 @@ async def __update_boss_party_list_message(ctx, message: discord.Message, sheets
                    ephemeral=True, suppress_embeds=True)
 
 
-async def __update_thread(ctx, party_thread: discord.ForumChannel, party_message: discord.Message,
+async def __update_thread(ctx, party_thread: discord.Thread, party_message: discord.Message,
                           sheets_party: SheetsParty):
     # Update thread title
     title = f'{sheets_party.boss_name} Party {sheets_party.party_number} - '
-    if sheets_party.status == SheetsParty.PartyStatus.new.name:
-        title += 'New'
-    elif sheets_party.status == SheetsParty.PartyStatus.retired.name:
+    if sheets_party.status == SheetsParty.PartyStatus.retired.name:
         title += 'Retired'
-    elif sheets_party.status == SheetsParty.PartyStatus.exclusive.name or sheets_party.status == SheetsParty.PartyStatus.open.name and sheets_party.member_count == '6':
-        title += 'Full'
+        await party_thread.edit(name=title, archived=True, locked=True)
     else:
-        title += 'Open'
+        if sheets_party.status == SheetsParty.PartyStatus.new.name:
+            title += 'New'
 
-    await party_thread.edit(name=title)
+        elif sheets_party.status == SheetsParty.PartyStatus.exclusive.name or sheets_party.status == SheetsParty.PartyStatus.open.name and sheets_party.member_count == '6':
+            title += 'Full'
+        else:
+            title += 'Open'
+
+        await party_thread.edit(name=title)
 
     if party_message:
         message = f'<@&{sheets_party.role_id}>'
