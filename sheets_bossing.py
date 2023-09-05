@@ -317,9 +317,10 @@ class SheetsBossing:
             self.__members = self.__members[0:delete_index] + self.__members[delete_index + 1:]
 
             # Remove deleted member from members dict
-            for sheets_member in self.__members_dict[delete_sheets_member.party_role_id]:
-                if sheets_member.user_id == delete_sheets_member.user_id and sheets_member.job == delete_sheets_member.job:
-                    self.__members_dict[delete_sheets_member.party_role_id].remove(sheets_member)
+            for sheets_member in self.__members_dict[deleted_sheets_member.party_role_id]:
+                if sheets_member.user_id == deleted_sheets_member.user_id and sheets_member.job == deleted_sheets_member.job:
+                    self.__members_dict[deleted_sheets_member.party_role_id].remove(sheets_member)
+                    print(self.__members_dict)
                     break
 
             print(self.__members)
