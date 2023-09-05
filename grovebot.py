@@ -6,10 +6,18 @@ import announcement
 import config
 from bossparty import BossParty
 
+
+class GroveBot(commands.Bot):
+    bossparty: BossParty
+
+    def __init__(self, command_prefix, intents):
+        super().__init__(command_prefix='>', intents=intents)
+
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix='>', intents=intents)
+bot = GroveBot(command_prefix='>', intents=intents)
 
 
 @bot.event
@@ -50,21 +58,21 @@ async def bossparty_sync(ctx):
 @commands.has_role('Junior')
 async def bossparty_add(ctx, user: discord.Member, boss_party_role: discord.Role, job: str):
     await ctx.defer(ephemeral=True)
-    await bot.bossparty.add(bot, ctx, user, boss_party_role, job)
+    await bot.bossparty.add(ctx, user, boss_party_role, job)
 
 
 @_bossparty.command(name='remove', brief='Remove a boss party role from a member')
 @commands.has_role('Junior')
 async def bossparty_remove(ctx, user: discord.Member, boss_party_role: discord.Role, job=''):
     await ctx.defer(ephemeral=True)
-    await bot.bossparty.remove(bot, ctx, user, boss_party_role, job)
+    await bot.bossparty.remove(ctx, user, boss_party_role, job)
 
 
 @_bossparty.command(name='create', brief='Create a new boss party')
 @commands.has_role('Junior')
 async def bossparty_create(ctx, boss_name):
     await ctx.defer(ephemeral=True)
-    await bot.bossparty.create(bot, ctx, boss_name)
+    await bot.bossparty.create(ctx, boss_name)
 
 
 @_bossparty.command(name='settime', brief='Set the boss party time')
@@ -73,51 +81,42 @@ async def bossparty_create(ctx, boss_name):
 @app_commands.describe(hour='hour relative to reset: [0-23]')
 @app_commands.describe(minute='minute of the hour: [0-59]')
 async def bossparty_settime(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
-    await bot.bossparty.settime(bot, ctx, boss_party_role, weekday, hour, minute)
+    await bot.bossparty.settime(ctx, boss_party_role, weekday, hour, minute)
 
 
 @_bossparty.command(name='cleartime', brief='Clear the boss party time')
 @commands.has_role('Junior')
 async def bossparty_cleartime(ctx, boss_party_role: discord.Role):
-    await bot.bossparty.cleartime(bot, ctx, boss_party_role)
+    await bot.bossparty.cleartime(ctx, boss_party_role)
 
 
 @_bossparty.command(name='retire', brief='Retire a party, removing all of its party members')
 @commands.has_role('Junior')
 async def bossparty_retire(ctx, boss_party_role: discord.Role):
-    await bot.bossparty.retire(bot, ctx, boss_party_role)
+    await bot.bossparty.retire(ctx, boss_party_role)
 
 
 @_bossparty.command(name='exclusive', brief='Make a party exclusive')
 @commands.has_role('Junior')
 async def bossparty_exclusive(ctx, boss_party_role: discord.Role):
-    await bot.bossparty.exclusive(bot, ctx, boss_party_role)
+    await bot.bossparty.exclusive(ctx, boss_party_role)
 
 
 @_bossparty.command(name='open', brief='Make a party open')
 @commands.has_role('Junior')
 async def bossparty_open(ctx, boss_party_role: discord.Role):
-    await bot.bossparty.open(bot, ctx, boss_party_role)
+    await bot.bossparty.open(ctx, boss_party_role)
 
 
 @_bossparty.command(name='listremake', brief='Remake the boss party list')
 @commands.has_role('Junior')
 async def bossparty_listremake(ctx):
-    await bot.bossparty.listremake(bot, ctx)
+    await bot.bossparty.listremake(ctx)
 
 
-@_bossparty.command(name='posttest', brief='post test')
-@commands.has_role('Junior')
-async def bossparty_posttest(ctx):
-    await bot.bossparty.post_test(bot, ctx)
-
-
-@_bossparty.command(name='testedit', brief='test edit')
-@commands.has_role('Junior')
-async def bossparty_testedit(ctx, thread_id: str):
-    channel = bot.get_channel(1146240330405007380)
-    thread = channel.get_thread(int(thread_id))
-    await thread.edit(name="this is the edited name!")
+@bot.event
+async def on_member_remove(member):
+    await bot.bossparty.on_member_remove(member)
 
 
 bot.run(config.BOT_TOKEN)
