@@ -221,8 +221,11 @@ class BossParty:
             except StopIteration:
                 raise UserWarning(f'Error - {member.mention} is not in {discord_party.mention}.')
 
-        if sheets_party.status == SheetsParty.PartyStatus.fill.name:
-            # Can have multiple characters in fill. Match by job
+        if sheets_party.status != SheetsParty.PartyStatus.fill.name and job == '':
+            has_role_count = 1
+            found_character = True
+        else:
+            # Find by job since it was provided. Also, can have multiple characters in fill
             has_role_count = 0
             found_character = False
             for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id]:
@@ -230,21 +233,21 @@ class BossParty:
                     has_role_count += 1
                     if sheets_member.job == job:
                         found_character = True
-        else:
-            has_role_count = 1
-            found_character = True
+            if job == '':
+                found_character = True
 
         # Remove role from user if only one character with role
-        if has_role_count == 1:
-            await member.remove_roles(discord_party)
+        if has_role_count == 1 and found_character:
+            if not left_server:
+                # Can only remove role from an existing member
+                await member.remove_roles(discord_party)
         elif has_role_count > 1 and found_character:
+            # Keep fill role since they will still have another character
             pass
-        elif has_role_count > 1 and not found_character:
-            if job:
-                raise Exception(f'Error - {member.mention} *{job}* is not in {discord_party.mention}.')
-            else:
-                raise Exception(
-                    f'Error - {member.mention} has more than one character with this role, please specify job.')
+        elif has_role_count > 1 and not found_character and job == '':
+            # More than one character with fill role, job must be specified
+            raise Exception(
+                f'Error - {member.mention} has more than one character with this role, please specify job.')
         else:
             raise Exception(f'Error - {member.mention} *{job}* is not in {discord_party.mention}.')
 
