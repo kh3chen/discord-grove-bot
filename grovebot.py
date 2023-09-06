@@ -8,6 +8,7 @@ from bossparty import BossParty
 
 
 class GroveBot(commands.Bot):
+    grove_bot_version = "1.0.0"
     bossparty: BossParty
 
     def __init__(self, command_prefix, intents):
@@ -30,8 +31,8 @@ async def on_ready():
 
 
 @bot.command()
-async def ping(ctx):
-    await ctx.send("pong")
+async def version(ctx):
+    await ctx.send(bot.grove_bot_version)
 
 
 @bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
