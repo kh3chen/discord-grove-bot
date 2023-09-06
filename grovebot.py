@@ -4,11 +4,11 @@ from discord.ext import commands
 
 import announcement
 import config
+import release
 from bossparty import BossParty
 
 
 class GroveBot(commands.Bot):
-    grove_bot_version = "1.0.0"
     bossparty: BossParty
 
     def __init__(self, command_prefix, intents):
@@ -32,7 +32,7 @@ async def on_ready():
 
 @bot.command()
 async def version(ctx):
-    await ctx.send(bot.grove_bot_version)
+    await ctx.send(release.version_name)
 
 
 @bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
