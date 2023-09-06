@@ -30,7 +30,7 @@ class BossParty:
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 timestamp = sheets_party.next_scheduled_time()
                 message = f'{sheets_party.get_mention()}\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n\n'
-                message += 'If you are unable to make this run, please act in accordance with Grove\'s bossing etiquette rules. Thank you!'
+                message += 'React to confirm your availability. If you are unable to make this run, please act in accordance with Grove\'s bossing etiquette rules. Thank you!'
                 await party_thread.send(message)
 
         async def on_update(sheets_party: SheetsParty):
@@ -783,7 +783,7 @@ class BossParty:
         new_sheets_parties = self.sheets_bossing.parties
         for sheets_party in new_sheets_parties:
             if sheets_party.role_id == str(discord_party.id):  # The relevant party data
-                sheets_party.member_count = str(len(discord_party.members))
+                sheets_party.member_count = len(self.sheets_bossing.members_dict[sheets_party.role_id])
                 if discord_party.name.find('Retired') != -1:
                     # Update to retired
                     sheets_party.status = SheetsParty.PartyStatus.retired.name
