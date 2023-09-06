@@ -82,12 +82,14 @@ async def bossparty_create(ctx, boss_name):
 @app_commands.describe(hour='hour relative to reset: [0-23]')
 @app_commands.describe(minute='minute of the hour: [0-59]')
 async def bossparty_settime(ctx, boss_party_role: discord.Role, weekday: str, hour: int, minute: int = 0):
+    await ctx.defer(ephemeral=True)
     await bot.bossparty.settime(ctx, boss_party_role, weekday, hour, minute)
 
 
 @_bossparty.command(name='cleartime', brief='Clear the boss party time')
 @commands.has_role('Junior')
 async def bossparty_cleartime(ctx, boss_party_role: discord.Role):
+    await ctx.defer(ephemeral=True)
     await bot.bossparty.cleartime(ctx, boss_party_role)
 
 
@@ -100,12 +102,14 @@ async def bossparty_retire(ctx, boss_party_role: discord.Role):
 @_bossparty.command(name='exclusive', brief='Make a party exclusive')
 @commands.has_role('Junior')
 async def bossparty_exclusive(ctx, boss_party_role: discord.Role):
+    await ctx.defer(ephemeral=True)
     await bot.bossparty.exclusive(ctx, boss_party_role)
 
 
 @_bossparty.command(name='open', brief='Make a party open')
 @commands.has_role('Junior')
 async def bossparty_open(ctx, boss_party_role: discord.Role):
+    await ctx.defer(ephemeral=True)
     await bot.bossparty.open(ctx, boss_party_role)
 
 

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import asyncio
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
@@ -98,8 +99,8 @@ class Party:
 
     def to_sheets_value(self):
         return [str(self.role_id), str(self.boss_name), str(self.party_number), str(self.status),
-            str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),
-            str(self.party_message_id), str(self.boss_list_message_id), str(self.boss_list_decorator_id)]
+                str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),
+                str(self.party_message_id), str(self.boss_list_message_id), str(self.boss_list_decorator_id)]
 
     def next_scheduled_time(self):
         if not self.weekday or not self.hour or not self.minute:
@@ -165,7 +166,7 @@ class SheetsBossing:
     @staticmethod
     def __get_bosses_dict():
         result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-            range=SheetsBossing.RANGE_BOSSES).execute()
+                                                                  range=SheetsBossing.RANGE_BOSSES).execute()
         bosses_values = result.get('values', [])
         bosses = {}
         for bosses_value in bosses_values:
@@ -175,14 +176,14 @@ class SheetsBossing:
     @staticmethod
     def __get_parties():
         result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-            range=SheetsBossing.RANGE_PARTIES).execute()
+                                                                  range=SheetsBossing.RANGE_PARTIES).execute()
         parties_values = result.get('values', [])
         return list(map(lambda parties_value: Party.from_sheets_value(parties_value), parties_values))
 
     @staticmethod
     def __get_members():
         result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-            range=SheetsBossing.RANGE_MEMBERS).execute()
+                                                                  range=SheetsBossing.RANGE_MEMBERS).execute()
         members_values = result.get('values', [])
         return list(map(lambda members_value: Member.from_sheets_value(members_value), members_values))
 
@@ -270,11 +271,11 @@ class SheetsBossing:
 
         delete_body = {"requests": [{"deleteDimension": {
             "range": {"sheetId": self.SHEET_BOSS_PARTIES_MEMBERS, "dimension": "ROWS", "startIndex": delete_index + 1,
-                # Due to header row
-                "endIndex": delete_index + 2}}}]}
+                      # Due to header row
+                      "endIndex": delete_index + 2}}}]}
         try:
             sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                body=delete_body).execute()
+                                                            body=delete_body).execute()
 
             deleted_sheets_member = self.__members[delete_index]
 
@@ -285,10 +286,7 @@ class SheetsBossing:
             for sheets_member in self.__members_dict[deleted_sheets_member.party_role_id]:
                 if sheets_member.user_id == deleted_sheets_member.user_id and sheets_member.job == deleted_sheets_member.job:
                     self.__members_dict[deleted_sheets_member.party_role_id].remove(sheets_member)
-                    print(self.__members_dict)
                     break
-
-            print(self.__members)
 
             return deleted_sheets_member
 
