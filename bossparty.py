@@ -195,6 +195,7 @@ class BossParty:
         # Success
         await self.__send(ctx, f'Successfully added {member.mention} *{job}* to {discord_party.mention}.',
                           ephemeral=True)
+
         if sheets_party.boss_list_message_id:
             # Update boss list message
             boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
@@ -795,7 +796,7 @@ class BossParty:
         new_sheets_parties = self.sheets_bossing.parties
         for sheets_party in new_sheets_parties:
             if sheets_party.role_id == str(discord_party.id):  # The relevant party data
-                sheets_party.member_count = len(self.sheets_bossing.members_dict[sheets_party.role_id])
+                sheets_party.member_count = str(len(self.sheets_bossing.members_dict[sheets_party.role_id]))
                 if discord_party.name.find('Retired') != -1:
                     # Update to retired
                     sheets_party.status = SheetsParty.PartyStatus.retired.name

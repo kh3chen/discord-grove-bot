@@ -72,13 +72,12 @@ class BossTimeUpdater:
 
         while True:
             # Sleep until next event
-            print(f'Size {len(events)}: {events}')
+            print(f'Next 5 events: {events[0:5]}')
             now = int(datetime.timestamp(datetime.now()))
             sleep_duration = events[0].timestamp - now
             if sleep_duration > 0:
                 print(f'Sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
-                print(f'Woke up!')
 
             # Fire event
             if events[0].update_type == BossTimeUpdater.Event.Type.reminder:
