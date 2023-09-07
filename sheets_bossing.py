@@ -12,14 +12,15 @@ import sheets
 
 
 class Boss:
-    LENGTH = 6
+    LENGTH = 7
 
     INDEX_BOSS_NAME = 0
     INDEX_ROLE_COLOUR = 1
     INDEX_HUMAN_READABLE_NAME = 2
     INDEX_FORUM_CHANNEL_ID = 3
-    INDEX_LFG_ROLE_ID = 4
-    INDEX_FILL_ROLE_ID = 5
+    INDEX_SIGN_UP_THREAD_ID = 4
+    INDEX_LFG_ROLE_ID = 5
+    INDEX_FILL_ROLE_ID = 6
 
     def __init__(self, bosses_value):
         bosses_value = bosses_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(bosses_value))
@@ -27,6 +28,7 @@ class Boss:
         self._role_colour = bosses_value[Boss.INDEX_ROLE_COLOUR]
         self.human_readable_name = bosses_value[Boss.INDEX_HUMAN_READABLE_NAME]
         self.forum_channel_id = bosses_value[Boss.INDEX_FORUM_CHANNEL_ID]
+        self.sign_up_thread_id = bosses_value[Boss.INDEX_SIGN_UP_THREAD_ID]
         self.lfg_role_id = bosses_value[Boss.INDEX_LFG_ROLE_ID]
         self.fill_role_id = bosses_value[Boss.INDEX_FILL_ROLE_ID]
 
@@ -184,7 +186,7 @@ class Member:
 class SheetsBossing:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the boss parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
-    RANGE_BOSSES = 'Bosses!A2:F'
+    RANGE_BOSSES = 'Bosses!A2:G'
     RANGE_PARTIES = 'Parties!A2:L'
     RANGE_MEMBERS = 'Members!A2:E'
 
@@ -303,6 +305,7 @@ class SheetsBossing:
                                                             body=delete_body).execute()
 
             deleted_sheets_member = self.__members[delete_index]
+            print(deleted_sheets_member)
 
             # Remove deleted member from members list
             self.__members = self.__members[0:delete_index] + self.__members[delete_index + 1:]
