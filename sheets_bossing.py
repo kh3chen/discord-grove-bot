@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
+import discord
 from googleapiclient.errors import HttpError
 
 import config
@@ -11,13 +12,14 @@ import sheets
 
 
 class Boss:
-    LENGTH = 5
+    LENGTH = 6
 
     INDEX_BOSS_NAME = 0
     INDEX_ROLE_COLOUR = 1
     INDEX_HUMAN_READABLE_NAME = 2
     INDEX_FORUM_CHANNEL_ID = 3
-    INDEX_FILL_ROLE_ID = 4
+    INDEX_LFG_ROLE_ID = 4
+    INDEX_FILL_ROLE_ID = 5
 
     def __init__(self, bosses_value):
         bosses_value = bosses_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(bosses_value))
@@ -25,6 +27,7 @@ class Boss:
         self._role_colour = bosses_value[Boss.INDEX_ROLE_COLOUR]
         self.human_readable_name = bosses_value[Boss.INDEX_HUMAN_READABLE_NAME]
         self.forum_channel_id = bosses_value[Boss.INDEX_FORUM_CHANNEL_ID]
+        self.lfg_role_id = bosses_value[Boss.INDEX_LFG_ROLE_ID]
         self.fill_role_id = bosses_value[Boss.INDEX_FILL_ROLE_ID]
 
     def get_role_colour(self):
@@ -51,8 +54,9 @@ class Party:
         new = 0
         open = 1
         exclusive = 2
-        fill = 3
-        retired = 4
+        lfg = 3
+        fill = 4
+        retired = 5
 
     class Weekday(Enum):
         mon = 1
@@ -87,6 +91,27 @@ class Party:
                      parties_value[Party.INDEX_HOUR], parties_value[Party.INDEX_MINUTE],
                      parties_value[Party.INDEX_PARTY_THREAD_ID], parties_value[Party.INDEX_PARTY_MESSAGE_ID],
                      parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID], parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID])
+
+    @staticmethod
+    def from_discord_party(discord_party: discord.Role):
+        new_sheets_party = Party.from_sheets_value([])
+        new_sheets_party.role_id = str(discord_party.id)
+        boss_name_first_space = discord_party.name.find(' ')
+        new_sheets_party.boss_name = discord_party.name[0:boss_name_first_space]
+        new_sheets_party.party_number = str(discord_party.name[boss_name_first_space + 1 + discord_party.name[
+                                                                                           boss_name_first_space + 1:].find(
+            ' ') + 1:])
+        if discord_party.name.find('Retired') != -1:
+            new_sheets_party.status = Party.PartyStatus.retired.name
+            new_sheets_party.party_number = new_sheets_party.party_number[
+                                            0:new_sheets_party.party_number.find(' ')]  # Remove " (Retired)"
+        elif discord_party.name.find('Fill') != -1:
+            new_sheets_party.status = Party.PartyStatus.fill.name
+        elif len(discord_party.members) == 0:
+            new_sheets_party.status = Party.PartyStatus.new.name
+        else:
+            new_sheets_party.status = Party.PartyStatus.open.name
+        new_sheets_party.member_count = str(len(discord_party.members))
 
     def __str__(self):
         return str(self.to_sheets_value())
@@ -159,7 +184,7 @@ class Member:
 class SheetsBossing:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the boss parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
-    RANGE_BOSSES = 'Bosses!A2:E'
+    RANGE_BOSSES = 'Bosses!A2:F'
     RANGE_PARTIES = 'Parties!A2:L'
     RANGE_MEMBERS = 'Members!A2:E'
 

@@ -119,8 +119,8 @@ class BossParty:
             # Add/remove from fill party based on joined party status
             fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
             if fill_party_id:  # Fill party exists
-                if sheets_party.status == SheetsParty.PartyStatus.new.name:
-                    # Added party status is New. Add to fill
+                if sheets_party.status == SheetsParty.PartyStatus.new.name or sheets_party.status == SheetsParty.PartyStatus.lfg.name:
+                    # Added party status is New or LFG. Add to fill
                     discord_fill_party = ctx.guild.get_role(int(fill_party_id))
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -137,6 +137,24 @@ class BossParty:
                         # Member already has the fill role
                         return
                 elif sheets_party.status == SheetsParty.PartyStatus.open.name or sheets_party.status == SheetsParty.PartyStatus.exclusive.name:
+                    # Added party status is not New. Remove from LFG
+                    lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].lfg_role_id
+                    discord_lfg_party = ctx.guild.get_role(int(lfg_party_id))
+                    try:
+                        sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                                 sheets_party.role_id == lfg_party_id)
+                    except StopIteration:
+                        await self.__send(ctx,
+                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          ephemeral=True)
+                        return
+
+                    try:
+                        await self._remove(ctx, member, discord_lfg_party, job, sheets_lfg_party)
+                    except UserWarning:
+                        # Member did not have the LFG role
+                        return
+
                     # Added party status is not New. Remove from fill
                     discord_fill_party = ctx.guild.get_role(int(fill_party_id))
                     try:
@@ -233,11 +251,11 @@ class BossParty:
                 await self.__send(ctx, str(e), ephemeral=True)
                 return
 
-            # Remove from fill if the party is new
+            # Remove from fill if the party is new or LFG
             fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
             if fill_party_id:  # Fill party exists
-                if sheets_party.status == SheetsParty.PartyStatus.new.name:
-                    # Removed party status is New. Remove from fill
+                if sheets_party.status == SheetsParty.PartyStatus.new.name or sheets_party.status == SheetsParty.PartyStatus.lfg.name:
+                    # Removed party status is New or LFG. Remove from fill
                     discord_fill_party = ctx.guild.get_role(int(fill_party_id))
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -344,8 +362,8 @@ class BossParty:
                 party_boss_index = self.sheets_bossing.get_boss_names().index(
                     discord_party.name[0:discord_party.name.find(' ')])
                 if boss_name in discord_party.name:
-                    if 'Fill' in discord_party.name:
-                        # Found Fill party for the corresponding boss, insert new party above it
+                    if 'LFG' in discord_party.name:
+                        # Found LFG party for the corresponding boss, insert new party above it
                         new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
                                                                      colour=self.sheets_bossing.bosses_dict[
                                                                          boss_name].get_role_colour(), mentionable=True)
@@ -763,33 +781,17 @@ class BossParty:
         sheets_parties = self.sheets_bossing.parties
         added_sheets_parties = []
         parties_values_index = 0
-        for discord_party in discord_parties:
-            new_sheets_party = SheetsParty.from_sheets_value([])
-            new_sheets_party.role_id = str(discord_party.id)
-            boss_name_first_space = discord_party.name.find(' ')
-            new_sheets_party.boss_name = discord_party.name[0:boss_name_first_space]
-            new_sheets_party.party_number = str(discord_party.name[boss_name_first_space + 1 + discord_party.name[
-                                                                                               boss_name_first_space + 1:].find(
-                ' ') + 1:])
-            if discord_party.name.find('Retired') != -1:
-                new_sheets_party.status = SheetsParty.PartyStatus.retired.name
-                new_sheets_party.party_number = new_sheets_party.party_number[
-                                                0:new_sheets_party.party_number.find(' ')]  # Remove " (Retired)"
-            elif discord_party.name.find('Fill') != -1:
-                new_sheets_party.status = SheetsParty.PartyStatus.fill.name
-            elif len(discord_party.members) == 0:
-                new_sheets_party.status = SheetsParty.PartyStatus.new.name
-            else:
-                new_sheets_party.status = SheetsParty.PartyStatus.open.name
-            new_sheets_party.member_count = str(len(discord_party.members))
 
+        for discord_party in discord_parties:
             if parties_values_index == len(sheets_parties):
-                # More party roles than in data
+                # More party roles than in data, new party at the end
+                new_sheets_party = SheetsParty.from_discord_party(discord_party)
                 sheets_parties.append(new_sheets_party)
                 added_sheets_parties.append(new_sheets_party)
                 parties_pairs.append((discord_party, new_sheets_party))
-            elif sheets_parties[parties_values_index].role_id != new_sheets_party.role_id:
+            elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
                 # Party role doesn't match data, there must be a new record
+                new_sheets_party = SheetsParty.from_discord_party(discord_party)
                 sheets_parties.insert(parties_values_index, new_sheets_party)
                 added_sheets_parties.append(new_sheets_party)
                 parties_pairs.append((discord_party, new_sheets_party))
@@ -807,7 +809,7 @@ class BossParty:
         # Update party status and member count
         new_sheets_parties = self.sheets_bossing.parties
         for sheets_party in new_sheets_parties:
-            if sheets_party.role_id == str(discord_party.id):  # The relevant party data
+            if sheets_party.role_id == str(discord_party.id):  # Found the existing party we want to update
                 sheets_party.member_count = str(len(self.sheets_bossing.members_dict[sheets_party.role_id]))
                 if discord_party.name.find('Retired') != -1:
                     # Update to retired
