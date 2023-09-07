@@ -440,6 +440,14 @@ class BossParty:
                                   ephemeral=True)
                 return
 
+            if sheets_party.status == SheetsParty.PartyStatus.retired.name:
+                await ctx.send(f'Error - {discord_party.mention} is retired.')
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.lfg.name or sheets_party.status == SheetsParty.PartyStatus.fill.name:
+                await ctx.send(f'Error - {discord_party.mention} is not a party.')
+                return
+
             sheets_party.weekday = weekday.name
             sheets_party.hour = str(hour)
             sheets_party.minute = str(minute)
@@ -480,6 +488,14 @@ class BossParty:
                 await self.__send(ctx,
                                   f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
                                   ephemeral=True)
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.retired.name:
+                await ctx.send(f'Error - {discord_party.mention} is retired.')
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.lfg.name or sheets_party.status == SheetsParty.PartyStatus.fill.name:
+                await ctx.send(f'Error - {discord_party.mention} is not a party.')
                 return
 
             sheets_party.weekday = ''
