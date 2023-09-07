@@ -737,6 +737,7 @@ class BossParty:
                              '\n1. Be on time.'
                              '\n2. If you are unable to make boss run time for the week, let your party know as soon as possible, and organize another time for your party that week.'
                              '\n3. If you are unable to make the boss run at all for a week, let your party know as soon as possible, and find a fill for your spot.')
+        await boss_party_list_channel.send(etiquette_message)
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
