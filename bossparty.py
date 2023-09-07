@@ -857,9 +857,9 @@ class BossParty:
             for n in range(0, 6 - int(sheets_party.member_count)):
                 message_content += 'Open\n'
         elif sheets_party.status == SheetsParty.PartyStatus.lfg.name and len(party_sheets_members) == 0:
-            message += 'No members looking for group'
+            message_content += 'No members looking for group'
         elif sheets_party.status == SheetsParty.PartyStatus.fill.name and len(party_sheets_members) == 0:
-            message += 'No members available to fill'
+            message_content += 'No members available to fill'
 
         await message.edit(content=message_content)
 
