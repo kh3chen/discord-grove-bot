@@ -1,5 +1,6 @@
-major_version = 1
-minor_version = 0
-patch_version = 4
+major = 1
+minor = 0
+patch = 5
+pre_release = 'alpha'
 
-version_name = f'Version {major_version}.{minor_version}.{patch_version}'
+version_name = f'Version {major}.{minor}.{patch}{"-" + pre_release if pre_release else ""}'
