@@ -1,7 +1,5 @@
-majorVersion = 1
-minorVersion = 0
-patchVersion = 1
-releaseVersion = 1
+major_version = 1
+minor_version = 0
+patch_version = 2
 
-version_code = majorVersion * 1000000 + minorVersion * 10000 + patchVersion * 100 + releaseVersion
-version_name = f'{majorVersion}.{minorVersion}.{patchVersion}-rc{releaseVersion}'
+version_name = f'Version {major_version}.{minor_version}.{patch_version}'
