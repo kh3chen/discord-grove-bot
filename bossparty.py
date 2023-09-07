@@ -142,7 +142,7 @@ class BossParty:
                     discord_lfg_party = ctx.guild.get_role(int(lfg_party_id))
                     try:
                         sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                 sheets_party.role_id == lfg_party_id)
+                                                sheets_party.role_id == lfg_party_id)
                     except StopIteration:
                         await self.__send(ctx,
                                           f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
@@ -856,6 +856,10 @@ class BossParty:
         if sheets_party.status == SheetsParty.PartyStatus.open.name or sheets_party.status == SheetsParty.PartyStatus.new.name:
             for n in range(0, 6 - int(sheets_party.member_count)):
                 message_content += 'Open\n'
+        elif sheets_party.status == SheetsParty.PartyStatus.lfg.name and len(party_sheets_members) == 0:
+            message += 'No members looking for group'
+        elif sheets_party.status == SheetsParty.PartyStatus.fill.name and len(party_sheets_members) == 0:
+            message += 'No members available to fill'
 
         await message.edit(content=message_content)
 
