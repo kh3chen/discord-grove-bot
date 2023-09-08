@@ -477,11 +477,11 @@ class BossParty:
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.retired.name:
-                await ctx.send(f'Error - {discord_party.mention} is retired.')
+                await self.__send(ctx, f'Error - {discord_party.mention} is retired.')
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.lfg.name or sheets_party.status == SheetsParty.PartyStatus.fill.name:
-                await ctx.send(f'Error - {discord_party.mention} is not a party.')
+                await self.__send(ctx, f'Error - {discord_party.mention} is not a party.')
                 return
 
             sheets_party.weekday = weekday.name
@@ -527,11 +527,11 @@ class BossParty:
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.retired.name:
-                await ctx.send(f'Error - {discord_party.mention} is retired.')
+                await self.__send(ctx, f'Error - {discord_party.mention} is retired.')
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.lfg.name or sheets_party.status == SheetsParty.PartyStatus.fill.name:
-                await ctx.send(f'Error - {discord_party.mention} is not a party.')
+                await self.__send(ctx, f'Error - {discord_party.mention} is not a party.')
                 return
 
             sheets_party.weekday = ''
@@ -937,9 +937,9 @@ class BossParty:
                           content=f'Boss party thread updated for <@&{sheets_party.role_id}>:\n{party_thread.mention}',
                           ephemeral=True, suppress_embeds=True)
 
-    async def __send(self, ctx, content, ephemeral=False, suppress_embeds=False):
-        if ctx:
-            return await ctx.send(content=content, ephemeral=ephemeral, suppress_embeds=suppress_embeds)
+    async def __send(self, interaction, content, ephemeral=False, suppress_embeds=False):
+        if interaction:
+            return await interaction.followup.send(content=content, ephemeral=ephemeral, suppress_embeds=suppress_embeds)
         else:
             modlog_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MODLOG)
             return await modlog_channel.send(content)
