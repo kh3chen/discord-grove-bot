@@ -93,12 +93,6 @@ async def bossparty_cleartime(ctx, boss_party_role: discord.Role):
     await bot.bossparty.cleartime(ctx, boss_party_role)
 
 
-@_bossparty.command(name='retire', brief='Retire a party, removing all of its party members')
-@commands.has_role('Junior')
-async def bossparty_retire(ctx, boss_party_role: discord.Role):
-    await bot.bossparty.retire(ctx, boss_party_role)
-
-
 @_bossparty.command(name='exclusive', brief='Make a party exclusive')
 @commands.has_role('Junior')
 async def bossparty_exclusive(ctx, boss_party_role: discord.Role):
@@ -111,6 +105,12 @@ async def bossparty_exclusive(ctx, boss_party_role: discord.Role):
 async def bossparty_open(ctx, boss_party_role: discord.Role):
     await ctx.defer(ephemeral=True)
     await bot.bossparty.open(ctx, boss_party_role)
+
+
+@_bossparty.command(name='retire', brief='Retire a party, removing all of its party members')
+@commands.has_role('Junior')
+async def bossparty_retire(ctx, boss_party_role: discord.Role):
+    await bot.bossparty.retire(ctx, boss_party_role)
 
 
 @_bossparty.command(name='listremake', brief='Remake the boss party list')

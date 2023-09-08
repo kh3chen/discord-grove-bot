@@ -121,6 +121,7 @@ class BossParty:
             # Add/remove from fill party based on joined party status
             fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
             if fill_party_id:  # Fill party exists
+
                 if (sheets_party.status == SheetsParty.PartyStatus.new.name or
                         sheets_party.status == SheetsParty.PartyStatus.lfg.name):
                     # Added party status is New or LFG. Add to fill
@@ -139,9 +140,11 @@ class BossParty:
                     except UserWarning:
                         # Member already has the fill role
                         return
-                elif (sheets_party.status == SheetsParty.PartyStatus.open.name or
-                      sheets_party.status == SheetsParty.PartyStatus.exclusive.name):
-                    # Added party status is not New. Remove from LFG
+
+                if (sheets_party.status == SheetsParty.PartyStatus.new.name or
+                        sheets_party.status == SheetsParty.PartyStatus.open.name or
+                        sheets_party.status == SheetsParty.PartyStatus.exclusive.name):
+                    # Added to a party. Remove from LFG
                     lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].lfg_role_id
                     discord_lfg_party = ctx.guild.get_role(int(lfg_party_id))
                     try:
@@ -153,11 +156,13 @@ class BossParty:
                                           ephemeral=True)
                         return
                     try:
-                        await self._remove(ctx, member, discord_lfg_party, job, sheets_lfg_party, silent=True)
+                        await self._remove(ctx, member, discord_lfg_party, job, sheets_lfg_party)
                     except UserWarning:
                         # Member did not have the LFG role
                         return
 
+                if (sheets_party.status == SheetsParty.PartyStatus.open.name or
+                        sheets_party.status == SheetsParty.PartyStatus.exclusive.name):
                     # Added party status is not New. Remove from fill
                     discord_fill_party = ctx.guild.get_role(int(fill_party_id))
                     try:
@@ -571,6 +576,11 @@ class BossParty:
         if sheets_party.status == SheetsParty.PartyStatus.new.name:
             await self.__send(ctx, f'Error - {discord_party.mention} is new, you cannot retire a new party.',
                               ephemeral=True)
+            return
+
+        if (sheets_party.status == SheetsParty.PartyStatus.lfg.name or
+                sheets_party.status == SheetsParty.PartyStatus.fill.name):
+            await self.__send(ctx, f'Error - {discord_party.mention} is not a boss party.', ephemeral=True)
             return
 
         # Confirmation
