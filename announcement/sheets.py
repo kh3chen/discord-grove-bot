@@ -1,7 +1,7 @@
 import itertools
 
 import config
-import sheets
+from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:E'

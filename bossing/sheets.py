@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import asyncio
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 
@@ -8,7 +7,7 @@ import discord
 from googleapiclient.errors import HttpError
 
 import config
-import sheets
+from utils import sheets
 
 
 class Boss:

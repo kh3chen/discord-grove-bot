@@ -2,11 +2,11 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from announcement.announcement import send_announcement
 import config
-import release
+from announcement.announcement import send_announcement
 from bossing.bossing import Bossing
 from bossing.group import BossingGroup
+from utils import version
 
 MY_GUILD = discord.Object(id=config.GROVE_GUILD_ID)
 
@@ -46,7 +46,7 @@ async def on_member_remove(member):
 
 @grove_bot.command()
 async def version(ctx):
-    await ctx.send(release.version_name)
+    await ctx.send(version.version_name)
 
 
 @grove_bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
