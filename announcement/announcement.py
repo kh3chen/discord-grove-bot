@@ -3,7 +3,7 @@ import datetime
 from functools import reduce
 
 import config
-import sheets_members
+import announcement.sheets as sheets_members
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
