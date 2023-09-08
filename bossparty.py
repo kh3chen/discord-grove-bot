@@ -18,15 +18,15 @@ class BossParty:
             'Mechanic', 'Xenon', 'Blaster', 'Hayato', 'Kanna', 'Mihile', 'Kaiser', 'Kain', 'Cadena', 'Angelic Buster',
             'Zero', 'Beast Tamer', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Lara', 'Hoyoung']
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, client):
+        self.client = client
         self.lock = asyncio.Lock()
         self.sheets_bossing = SheetsBossing()
 
         async def on_reminder(sheets_party: SheetsParty):
             # Send reminder in party thread
             if sheets_party.party_thread_id:
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 timestamp = sheets_party.next_scheduled_time()
@@ -37,13 +37,13 @@ class BossParty:
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:
                 # Update boss list message
-                boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+                boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(None, message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -53,10 +53,12 @@ class BossParty:
                 await self.__update_thread(None, party_thread, party_message, sheets_party)
 
         self.boss_time_updater = BossTimeUpdater(on_reminder, on_update)
-        self.restart_updater()
 
-    def restart_updater(self):
+    def __restart_updater(self):
         self.boss_time_updater.restart_updater(self.sheets_bossing.parties)
+
+    def on_ready(self):
+        self.__restart_updater()
 
     async def scrape(self, ctx):
         """ Used in the initial set up for the Boss Parties spreadsheet data, this function should no longer have any use."""
@@ -88,7 +90,7 @@ class BossParty:
     async def sync(self, ctx):
         async with self.lock:
             self.sheets_bossing.sync_data()
-        self.restart_updater()
+        self.__restart_updater()
 
         await self.__send(ctx, 'Sync complete.', ephemeral=True)
 
@@ -224,14 +226,14 @@ class BossParty:
 
         if sheets_party.boss_list_message_id:
             # Update boss list message
-            boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+            boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.__update_boss_party_list_message(ctx, message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -242,7 +244,7 @@ class BossParty:
                 await party_thread.send(f'{member.mention} *{job}* has been added to {discord_party.mention}.')
             else:
                 # Send LFG and Fill updates in Sign Up thread
-                sign_up_thread = self.bot.get_channel(
+                sign_up_thread = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
                 if sheets_party.status == SheetsParty.PartyStatus.lfg.name:
                     # Mention role
@@ -348,14 +350,14 @@ class BossParty:
 
         if sheets_party.boss_list_message_id:
             # Update boss list message
-            boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+            boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.__update_boss_party_list_message(ctx, message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -367,7 +369,7 @@ class BossParty:
                     f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.')
             else:
                 # Send LFG and Fill updates in Sign Up thread
-                sign_up_thread = self.bot.get_channel(
+                sign_up_thread = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
                 if sheets_party.status == SheetsParty.PartyStatus.lfg.name:
                     # Do not mention role
@@ -430,7 +432,7 @@ class BossParty:
             self.__update_with_new_parties(discord_parties)
 
             # Create thread
-            boss_forum = self.bot.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
+            boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
             party_thread_with_message = await boss_forum.create_thread(name=f'{new_boss_party.name} - New',
                                                                        content=f'{new_boss_party.mention}')
             await self.__send(ctx,
@@ -488,7 +490,7 @@ class BossParty:
             sheets_party.hour = str(hour)
             sheets_party.minute = str(minute)
             self.sheets_bossing.update_parties(sheets_parties)
-            self.restart_updater()
+            self.__restart_updater()
             timestamp = sheets_party.next_scheduled_time()
 
             message_content = f'Set {discord_party.mention} time to {weekday.name} at +{hour}:{minute:02d}.\n'
@@ -497,13 +499,13 @@ class BossParty:
 
             if sheets_party.boss_list_message_id:
                 # Update boss list message
-                boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+                boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -538,19 +540,19 @@ class BossParty:
             sheets_party.hour = ''
             sheets_party.minute = ''
             self.sheets_bossing.update_parties(sheets_parties)
-            self.restart_updater()
+            self.__restart_updater()
 
             await self.__send(ctx, f'Cleared {discord_party.mention} time.', ephemeral=True)
 
             if sheets_party.boss_list_message_id:
                 # Update boss list message
-                boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+                boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -597,7 +599,7 @@ class BossParty:
             return user == ctx.author and str(reaction.emoji) == '👍'
 
         try:
-            await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+            await self.client.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
             await self.__send(ctx, 'Error - confirmation expired. Party retire has been cancelled.', ephemeral=True)
             return
@@ -611,7 +613,7 @@ class BossParty:
             discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
 
             # Delete boss party list messages
-            boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+            boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             if sheets_party.boss_list_message_id:
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await message.delete()
@@ -620,11 +622,11 @@ class BossParty:
                 await message.delete()
 
             self.__update_existing_party(discord_party)
-            self.restart_updater()
+            self.__restart_updater()
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -697,13 +699,13 @@ class BossParty:
 
             if sheets_party.boss_list_message_id:
                 # Update boss list message
-                boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+                boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.bot.get_channel(
+                boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
@@ -725,7 +727,7 @@ class BossParty:
             return user == ctx.author and str(reaction.emoji) == '👍'
 
         try:
-            await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+            await self.client.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
             await self.__send(ctx, 'Error - confirmation expired. Party retire has been cancelled.', ephemeral=True)
             return
@@ -761,7 +763,7 @@ class BossParty:
 
     async def __remake_boss_party_list(self, ctx):
         # Delete existing messages
-        boss_party_list_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
+        boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
 
         new_sheets_parties = self.sheets_bossing.parties
 
@@ -941,5 +943,5 @@ class BossParty:
         if interaction:
             return await interaction.followup.send(content=content, ephemeral=ephemeral, suppress_embeds=suppress_embeds)
         else:
-            modlog_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MODLOG)
+            modlog_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_MODLOG)
             return await modlog_channel.send(content)
