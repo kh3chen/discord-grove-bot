@@ -183,8 +183,8 @@ class Member:
         return [str(self.boss_name), str(self.party_number), str(self.party_role_id), str(self.user_id), str(self.job)]
 
 
-class SheetsBossing:
-    SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the boss parties spreadsheet
+class BossingSheets:
+    SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:G'
     RANGE_PARTIES = 'Parties!A2:L'
@@ -192,8 +192,8 @@ class SheetsBossing:
 
     @staticmethod
     def __get_bosses_dict():
-        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-                                                                  range=SheetsBossing.RANGE_BOSSES).execute()
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
+                                                                  range=BossingSheets.RANGE_BOSSES).execute()
         bosses_values = result.get('values', [])
         bosses = {}
         for bosses_value in bosses_values:
@@ -202,20 +202,20 @@ class SheetsBossing:
 
     @staticmethod
     def __get_parties():
-        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-                                                                  range=SheetsBossing.RANGE_PARTIES).execute()
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
+                                                                  range=BossingSheets.RANGE_PARTIES).execute()
         parties_values = result.get('values', [])
         return list(map(lambda parties_value: Party.from_sheets_value(parties_value), parties_values))
 
     @staticmethod
     def __get_members():
-        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=SheetsBossing.SPREADSHEET_BOSS_PARTIES,
-                                                                  range=SheetsBossing.RANGE_MEMBERS).execute()
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
+                                                                  range=BossingSheets.RANGE_MEMBERS).execute()
         members_values = result.get('values', [])
         return list(map(lambda members_value: Member.from_sheets_value(members_value), members_values))
 
     def __get_members_dict(self):
-        # Key of the following dictionaries is the boss party role ID
+        # Key of the following dictionaries is the bossing party role ID
         members_dict = {}
         for sheets_party in self.__parties:
             members_dict[sheets_party.role_id] = []

@@ -4,13 +4,13 @@ from functools import reduce
 import discord
 
 import config
-from bosstimeupdater import BossTimeUpdater
-from sheets_bossing import Member as SheetsMember
-from sheets_bossing import Party as SheetsParty
-from sheets_bossing import SheetsBossing
+from bossing.sheets import BossingSheets
+from bossing.sheets import Member as SheetsMember
+from bossing.sheets import Party as SheetsParty
+from bossing.service import BossTimeService
 
 
-class BossParty:
+class Bossing:
     JOBS = ['Hero', 'Paladin', 'Dark Knight', 'Arch Mage (F/P)', 'Arch Mage (I/L)', 'Bishop', 'Bowmaster', 'Marksman',
             'Pathfinder', 'Night Lord', 'Shadower', 'Blade Master', 'Buccaneer', 'Corsair', 'Cannon Master',
             'Dawn Warrior', 'Blaze Wizard', 'Wind Archer', 'Night Walker', 'Thunder Breaker', 'Aran', 'Evan',
@@ -21,7 +21,7 @@ class BossParty:
     def __init__(self, client):
         self.client = client
         self.lock = asyncio.Lock()
-        self.sheets_bossing = SheetsBossing()
+        self.sheets_bossing = BossingSheets()
 
         async def on_reminder(sheets_party: SheetsParty):
             # Send reminder in party thread
@@ -36,7 +36,7 @@ class BossParty:
 
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:
-                # Update boss list message
+                # Update bossing list message
                 boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(None, message, sheets_party)
@@ -52,13 +52,13 @@ class BossParty:
                     party_message = None
                 await self.__update_thread(None, party_thread, party_message, sheets_party)
 
-        self.boss_time_updater = BossTimeUpdater(on_reminder, on_update)
+        self.boss_time_service = BossTimeService(on_reminder, on_update)
 
-    def __restart_updater(self):
-        self.boss_time_updater.restart_updater(self.sheets_bossing.parties)
+    def __restart_service(self):
+        self.boss_time_service.restart_service(self.sheets_bossing.parties)
 
     def on_ready(self):
-        self.__restart_updater()
+        self.__restart_service()
 
     async def scrape(self, ctx):
         """ Used in the initial set up for the Boss Parties spreadsheet data, this function should no longer have any use."""
@@ -90,7 +90,7 @@ class BossParty:
     async def sync(self, ctx):
         async with self.lock:
             self.sheets_bossing.sync_data()
-        self.__restart_updater()
+        self.__restart_service()
 
         await self.__send(ctx, 'Sync complete.', ephemeral=True)
 
@@ -98,7 +98,7 @@ class BossParty:
         # Validate job
         if job not in self.JOBS:
             await self.__send(ctx, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
-                                   f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, BossParty.JOBS)}`',
+                                   f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
                               ephemeral=True)
             return
 
@@ -109,7 +109,7 @@ class BossParty:
                                     sheets_party.role_id == str(discord_party.id))
             except StopIteration:
                 await self.__send(ctx,
-                                  f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                  f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                   ephemeral=True)
                 return
 
@@ -133,7 +133,7 @@ class BossParty:
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
                         await self.__send(ctx,
-                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                           ephemeral=True)
                         return
 
@@ -154,7 +154,7 @@ class BossParty:
                                                 sheets_party.role_id == lfg_party_id)
                     except StopIteration:
                         await self.__send(ctx,
-                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                           ephemeral=True)
                         return
                     try:
@@ -172,7 +172,7 @@ class BossParty:
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
                         await self.__send(ctx,
-                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                           ephemeral=True)
                         return
                     try:
@@ -225,7 +225,7 @@ class BossParty:
                           ephemeral=True)
 
         if sheets_party.boss_list_message_id:
-            # Update boss list message
+            # Update bossing list message
             boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.__update_boss_party_list_message(ctx, message, sheets_party)
@@ -255,12 +255,12 @@ class BossParty:
                         f'{member.mention} *{job}* has been added to {sheets_party.boss_name} Fill.')
 
     async def remove(self, ctx, member, discord_party, job=''):
-        # Validate that this is a boss party role
+        # Validate that this is a bossing party role
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(ctx, f'Error - Unable to find party {discord_party.id} in the boss parties data.',
+            await self.__send(ctx, f'Error - Unable to find party {discord_party.id} in the bossing parties data.',
                               ephemeral=True)
             return
 
@@ -284,7 +284,7 @@ class BossParty:
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
                         await self.__send(ctx,
-                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                           ephemeral=True)
                         return
 
@@ -349,7 +349,7 @@ class BossParty:
                           ephemeral=True)
 
         if sheets_party.boss_list_message_id:
-            # Update boss list message
+            # Update bossing list message
             boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.__update_boss_party_list_message(ctx, message, sheets_party)
@@ -384,8 +384,9 @@ class BossParty:
 
     async def create(self, ctx, boss_name):
         if boss_name not in self.sheets_bossing.get_boss_names():
-            await self.__send(ctx, f'Error - `{boss_name}` is not a valid boss name. Valid boss names are as follows:\n'
-                                   f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.get_boss_names())}`',
+            await self.__send(ctx,
+                              f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
+                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.get_boss_names())}`',
                               ephemeral=True)
             return
 
@@ -401,7 +402,7 @@ class BossParty:
                     discord_party.name[0:discord_party.name.find(' ')])
                 if boss_name in discord_party.name:
                     if 'LFG' in discord_party.name:
-                        # Found LFG party for the corresponding boss, insert new party above it
+                        # Found LFG party for the corresponding bossing, insert new party above it
                         new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
                                                                      colour=self.sheets_bossing.bosses_dict[
                                                                          boss_name].get_role_colour(), mentionable=True)
@@ -412,7 +413,7 @@ class BossParty:
                         party_number += 1
 
                 elif party_boss_index > new_party_boss_index:
-                    # Found a party boss that comes after, insert new party above it
+                    # Found a party bossing that comes after, insert new party above it
                     new_boss_party = await ctx.guild.create_role(name=f'{boss_name} Party {party_number}',
                                                                  colour=self.sheets_bossing.bosses_dict[
                                                                      boss_name].get_role_colour(), mentionable=True)
@@ -448,7 +449,7 @@ class BossParty:
 
             await self.__send(ctx, f'Successfully created {new_boss_party.name}.', ephemeral=True)
 
-            # Remake boss party list
+            # Remake bossing party list
             await self.__remake_boss_party_list(ctx)
 
     async def settime(self, ctx, discord_party, weekday_str, hour, minute):
@@ -474,7 +475,7 @@ class BossParty:
                     sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
             except StopIteration:
                 await self.__send(ctx,
-                                  f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                  f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                   ephemeral=True)
                 return
 
@@ -490,7 +491,7 @@ class BossParty:
             sheets_party.hour = str(hour)
             sheets_party.minute = str(minute)
             self.sheets_bossing.update_parties(sheets_parties)
-            self.__restart_updater()
+            self.__restart_service()
             timestamp = sheets_party.next_scheduled_time()
 
             message_content = f'Set {discord_party.mention} time to {weekday.name} at +{hour}:{minute:02d}.\n'
@@ -498,7 +499,7 @@ class BossParty:
             await self.__send(ctx, message_content, ephemeral=True)
 
             if sheets_party.boss_list_message_id:
-                # Update boss list message
+                # Update bossing list message
                 boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
@@ -524,7 +525,7 @@ class BossParty:
                     sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
             except StopIteration:
                 await self.__send(ctx,
-                                  f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                  f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                   ephemeral=True)
                 return
 
@@ -540,12 +541,12 @@ class BossParty:
             sheets_party.hour = ''
             sheets_party.minute = ''
             self.sheets_bossing.update_parties(sheets_parties)
-            self.__restart_updater()
+            self.__restart_service()
 
             await self.__send(ctx, f'Cleared {discord_party.mention} time.', ephemeral=True)
 
             if sheets_party.boss_list_message_id:
-                # Update boss list message
+                # Update bossing list message
                 boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
@@ -563,12 +564,12 @@ class BossParty:
                 await party_thread.send(f'{discord_party.mention} time has been cleared.')
 
     async def retire(self, ctx, discord_party):
-        # Validate that this is a boss party role
+        # Validate that this is a bossing party role
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(ctx, f'Error - {discord_party.mention} is not a boss party.', ephemeral=True)
+            await self.__send(ctx, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
             return
 
         if sheets_party.status == SheetsParty.PartyStatus.retired.name:
@@ -582,7 +583,7 @@ class BossParty:
 
         if (sheets_party.status == SheetsParty.PartyStatus.lfg.name or
                 sheets_party.status == SheetsParty.PartyStatus.fill.name):
-            await self.__send(ctx, f'Error - {discord_party.mention} is not a boss party.', ephemeral=True)
+            await self.__send(ctx, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
             return
 
         # Confirmation
@@ -612,7 +613,7 @@ class BossParty:
             # Update party status to retired
             discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
 
-            # Delete boss party list messages
+            # Delete bossing party list messages
             boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
             if sheets_party.boss_list_message_id:
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
@@ -622,7 +623,7 @@ class BossParty:
                 await message.delete()
 
             self.__update_existing_party(discord_party)
-            self.__restart_updater()
+            self.__restart_service()
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -650,7 +651,7 @@ class BossParty:
                 sheets_party = next(
                     sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
             except StopIteration:
-                await self.__send(ctx, f'Error - {discord_party.mention} is not a boss party.', ephemeral=True)
+                await self.__send(ctx, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.retired.name:
@@ -690,7 +691,7 @@ class BossParty:
                                                   ephemeral=True)
                     except StopIteration:
                         await self.__send(ctx,
-                                          f'Error - Unable to find party {discord_party.mention} in the boss parties data.',
+                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
                                           ephemeral=True)
 
             sheets_party.status = status.name
@@ -698,7 +699,7 @@ class BossParty:
             await self.__send(ctx, f'{discord_party.name} is now {sheets_party.status}.', ephemeral=True)
 
             if sheets_party.boss_list_message_id:
-                # Update boss list message
+                # Update bossing list message
                 boss_party_list_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST)
                 message = await boss_party_list_channel.fetch_message(sheets_party.boss_list_message_id)
                 await self.__update_boss_party_list_message(ctx, message, sheets_party)
@@ -716,7 +717,7 @@ class BossParty:
 
     async def listremake(self, ctx):
         # Confirmation
-        confirmation_message_body = f'Are you sure you want to remake the boss party list in <#{config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST}>?\n'
+        confirmation_message_body = f'Are you sure you want to remake the bossing party list in <#{config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST}>?\n'
         confirmation_message_body += f'\nReact with 👍 to proceed.'
 
         confirmation_message = await self.__send(ctx, confirmation_message_body)
@@ -767,7 +768,7 @@ class BossParty:
 
         new_sheets_parties = self.sheets_bossing.parties
 
-        await self.__send(ctx, 'Deleting the existing boss party list...', ephemeral=True)
+        await self.__send(ctx, 'Deleting the existing bossing party list...', ephemeral=True)
         await boss_party_list_channel.purge(limit=len(new_sheets_parties) * 2)
 
         try:
@@ -779,10 +780,10 @@ class BossParty:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-        await self.__send(ctx, 'Existing boss party list deleted.', ephemeral=True)
+        await self.__send(ctx, 'Existing bossing party list deleted.', ephemeral=True)
 
-        # Send the boss party messages
-        await self.__send(ctx, 'Creating the new boss party list...', ephemeral=True)
+        # Send the bossing party messages
+        await self.__send(ctx, 'Creating the new bossing party list...', ephemeral=True)
 
         current_sheets_boss = None
         for sheets_party in new_sheets_parties:
@@ -809,17 +810,17 @@ class BossParty:
         etiquette_message = ('# Bossing etiquette'
                              '\n\nWith organized bossing, it is important that all party members are in attendance to ensure a smooth clear. Out of respect for your fellow guildmates, please follow Grove\'s bossing etiquette:'
                              '\n1. Be on time.'
-                             '\n2. If you are unable to make boss run time for the week, let your party know as soon as possible, and organize another time for your party that week.'
-                             '\n3. If you are unable to make the boss run at all for a week, let your party know as soon as possible, and find a fill for your spot.')
+                             '\n2. If you are unable to make bossing run time for the week, let your party know as soon as possible, and organize another time for your party that week.'
+                             '\n3. If you are unable to make the bossing run at all for a week, let your party know as soon as possible, and find a fill for your spot.')
         await boss_party_list_channel.send(etiquette_message)
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-        await self.__send(ctx, 'New boss party list complete.', ephemeral=True)
+        await self.__send(ctx, 'New bossing party list complete.', ephemeral=True)
 
     def __get_boss_parties(self, discord_roles):
-        """Returns the subset of Grove boss party roles from a list of Discord roles."""
-        # get all boss party roles by matching their names to the bosses
+        """Returns the subset of Grove bossing party roles from a list of Discord roles."""
+        # get all bossing party roles by matching their names to the bosses
         parties = []
         for role in discord_roles:
             if role.name.find(' ') == -1 or role.name.find('Practice') != -1:
@@ -941,7 +942,8 @@ class BossParty:
 
     async def __send(self, interaction, content, ephemeral=False, suppress_embeds=False):
         if interaction:
-            return await interaction.followup.send(content=content, ephemeral=ephemeral, suppress_embeds=suppress_embeds)
+            return await interaction.followup.send(content=content, ephemeral=ephemeral,
+                                                   suppress_embeds=suppress_embeds)
         else:
             modlog_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_MODLOG)
             return await modlog_channel.send(content)

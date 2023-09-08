@@ -5,14 +5,14 @@ from discord.ext import commands
 import announcement
 import config
 import release
-from bossparty import BossParty
-from group_boss import BossGroup
+from bossing.bossing import Bossing
+from bossing.group import BossingGroup
 
 MY_GUILD = discord.Object(id=config.GROVE_GUILD_ID)
 
 
 class GroveBot(commands.Bot):
-    bossparty: BossParty
+    boss_commands: Bossing
 
     def __init__(self, command_prefix, intents):
         super().__init__(command_prefix=command_prefix, intents=intents)
@@ -23,25 +23,25 @@ class GroveBot(commands.Bot):
         await self.tree.sync(guild=MY_GUILD)
 
 
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
-grove_bot = GroveBot(command_prefix='>', intents=intents)
-bossparty = BossParty(grove_bot)
-boss_group = BossGroup(bossparty)
-grove_bot.tree.add_command(BossGroup(grove_bot))
+grove_bot_intents = discord.Intents.default()
+grove_bot_intents.members = True
+grove_bot_intents.message_content = True
+grove_bot = GroveBot(command_prefix='>', intents=grove_bot_intents)
+boss_commands = Bossing(grove_bot)
+boss_group = BossingGroup(boss_commands)
+grove_bot.tree.add_command(BossingGroup(grove_bot))
 
 
 @grove_bot.event
 async def on_ready():
     print(f'Logged in as {grove_bot.user} (ID: {grove_bot.user.id})')
     print('------')
-    bossparty.on_ready()
+    boss_commands.on_ready()
 
 
 @grove_bot.event
 async def on_member_remove(member):
-    await grove_bot.bossparty.on_member_remove(member)
+    await boss_commands.on_member_remove(member)
 
 
 @grove_bot.command()
