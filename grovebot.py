@@ -12,7 +12,7 @@ class GroveBot(commands.Bot):
     bossparty: BossParty
 
     def __init__(self, command_prefix, intents):
-        super().__init__(command_prefix='>', intents=intents)
+        super().__init__(command_prefix=command_prefix, intents=intents)
 
 
 intents = discord.Intents.default()
