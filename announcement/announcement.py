@@ -56,7 +56,7 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
         return
 
     # Create and format announcement message
-    announcement_body = f'{config.GROVE_MENTION_GROVE}\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
+    announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
     new_members = sheets_members.get_new_members()
     if len(new_members) == 0:
@@ -97,4 +97,4 @@ async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title):
     for line in leaderboard:
         await leaderboard_thread.send(line)
     await leaderboard_thread.send(
-        f'*If you notice an error or have any questions or feedback, please let a {config.GROVE_MENTION_JUNIOR} know. Thank you!*')
+        f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')

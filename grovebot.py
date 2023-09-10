@@ -5,7 +5,6 @@ from discord.ext import commands
 import config
 from announcement.announcement import send_announcement
 from bossing.bossing import Bossing
-from bossing.group import BossingGroup
 from utils import version
 
 MY_GUILD = discord.Object(id=config.GROVE_GUILD_ID)
@@ -18,6 +17,7 @@ class GroveBot(commands.Bot):
         super().__init__(command_prefix=command_prefix, intents=intents)
 
     async def setup_hook(self):
+        await self.load_extension('bossing.cog')
         # This copies the global commands over to your guild.
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
@@ -27,21 +27,11 @@ grove_bot_intents = discord.Intents.default()
 grove_bot_intents.members = True
 grove_bot_intents.message_content = True
 grove_bot = GroveBot(command_prefix='>', intents=grove_bot_intents)
-boss_commands = Bossing(grove_bot)
-boss_group = BossingGroup(boss_commands)
-grove_bot.tree.add_command(BossingGroup(grove_bot))
-
 
 @grove_bot.event
 async def on_ready():
     print(f'Logged in as {grove_bot.user} (ID: {grove_bot.user.id})')
     print('------')
-    boss_commands.on_ready()
-
-
-@grove_bot.event
-async def on_member_remove(member):
-    await boss_commands.on_member_remove(member)
 
 
 @grove_bot.command()

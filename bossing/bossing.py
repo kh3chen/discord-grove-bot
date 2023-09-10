@@ -382,7 +382,7 @@ class Bossing:
 
         return removed_sheets_member
 
-    async def create(self, ctx, boss_name):
+    async def new(self, ctx, boss_name):
         if boss_name not in self.sheets_bossing.get_boss_names():
             await self.__send(ctx,
                               f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
