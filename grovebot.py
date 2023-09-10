@@ -28,6 +28,7 @@ grove_bot_intents.members = True
 grove_bot_intents.message_content = True
 grove_bot = GroveBot(command_prefix='>', intents=grove_bot_intents)
 
+
 @grove_bot.event
 async def on_ready():
     print(f'Logged in as {grove_bot.user} (ID: {grove_bot.user.id})')
@@ -45,5 +46,6 @@ async def version(ctx):
 @app_commands.describe(custom_msg_id='The message ID you want to copy for the custom announcement')
 async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
     await announcement.send_announcement(grove_bot, ctx, emoji, custom_msg_id)
+
 
 grove_bot.run(config.BOT_TOKEN)
