@@ -18,7 +18,7 @@ class GroveBot(commands.Bot):
 
     async def setup_hook(self):
         await self.load_extension('bossing.cog')
-        print('Bossing cog loaded.')
+        print('Bossing cog loaded.' )
         await self.tree.sync()
         print('Command tree synced.')
 
