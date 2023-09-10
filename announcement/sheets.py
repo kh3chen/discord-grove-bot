@@ -37,6 +37,29 @@ def get_new_members():
     return list(itertools.chain(*new_members))  # flatten
 
 
+def update_introed_new_members():
+    service = sheets.get_service()
+    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                 range=RANGE_MEMBERS).execute()
+    values = result.get('values', [])
+
+    print(values)
+
+    if not values:
+        print('No data found.')
+        return []
+
+    for value in values:
+        if len(value) == 1:
+            value.append('Y')
+
+    body = {'values': values}
+    print(body)
+    sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                        range=RANGE_MEMBERS, valueInputOption="RAW",
+                                                        body=body).execute()
+
+
 def get_leaderboard():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,

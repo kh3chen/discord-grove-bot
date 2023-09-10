@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-from announcement.announcement import send_announcement
+from announcement import announcement
 from bossing.bossing import Bossing
 from utils import version
 
@@ -44,7 +44,6 @@ async def version(ctx):
 @app_commands.describe(emoji='The seasonal Grove tree emoji')
 @app_commands.describe(custom_msg_id='The message ID you want to copy for the custom announcement')
 async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
-    await send_announcement(grove_bot, ctx, emoji, custom_msg_id)
-
+    await announcement.send_announcement(grove_bot, ctx, emoji, custom_msg_id)
 
 grove_bot.run(config.BOT_TOKEN)

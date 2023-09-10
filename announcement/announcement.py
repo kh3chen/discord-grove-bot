@@ -2,8 +2,8 @@ import asyncio
 import datetime
 from functools import reduce
 
-import config
 import announcement.sheets as sheets_members
+import config
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
@@ -46,9 +46,6 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     else:
         await ctx.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>')
 
-    # Defer because sending the announcement takes longer than 3 seconds
-    # await ctx.defer()
-
     # Validate the spreadsheet has a column for this week's announcement
     if not sheets_members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
         await ctx.send(
@@ -88,6 +85,9 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     # Send leaderboard ranking messages
     await announce_leaderboard(leaderboard_thread, leaderboard_thread_title)
 
+    # Set the new members as introed
+    sheets_members.update_introed_new_members()
+
     await ctx.reply("Done!")
 
 
@@ -98,3 +98,4 @@ async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title):
         await leaderboard_thread.send(line)
     await leaderboard_thread.send(
         f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')
+
