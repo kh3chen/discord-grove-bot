@@ -35,8 +35,8 @@ async def on_ready():
     print('------')
 
 
-@grove_bot.command()
-async def version(ctx):
+@grove_bot.command(name='version')
+async def _version(ctx):
     await ctx.send(version.version_name)
 
 
