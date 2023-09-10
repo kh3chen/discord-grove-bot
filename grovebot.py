@@ -18,9 +18,9 @@ class GroveBot(commands.Bot):
 
     async def setup_hook(self):
         await self.load_extension('bossing.cog')
-        # This copies the global commands over to your guild.
-        self.tree.copy_global_to(guild=MY_GUILD)
-        await self.tree.sync(guild=MY_GUILD)
+        print('Bossing cog loaded.')
+        await self.tree.sync()
+        print('Command tree synced.')
 
 
 grove_bot_intents = discord.Intents.default()
