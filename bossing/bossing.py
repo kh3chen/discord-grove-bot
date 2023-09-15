@@ -236,12 +236,12 @@ class Bossing:
                 boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                await party_thread.send(f'{member.mention} *{job}* has been added to {discord_party.mention}.')
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
                 await self.__update_thread(interaction, party_thread, party_message, sheets_party)
-                await party_thread.send(f'{member.mention} *{job}* has been added to {discord_party.mention}.')
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
@@ -361,13 +361,13 @@ class Bossing:
                 boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                await party_thread.send(
+                    f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.')
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
                 await self.__update_thread(interaction, party_thread, party_message, sheets_party)
-                await party_thread.send(
-                    f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.')
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
