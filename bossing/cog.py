@@ -101,7 +101,7 @@ class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossi
         await bossing.user_settime(interaction, weekday, hour, minute)
 
     @app_commands.command(name='cleartime', description='Clear the bossing party time')
-    async def cleartime(self, interaction: discord.Interaction, boss_party_role: discord.Role):
+    async def cleartime(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         await bossing.user_cleartime(interaction)
 
