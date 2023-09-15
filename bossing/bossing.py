@@ -236,7 +236,10 @@ class Bossing:
                 boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
-                await party_thread.send(f'{member.mention} *{job}* has been added to {discord_party.mention}.')
+                message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
+                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
+                    sheets_party.role_id])
+                await party_thread.send(message_content)
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -248,7 +251,11 @@ class Bossing:
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
                 if sheets_party.status == SheetsParty.PartyStatus.lfg.name:
                     # Mention role
-                    await sign_up_thread.send(f'{member.mention} *{job}* has been added to {discord_party.mention}.')
+                    message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
+                    message_content += self.__get_boss_party_list_message(sheets_party,
+                                                                          self.sheets_bossing.members_dict[
+                                                                              sheets_party.role_id])
+                    await sign_up_thread.send(message_content)
                 elif sheets_party.status == SheetsParty.PartyStatus.fill.name:
                     # Do not mention role
                     await sign_up_thread.send(
@@ -361,8 +368,10 @@ class Bossing:
                 boss_forum = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
                 party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
-                await party_thread.send(
-                    f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.')
+                message_content = f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.\n\n'
+                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
+                    sheets_party.role_id])
+                await party_thread.send(message_content)
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -609,11 +618,11 @@ class Bossing:
                               ephemeral=True)
             return
 
-        # Remove members from party
-        for member in discord_party.members:
-            await self.remove(interaction, member, discord_party)
-
         async with self.lock:
+            # Remove members from party
+            for member in discord_party.members:
+                await self._remove(interaction, member, discord_party, '', sheets_party, silent=True)
+
             # Update party status to retired
             discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
 
@@ -894,6 +903,15 @@ class Bossing:
         if party_sheets_members is None:
             party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
 
+        message_content = self.__get_boss_party_list_message(sheets_party, party_sheets_members)
+        await message.edit(content=message_content)
+
+        await self.__send(interaction,
+                          content=f'Boss party list message updated for <@&{sheets_party.role_id}>:\n{message.jump_url}',
+                          ephemeral=True, suppress_embeds=True)
+
+    @staticmethod
+    def __get_boss_party_list_message(sheets_party, party_sheets_members):
         message_content = f'<@&{sheets_party.role_id}>'
         if sheets_party.party_thread_id:
             message_content += f' <#{sheets_party.party_thread_id}>'
@@ -910,12 +928,7 @@ class Bossing:
             message_content += '*No members looking for group at this time*'
         elif sheets_party.status == SheetsParty.PartyStatus.fill.name and len(party_sheets_members) == 0:
             message_content += '*No members available to fill at this time*'
-
-        await message.edit(content=message_content)
-
-        await self.__send(interaction,
-                          content=f'Boss party list message updated for <@&{sheets_party.role_id}>:\n{message.jump_url}',
-                          ephemeral=True, suppress_embeds=True)
+        return message_content
 
     async def __update_thread(self, interaction, party_thread: discord.Thread, party_message: discord.Message,
                               sheets_party: SheetsParty):
