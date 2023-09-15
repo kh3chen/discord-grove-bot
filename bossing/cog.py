@@ -34,13 +34,15 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
 
         @app_commands.command(name='add', description='Add a bossing party role to a member')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def add(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role, job: str):
+        async def add(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role,
+                      job: str):
             await interaction.response.defer(ephemeral=True)
             await bossing.add(interaction, user, boss_party_role, job)
 
         @app_commands.command(name='remove', description='Remove a bossing party role from a member')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def remove(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role, job: str = ''):
+        async def remove(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role,
+                         job: str = ''):
             await interaction.response.defer(ephemeral=True)
             await bossing.remove(interaction, user, boss_party_role, job)
 
@@ -51,7 +53,8 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
         @app_commands.describe(hour='hour relative to reset: [0-23]')
         @app_commands.describe(minute='minute of the hour: [0-59]')
-        async def settime(self, interaction: discord.Interaction, boss_party_role: discord.Role, weekday: str, hour: int,
+        async def settime(self, interaction: discord.Interaction, boss_party_role: discord.Role, weekday: str,
+                          hour: int,
                           minute: int = 0):
             await interaction.response.defer(ephemeral=True)
             await bossing.settime(interaction, boss_party_role, weekday, hour, minute)
@@ -60,7 +63,7 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def cleartime(self, interaction: discord.Interaction, boss_party_role: discord.Role):
             await interaction.response.defer(ephemeral=True)
-            await bossing.cleartime(interaction, boss_party_role)
+            await bossing.__cleartime(interaction, boss_party_role)
 
         @app_commands.command(name='new', description='Create a new bossing party')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
@@ -86,27 +89,21 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
             await bossing.retire(interaction, boss_party_role)
 
 
-class BossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
+class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
 
     @app_commands.command(name='settime', description='Set the bossing party time')
     @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
     @app_commands.describe(hour='hour relative to reset: [0-23]')
     @app_commands.describe(minute='minute of the hour: [0-59]')
-    async def settime(self, interaction: discord.Interaction, boss_party_role: discord.Role, weekday: str, hour: int,
+    async def settime(self, interaction: discord.Interaction, weekday: str, hour: int,
                       minute: int = 0):
         await interaction.response.defer(ephemeral=True)
-        if boss_party_role in interaction.user.roles:
-            await bossing.settime(interaction, boss_party_role, weekday, hour, minute)
-        else:
-            await interaction.followup.send(f'Error: You are not in <@&{boss_party_role.id}>.')
+        await bossing.user_settime(interaction, weekday, hour, minute)
 
     @app_commands.command(name='cleartime', description='Clear the bossing party time')
     async def cleartime(self, interaction: discord.Interaction, boss_party_role: discord.Role):
         await interaction.response.defer(ephemeral=True)
-        if boss_party_role in interaction.user.roles:
-            await bossing.cleartime(interaction, boss_party_role)
-        else:
-            await interaction.followup.send(f'Error: You are not in <@&{boss_party_role.id}>.')
+        await bossing.user_cleartime(interaction)
 
 
 class BossingCog(commands.Cog):
@@ -115,7 +112,7 @@ class BossingCog(commands.Cog):
 
     mod_bossing = ModBossingGroup()
     bossing = app_commands.Group(name='bossing', description='Bossing commands')
-    bossing.add_command(BossingPartyGroup())
+    bossing.add_command(UserBossingPartyGroup())
 
     @commands.Cog.listener()
     async def on_ready(self):
