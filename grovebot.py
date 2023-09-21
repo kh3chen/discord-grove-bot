@@ -1,25 +1,22 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 import config
-from announcement import announcement
-from bossing.bossing import Bossing
 from utils import version
 
 MY_GUILD = discord.Object(id=config.GROVE_GUILD_ID)
 
 
 class GroveBot(commands.Bot):
-    boss_commands: Bossing
-
     def __init__(self, command_prefix, intents):
         super().__init__(command_prefix=command_prefix, intents=intents)
 
     async def setup_hook(self):
+        await self.load_extension('announcement.cog')
         await self.load_extension('bossing.cog')
-        print('Bossing cog loaded.' )
-        await self.tree.sync()
+        print('Cogs loaded.')
+        self.tree.copy_global_to(guild=MY_GUILD)
+        await self.tree.sync(guild=MY_GUILD)
         print('Command tree synced.')
 
 
@@ -38,14 +35,6 @@ async def on_ready():
 @grove_bot.command(name='version')
 async def _version(ctx):
     await ctx.send(version.version_name)
-
-
-@grove_bot.hybrid_command(name='announcement', brief='Sends the weekly Grove announcement')
-@commands.has_role('Junior')
-@app_commands.describe(emoji='The seasonal Grove tree emoji')
-@app_commands.describe(custom_msg_id='The message ID you want to copy for the custom announcement')
-async def _announcement(ctx, emoji: str, custom_msg_id: str = None):
-    await announcement.send_announcement(grove_bot, ctx, emoji, custom_msg_id)
 
 
 grove_bot.run(config.BOT_TOKEN)

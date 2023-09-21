@@ -8,7 +8,6 @@ from bossing.bossing import Bossing
 bossing: Bossing
 
 
-@app_commands.guild_only()
 class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod bossing commands'):
 
     def __init__(self):

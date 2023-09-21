@@ -2,6 +2,8 @@ import asyncio
 import datetime
 from functools import reduce
 
+import discord
+
 import announcement.sheets as sheets_members
 import config
 
@@ -9,7 +11,7 @@ GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
 
 
-async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
+async def send_announcement(bot, interaction: discord.Interaction, emoji_id: str, custom_message_id: str):
     today = datetime.date.today()
     sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
     guild_week = (sunday - GUILD_CREATED_ON).days // 7
@@ -19,36 +21,37 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     try:
         emoji = next(e for e in bot.emojis if str(e) == emoji_id)
     except StopIteration:
-        await ctx.send('Error - invalid emoji, please use an emoji from this server. Announcement has been cancelled.')
+        await interaction.followup.send('Error - invalid emoji, please use an emoji from this server. Announcement has been cancelled.')
         return
 
     custom_message = None
     if custom_message_id:
-        custom_message = await ctx.fetch_message(custom_message_id)
+        channel = bot.get_channel(interaction.channel_id)
+        custom_message = await channel.fetch_message(custom_message_id)
 
     confirmation_message_body = f'Are you sure you want to send the announcement?\n\nWeek {guild_week}\n{sunday}\n{sunday.year} Leaderboard Week {leaderboard_week}\n\n'
     if custom_message:
         confirmation_message_body += f'Custom message:\n```{custom_message.content}```\n\n'
     confirmation_message_body += f'React with {emoji_id} to proceed.'
 
-    confirmation_message = await ctx.send(confirmation_message_body)
+    confirmation_message = await interaction.followup.send(confirmation_message_body)
     await confirmation_message.add_reaction(emoji)
 
     def check(reaction, user):
         print(reaction)
-        return user == ctx.author and str(reaction.emoji) == emoji_id
+        return user == interaction.user and str(reaction.emoji) == emoji_id
 
     try:
-        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+        await bot.wait_for('reaction_add', timeout=60.0, check=check)
     except asyncio.TimeoutError:
-        await ctx.send('Error - confirmation expired. Announcement has been cancelled.')
+        await interaction.followup.send('Error - confirmation expired. Announcement has been cancelled.')
         return
     else:
-        await ctx.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>')
+        await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>')
 
     # Validate the spreadsheet has a column for this week's announcement
     if not sheets_members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
-        await ctx.send(
+        await interaction.followup.send(
             'Error - unable to find the member tracking data for this week\'s announcement. Announcement has been cancelled.')
         return
 
@@ -88,7 +91,7 @@ async def send_announcement(bot, ctx, emoji_id: str, custom_message_id: str):
     # Set the new members as introed
     sheets_members.update_introed_new_members()
 
-    await ctx.reply("Done!")
+    await interaction.followup.send("Done!")
 
 
 async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title):
