@@ -114,6 +114,8 @@ class Party:
             new_sheets_party.status = Party.PartyStatus.open.name
         new_sheets_party.member_count = str(len(discord_party.members))
 
+        return new_sheets_party
+
     def __str__(self):
         return str(self.to_sheets_value())
 
