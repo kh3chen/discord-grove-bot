@@ -26,9 +26,7 @@ class Bossing:
         async def on_reminder(sheets_party: SheetsParty):
             # Send reminder in party thread
             if sheets_party.party_thread_id:
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 timestamp = sheets_party.next_scheduled_time()
                 message = f'{sheets_party.get_mention()}\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n\n'
                 message += f'React to confirm your availability. If you are unable to make this run, please follow Grove\'s bossing etiquette found in <#{config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST}>. Thank you!'
@@ -43,9 +41,7 @@ class Bossing:
 
             if sheets_party.party_thread_id:
                 # Update thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -233,9 +229,7 @@ class Bossing:
         if not silent:
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
                 message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
                     sheets_party.role_id])
@@ -365,9 +359,7 @@ class Bossing:
         if not silent:
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message_content = f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.\n\n'
                 message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
                     sheets_party.role_id])
@@ -542,9 +534,7 @@ class Bossing:
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -613,9 +603,7 @@ class Bossing:
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -688,9 +676,7 @@ class Bossing:
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -771,9 +757,7 @@ class Bossing:
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
-                boss_forum = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].forum_channel_id))
-                party_thread = boss_forum.get_thread(int(sheets_party.party_thread_id))
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
@@ -980,6 +964,9 @@ class Bossing:
 
     async def __update_thread(self, interaction, party_thread: discord.Thread, party_message: discord.Message,
                               sheets_party: SheetsParty):
+        # Open and unlock thread
+        await party_thread.edit(archived=False, locked=False)
+
         # Update thread title
         title = f'{sheets_party.boss_name} Party {sheets_party.party_number} - '
         if sheets_party.status == SheetsParty.PartyStatus.retired.name:
