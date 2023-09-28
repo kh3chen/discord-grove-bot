@@ -657,7 +657,7 @@ class Bossing:
 
         def check(reaction, user):
             print(reaction)
-            return user == interaction.author and str(reaction.emoji) == '👍'
+            return user == interaction.user and str(reaction.emoji) == '👍'
 
         try:
             await self.client.wait_for('reaction_add', timeout=60.0, check=check)
@@ -790,7 +790,7 @@ class Bossing:
 
         def check(reaction, user):
             print(reaction)
-            return user == interaction.author and str(reaction.emoji) == '👍'
+            return user == interaction.user and str(reaction.emoji) == '👍'
 
         try:
             await self.client.wait_for('reaction_add', timeout=60.0, check=check)
