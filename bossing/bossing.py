@@ -27,9 +27,9 @@ class Bossing:
             # Send reminder in party thread
             if sheets_party.party_thread_id:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                timestamp = sheets_party.next_scheduled_time()
-                message = f'{sheets_party.get_mention()}\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n\n'
-                message += f'React to confirm your availability. If you are unable to make this run, please follow Grove\'s bossing etiquette found in <#{config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST}>. Thank you!'
+                message = self.__get_boss_party_list_message(sheets_party,
+                                                             self.sheets_bossing.members_dict[sheets_party.role_id])
+                message += f'\nReact to confirm your availability. If you are unable to make this run, please follow Grove\'s bossing etiquette found in <#{config.GROVE_CHANNEL_ID_BOSS_PARTY_LIST}>. Thank you!'
                 await party_thread.send(message)
 
         async def on_update(sheets_party: SheetsParty):
