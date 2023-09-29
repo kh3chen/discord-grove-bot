@@ -56,13 +56,13 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
                           hour: int,
                           minute: int = 0):
             await interaction.response.defer(ephemeral=True)
-            await bossing.settime(interaction, boss_party_role, weekday, hour, minute)
+            await bossing.mod_settime(interaction, boss_party_role, weekday, hour, minute)
 
         @app_commands.command(name='cleartime', description='Clear the bossing party time')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def cleartime(self, interaction: discord.Interaction, boss_party_role: discord.Role):
             await interaction.response.defer(ephemeral=True)
-            await bossing.__cleartime(interaction, boss_party_role)
+            await bossing.mod_cleartime(interaction, boss_party_role)
 
         @app_commands.command(name='new', description='Create a new bossing party')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)

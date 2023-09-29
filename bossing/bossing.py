@@ -480,12 +480,12 @@ class Bossing:
                               ephemeral=True)
             return
 
-        sheets_member = next(sheets_member for sheets_member in self.sheets_bossing.bosses_dict[sheets_party.role_id] if
-                             sheets_member.user_id == str(interaction.user.id))
-
-        if sheets_member:
+        try:
+            next(
+                sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                sheets_member.user_id == str(interaction.user.id))
             await self.__settime(interaction, sheets_party, weekday_str, hour, minute)
-        else:
+        except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
     async def __settime(self, interaction, sheets_party: SheetsParty, weekday_str, hour, minute):
@@ -567,12 +567,11 @@ class Bossing:
                               ephemeral=True)
             return
 
-        sheets_member = next(sheets_member for sheets_member in self.sheets_bossing.bosses_dict[sheets_party.role_id] if
-                             sheets_member.user_id == str(interaction.user.id))
-
-        if sheets_member:
+        try:
+            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                 sheets_member.user_id == str(interaction.user.id))
             await self.__cleartime(interaction, sheets_party)
-        else:
+        except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
     async def __cleartime(self, interaction, sheets_party: SheetsParty):
