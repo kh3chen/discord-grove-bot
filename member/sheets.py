@@ -73,10 +73,8 @@ def get_leaderboard():
     current_score = None
     line = ''
     for member in sorted_list:
-        index = member[0]
         score = member[4]
         discord_id = member[5]
-        # print(f'{index}, {score}, {discord_id}')
 
         if score != current_score:
             if current_score is not None:
@@ -88,5 +86,32 @@ def get_leaderboard():
     if current_score is not None:
         output.append(line)
 
-    # print(output)
     return output
+
+
+def update_member_rank(member_id: int, grove_role_name: str):
+    service = sheets.get_service()
+    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                 range=RANGE_MEMBERS).execute()
+    values = result.get('values', [])
+
+    if not values:
+        print('No data found.')
+        return []
+
+    print(values)
+
+    for value in values:
+        if value[0] == f'<@{member_id}>':
+            if len(value) == 1:
+                value.append('')
+                value.append(grove_role_name)
+            elif len(value) == 2:
+                value.append(grove_role_name)
+            else:
+                value[2] = grove_role_name
+
+    body = {'values': values}
+    sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                        range=RANGE_MEMBERS, valueInputOption="RAW",
+                                                        body=body).execute()
