@@ -4,7 +4,7 @@ from functools import reduce
 
 import discord
 
-import announcement.sheets as sheets_members
+import member.sheets as sheets_members
 import config
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
@@ -29,7 +29,7 @@ async def send_announcement(bot, interaction: discord.Interaction, emoji_id: str
         channel = bot.get_channel(interaction.channel_id)
         custom_message = await channel.fetch_message(custom_message_id)
 
-    confirmation_message_body = f'Are you sure you want to send the announcement?\n\nWeek {guild_week}\n{sunday}\n{sunday.year} Leaderboard Week {leaderboard_week}\n\n'
+    confirmation_message_body = f'Are you sure you want to send the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>?\n\nWeek {guild_week}\n{sunday}\n{sunday.year} Leaderboard Week {leaderboard_week}\n\n'
     if custom_message:
         confirmation_message_body += f'Custom message:\n```{custom_message.content}```\n\n'
     confirmation_message_body += f'React with {emoji_id} to proceed.'

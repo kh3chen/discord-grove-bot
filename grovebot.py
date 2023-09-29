@@ -12,7 +12,7 @@ class GroveBot(commands.Bot):
         super().__init__(command_prefix=command_prefix, intents=intents)
 
     async def setup_hook(self):
-        await self.load_extension('announcement.cog')
+        await self.load_extension('member.cog')
         await self.load_extension('bossing.cog')
         print('Cogs loaded.')
         self.tree.copy_global_to(guild=MY_GUILD)

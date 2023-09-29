@@ -1,10 +1,8 @@
-import itertools
-
 import config
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
-RANGE_MEMBERS = 'Member List!D3:E'
+RANGE_MEMBERS = 'Member List!D3:F'
 RANGE_LEADERBOARD = 'Weekly Participation!A2:F'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
@@ -33,8 +31,9 @@ def get_new_members():
         print('No data found.')
         return []
 
-    new_members = list(filter(lambda l: len(l) == 1, values))
-    return list(itertools.chain(*new_members))  # flatten
+    new_members = list(map(lambda value: value[0],
+                           (filter(lambda value: value[0] != '' and value[1] == '', values))))
+    return new_members
 
 
 def update_introed_new_members():
@@ -42,19 +41,15 @@ def update_introed_new_members():
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_MEMBERS).execute()
     values = result.get('values', [])
-
-    print(values)
-
     if not values:
         print('No data found.')
         return []
 
     for value in values:
-        if len(value) == 1:
-            value.append('Y')
+        if value[0] != '' and value[1] == '':
+            value[1] = 'Y'
 
     body = {'values': values}
-    print(body)
     sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                         range=RANGE_MEMBERS, valueInputOption="RAW",
                                                         body=body).execute()
