@@ -226,6 +226,14 @@ class BossingSheets:
 
         return members_dict
 
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            print('Creating the object')
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         self.__bosses_dict = None
         self.__parties = None

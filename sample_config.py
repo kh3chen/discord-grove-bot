@@ -7,6 +7,9 @@ MEMBER_TRACKING_SPREADSHEET_ID = 'member tracking spreadsheet id'
 BOSS_PARTIES_SPREADSHEET_ID = 'boss parties spreadsheet id'
 BOSS_PARTIES_SHEET_ID_MEMBERS = 1234
 
+# Discord Data spreadsheet IDs
+DISCORD_DATA_SPREADSHEET_ID = 'discord data spreadsheet id'
+
 # Discord IDs
 GROVE_GUILD_ID = 1234
 

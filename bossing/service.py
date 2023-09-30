@@ -39,11 +39,11 @@ class BossTimeService:
 
         self.updater_task = asyncio.create_task(self.service_loop(sheets_party))
 
-    async def service_loop(self, sheets_party: list[SheetsParty]):
+    async def service_loop(self, sheets_parties: list[SheetsParty]):
         # Create events list
         events: list[BossTimeService.Event] = []
         now = int(datetime.timestamp(datetime.now()))
-        for sheets_party in sheets_party:
+        for sheets_party in sheets_parties:
             next_scheduled_time = sheets_party.next_scheduled_time()
             if next_scheduled_time:
                 reminder_time = int(next_scheduled_time) - BossTimeService.ONE_DAY_IN_SECONDS
