@@ -52,12 +52,12 @@ class Party:
     INDEX_BOSS_LIST_DECORATOR_ID = 11
 
     class PartyStatus(Enum):
-        new = 0
-        open = 1
-        exclusive = 2
-        lfg = 3
-        fill = 4
-        retired = 5
+        new = "new"
+        open = "open"
+        exclusive = "exclusive"
+        lfg = "lfg"
+        fill = "fill"
+        retired = "retired"
 
     class Weekday(Enum):
         mon = 1
@@ -73,7 +73,7 @@ class Party:
         self.role_id = str(role_id)
         self.boss_name = str(boss_name)
         self.party_number = str(party_number)
-        self.status = str(status)
+        self.status = Party.PartyStatus[status]
         self.member_count = str(member_count)
         self.weekday = str(weekday)
         self.hour = str(hour)
@@ -103,15 +103,15 @@ class Party:
                                                                                            boss_name_first_space + 1:].find(
             ' ') + 1:])
         if discord_party.name.find('Retired') != -1:
-            new_sheets_party.status = Party.PartyStatus.retired.name
+            new_sheets_party.status = Party.PartyStatus.retired
             new_sheets_party.party_number = new_sheets_party.party_number[
                                             0:new_sheets_party.party_number.find(' ')]  # Remove " (Retired)"
         elif discord_party.name.find('Fill') != -1:
-            new_sheets_party.status = Party.PartyStatus.fill.name
+            new_sheets_party.status = Party.PartyStatus.fill
         elif len(discord_party.members) == 0:
-            new_sheets_party.status = Party.PartyStatus.new.name
+            new_sheets_party.status = Party.PartyStatus.new
         else:
-            new_sheets_party.status = Party.PartyStatus.open.name
+            new_sheets_party.status = Party.PartyStatus.open
         new_sheets_party.member_count = str(len(discord_party.members))
 
         return new_sheets_party
@@ -126,7 +126,7 @@ class Party:
         return f'<@&{self.role_id}>'
 
     def to_sheets_value(self):
-        return [str(self.role_id), str(self.boss_name), str(self.party_number), str(self.status),
+        return [str(self.role_id), str(self.boss_name), str(self.party_number), self.status.value,
                 str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),
                 str(self.party_message_id), str(self.boss_list_message_id), str(self.boss_list_decorator_id)]
 

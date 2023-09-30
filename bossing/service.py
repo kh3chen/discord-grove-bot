@@ -76,7 +76,7 @@ class BossTimeService:
             now = int(datetime.timestamp(datetime.now()))
             sleep_duration = events[0].timestamp - now
             if sleep_duration > 0:
-                print(f'Sleeping for {sleep_duration} seconds.')
+                print(f'Bossing service sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
 
             # Fire event

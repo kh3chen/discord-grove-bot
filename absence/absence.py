@@ -20,18 +20,32 @@ class Absence:
         async def on_start_absence(sheets_absence: SheetsAbsence):
             # Set the Away role
             member = self.client.get_guild(config.GROVE_GUILD_ID).get_member(sheets_absence.user_id)
-            await member.add_roles(self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
+            if member:
+                await member.add_roles(self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
             # Delete the absence event
             self.sheets_absence.delete_absence(sheets_absence)
 
         async def on_end_absence(sheets_absence: SheetsAbsence):
             # Clear the Away role
             member = self.client.get_guild(config.GROVE_GUILD_ID).get_member(sheets_absence.user_id)
-            await member.remove_roles(self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
+            if member:
+                await member.remove_roles(
+                    self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
             # Delete the absence event
             self.sheets_absence.delete_absence(sheets_absence)
 
         self.absence_service = AbsenceService(on_start_absence, on_end_absence)
+
+    def _restart_service(self):
+        self.absence_service.restart_service(self.sheets_absence.absences)
+
+    def on_ready(self):
+        self._restart_service()
+
+    def on_member_remove(self, member: discord.Member):
+        deleted_sheets_absences = self.sheets_absence.delete_user_absences(member.id)
+        if len(deleted_sheets_absences) > 0:
+            self._restart_service()
 
     async def schedule(self, interaction: discord.Interaction, start_date_str: str, start_reset_offset: float,
                        end_date_str: str,
@@ -40,7 +54,7 @@ class Absence:
             next(sheets_absence for sheets_absence in self.sheets_absence.absences if
                  sheets_absence.user_id == str(interaction.user.id))
             # Absence already exists
-            interaction.followup.send(
+            await interaction.followup.send(
                 f'Error - You already have an absence scheduled, you must clear your existing absence before setting a new one.',
                 ephemeral=True)
             return
@@ -81,38 +95,63 @@ class Absence:
 
         member_parties = []
         for sheet_party in self.sheets_bossing.parties:
-            if (sheet_party.status == Party.PartyStatus.new.name
-                    or sheet_party.status == Party.PartyStatus.new.open.name
-                    or sheet_party.status == Party.PartyStatus.new.exclusive.name):
+            if (sheet_party.status == Party.PartyStatus.new
+                    or sheet_party.status == Party.PartyStatus.open
+                    or sheet_party.status == Party.PartyStatus.exclusive):
                 for member in self.sheets_bossing.members_dict[sheet_party.role_id]:
                     if member.user_id == str(interaction.user.id):
                         member_parties.append(sheet_party)
                         break
 
-        message = f'**Start:** <t:{int(start_date.timestamp())}:F> <t:{int(start_date.timestamp())}:R>\n'
-        message += f'**End:** <t:{int(end_date.timestamp())}:F> <t:{int(end_date.timestamp())}:R>\n'
+        absence_details = f'**Start:** <t:{int(start_date.timestamp())}:F> <t:{int(start_date.timestamp())}:R>\n'
+        absence_details += f'**End:** <t:{int(end_date.timestamp())}:F> <t:{int(end_date.timestamp())}:R>\n'
         if duration == 1:
-            message += f'**Duration:** 1 day\n\n'
+            absence_details += f'**Duration:** 1 day\n\n'
         else:
-            message += f'**Duration:** {duration:0,.1f} days\n\n'
-        message += f'**Bossing parties**\n'
+            absence_details += f'**Duration:** {duration:0,.1f} days\n\n'
+        absence_details += f'**Bossing parties**\n'
         for member_party in member_parties:
-            message += f'<@&{member_party.role_id}>: <#{member_party.party_thread_id}>\n'
-        message += f'\nBy submitting this absence request, you confirm that:\n1. All bossing parties have been informed of your upcoming absence.\n2. Fills have been found in all parties where your attendance is required to reliably clear.'
+            absence_details += f'<@&{member_party.role_id}>: <#{member_party.party_thread_id}>\n'
+        confirmation = f'\nBy submitting this absence request, you confirm that:\n1. All bossing parties have been informed of your upcoming absence.\n2. Fills have been found in all parties where your attendance is required to reliably clear.'
 
         class Buttons(discord.ui.View):
             def __init__(self, *, timeout=180):
                 super().__init__(timeout=timeout)
 
             @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
-            async def green_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+            async def green_button(_self, button_interaction: discord.Interaction, button: discord.ui.Button):
                 await button_interaction.response.edit_message(view=None)
-                # TODO: sheets stuff
+                start_sheets_absence = SheetsAbsence(int(start_date.timestamp()), interaction.user.id,
+                                                     SheetsAbsence.Type.start.value)
+                end_sheets_absence = SheetsAbsence(int(end_date.timestamp()), interaction.user.id,
+                                                   SheetsAbsence.Type.end.value)
+
+                self.sheets_absence.append_absences(start_sheets_absence, end_sheets_absence)
+                self._restart_service()
+
                 await interaction.followup.send('Absence has been scheduled successfully.', ephemeral=True)
+
+                # Send to log channel
+                log_message = f'{interaction.user.mention} has scheduled the following absence:\n\n'
+                log_message += absence_details
+
+                grove_submissions_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_GROVE_SUBMISSIONS)
+                await grove_submissions_channel.send(log_message)
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
                 await button_interaction.response.edit_message(view=None)
                 await interaction.followup.send('Absence request cancelled.', ephemeral=True)
 
-        await interaction.followup.send(message, view=Buttons(), ephemeral=True)
+        await interaction.followup.send(absence_details + confirmation, view=Buttons(), ephemeral=True)
+
+    async def clear(self, interaction: discord.Interaction):
+        if interaction.guild.get_role(config.GROVE_ROLE_ID_AWAY) in interaction.user.roles:
+            await interaction.user.remove_roles(
+                self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
+
+        delete_sheets_absences = self.sheets_absence.delete_user_absences(interaction.user.id)
+        if len(delete_sheets_absences) > 0:
+            await interaction.followup.send(f'Scheduled absence has been cleared.', ephemeral=True)
+        else:
+            await interaction.followup.send(f'No scheduled absences to clear.', ephemeral=True)
