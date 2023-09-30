@@ -14,15 +14,19 @@ class Absence:
     INDEX_TIMESTAMP = 0
     INDEX_USER_ID = 1
     INDEX_EVENT_TYPE = 2
+    INDEX_START = 3
+    INDEX_END = 4
 
     class Type(Enum):
         start = "start"
         end = "end"
 
-    def __init__(self, timestamp: int, user_id: int, event_type: str):
+    def __init__(self, timestamp: int, user_id: int, event_type: str, start: int, end: int):
         self.timestamp = timestamp
         self.user_id = user_id
         self.event_type = Absence.Type[event_type]
+        self.start = start
+        self.end = end
 
     def __str__(self):
         return str(self.to_sheets_value())
@@ -34,16 +38,18 @@ class Absence:
     def from_sheets_value(absences_value):
         return Absence(int(absences_value[Absence.INDEX_TIMESTAMP]),
                        int(absences_value[Absence.INDEX_USER_ID]),
-                       absences_value[Absence.INDEX_EVENT_TYPE])
+                       absences_value[Absence.INDEX_EVENT_TYPE],
+                       int(absences_value[Absence.INDEX_START]),
+                       int(absences_value[Absence.INDEX_END]))
 
     def to_sheets_value(self):
-        return [str(self.timestamp), str(self.user_id), self.event_type.value]
+        return [str(self.timestamp), str(self.user_id), self.event_type.value, str(self.start), str(self.end)]
 
 
 class AbsenceSheets:
     SPREADSHEET_GROVE_SUBMISSIONS = config.GROVE_SUBMISSIONS_SPREADSHEET_ID
     SHEET_GROVE_SUBMISSIONS_ABSENCES = config.GROVE_SUBMISSIONS_SHEET_ID_ABSENCES
-    RANGE_ABSENCES = 'Absences!A2:C'
+    RANGE_ABSENCES = 'Absences!A2:E'
 
     def __init__(self):
         self.__absences = self.__get_absences()
