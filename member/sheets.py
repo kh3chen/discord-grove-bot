@@ -7,6 +7,35 @@ RANGE_LEADERBOARD = 'Weekly Participation!A2:F'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
 
+class Member:
+    LENGTH = 3
+
+    INDEX_DISCORD_MENTION = 0
+    INDEX_INTROED = 1
+    INDEX_RANK = 2
+
+    def __init__(self, discord_mention: str, introed: str, rank: str):
+        self.discord_mention = discord_mention
+        self.introed = introed
+        self.rank = rank
+
+    @staticmethod
+    def from_sheets_value(members_value: list[str]):
+        members_value = members_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(members_value))
+        return Member(members_value[Member.INDEX_DISCORD_MENTION],
+                      members_value[Member.INDEX_INTROED],
+                      members_value[Member.INDEX_RANK])
+
+    def __str__(self):
+        return str(self.to_sheets_value())
+
+    def __repr__(self):
+        return self.__str__()
+
+    def to_sheets_value(self):
+        return [self.discord_mention, self.introed, self.rank]
+
+
 def is_valid(week, datestr):
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
@@ -31,9 +60,9 @@ def get_new_members():
         print('No data found.')
         return []
 
-    new_members = list(map(lambda value: value[0],
-                           (filter(lambda value: value[0] != '' and value[1] == '', values))))
-    return new_members
+    members = list(map(lambda value: Member.from_sheets_value(value), values))
+    new_members = filter(lambda member: member.discord_mention != '' and member.introed == '', members)
+    return list(map(lambda member: member.discord_mention, new_members))
 
 
 def update_introed_new_members():
@@ -45,14 +74,39 @@ def update_introed_new_members():
         print('No data found.')
         return []
 
-    for value in values:
-        if value[0] != '' and value[1] == '':
-            value[1] = 'Y'
+    members = list(map(lambda value: Member.from_sheets_value(value), values))
+    for member in members:
+        if member.discord_mention != '' and member.introed == '':
+            member.introed = 'Y'
 
-    body = {'values': values}
+    body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
     sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                         range=RANGE_MEMBERS, valueInputOption="RAW",
                                                         body=body).execute()
+
+
+def update_member_rank(member_id: int, grove_role_name: str):
+    service = sheets.get_service()
+    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                 range=RANGE_MEMBERS).execute()
+    values = result.get('values', [])
+
+    if not values:
+        print('No data found.')
+        return []
+
+    members = list(map(lambda value: Member.from_sheets_value(value), values))
+    try:
+        member = next(member for member in members if
+                      member.discord_mention == f'<@{member_id}>')
+        member.rank = grove_role_name
+
+        body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
+        sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                            range=RANGE_MEMBERS, valueInputOption="RAW",
+                                                            body=body).execute()
+    except StopIteration:
+        return
 
 
 def get_leaderboard():
@@ -87,31 +141,3 @@ def get_leaderboard():
         output.append(line)
 
     return output
-
-
-def update_member_rank(member_id: int, grove_role_name: str):
-    service = sheets.get_service()
-    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                 range=RANGE_MEMBERS).execute()
-    values = result.get('values', [])
-
-    if not values:
-        print('No data found.')
-        return []
-
-    print(values)
-
-    for value in values:
-        if value[0] == f'<@{member_id}>':
-            if len(value) == 1:
-                value.append('')
-                value.append(grove_role_name)
-            elif len(value) == 2:
-                value.append(grove_role_name)
-            else:
-                value[2] = grove_role_name
-
-    body = {'values': values}
-    sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                        range=RANGE_MEMBERS, valueInputOption="RAW",
-                                                        body=body).execute()
