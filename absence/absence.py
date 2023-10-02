@@ -22,6 +22,13 @@ class Absence:
             member = self.client.get_guild(config.GROVE_GUILD_ID).get_member(sheets_absence.user_id)
             if member:
                 await member.add_roles(self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
+
+                # Send to log channel
+                member_activity_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
+                await member_activity_channel.send(
+                    f'{member.mention} is now away until <t:{sheets_absence.end}:F>, returning <t:{sheets_absence.end}:R>.')
+
+                # Send to bossing party threads
                 member_parties = []
                 for sheet_party in self.sheets_bossing.parties:
                     if (sheet_party.status == Party.PartyStatus.new
@@ -153,19 +160,19 @@ class Absence:
                 await interaction.followup.send('Absence has been scheduled successfully.', ephemeral=True)
 
                 # Send to log channel
-                log_message = f'{interaction.user.mention} has scheduled the following absence:\n\n'
-                log_message += f'**Start:** <t:{int(start_date.timestamp())}:F> <t:{int(start_date.timestamp())}:R>\n'
-                log_message += f'**End:** <t:{int(end_date.timestamp())}:F> <t:{int(end_date.timestamp())}:R>\n'
+                activity_message = f'{interaction.user.mention} has scheduled the following absence:\n\n'
+                activity_message += f'**Start:** <t:{int(start_date.timestamp())}:F> <t:{int(start_date.timestamp())}:R>\n'
+                activity_message += f'**End:** <t:{int(end_date.timestamp())}:F> <t:{int(end_date.timestamp())}:R>\n'
                 if duration == 1:
-                    log_message += f'**Duration:** 1 day\n\n'
+                    activity_message += f'**Duration:** 1 day\n\n'
                 else:
-                    log_message += f'**Duration:** {duration:0,.1f} days\n\n'
-                log_message += f'**Bossing parties**\n'
+                    activity_message += f'**Duration:** {duration:0,.1f} days\n\n'
+                activity_message += f'**Bossing parties**\n'
                 for member_party in member_parties:
-                    log_message += f'{member_party.boss_name} Party {member_party.party_number}: <#{member_party.party_thread_id}>\n'
+                    activity_message += f'{member_party.boss_name} Party {member_party.party_number}: <#{member_party.party_thread_id}>\n'
 
-                grove_submissions_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_GROVE_SUBMISSIONS)
-                await grove_submissions_channel.send(log_message)
+                member_activity_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
+                await member_activity_channel.send(activity_message)
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
@@ -173,6 +180,31 @@ class Absence:
                 await interaction.followup.send('Absence request cancelled.', ephemeral=True)
 
         await interaction.followup.send(message, view=Buttons(), ephemeral=True)
+
+    async def status(self, interaction: discord.Interaction):
+        user_sheets_absence_start = None
+        user_sheets_absence_end = None
+
+        for sheets_absence in self.sheets_absence.absences:
+            if sheets_absence.user_id == interaction.user.id:
+                if sheets_absence.event_type == SheetsAbsence.Type.start:
+                    user_sheets_absence_start = sheets_absence
+                elif sheets_absence.event_type == SheetsAbsence.Type.end:
+                    user_sheets_absence_end = sheets_absence
+
+        if not user_sheets_absence_start and not user_sheets_absence_end:
+            await interaction.followup.send('You have no absence scheduled.', ephemeral=True)
+        elif not user_sheets_absence_start:
+            await interaction.followup.send(f'You are current away until <t:{user_sheets_absence_end.timestamp}:F>.',
+                                            ephemeral=True)
+        elif user_sheets_absence_start and user_sheets_absence_end:
+            await interaction.followup.send(
+                f'You have an absence scheduled from <t:{user_sheets_absence_start.timestamp}:F> to <t:{user_sheets_absence_end.timestamp}:F>.',
+                ephemeral=True)
+        else:
+            await interaction.followup.send(
+                f'Error - There is an issue with your scheduled absences. Please contact a <@&{config.GROVE_ROLE_ID_JUNIOR}> to resolve this issue.',
+                ephemeral=True)
 
     async def clear(self, interaction: discord.Interaction):
         if interaction.guild.get_role(config.GROVE_ROLE_ID_AWAY) in interaction.user.roles:

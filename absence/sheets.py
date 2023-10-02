@@ -47,8 +47,6 @@ class Absence:
 
 
 class AbsenceSheets:
-    SPREADSHEET_GROVE_SUBMISSIONS = config.GROVE_SUBMISSIONS_SPREADSHEET_ID
-    SHEET_GROVE_SUBMISSIONS_ABSENCES = config.GROVE_SUBMISSIONS_SHEET_ID_ABSENCES
     RANGE_ABSENCES = 'Absences!A2:E'
 
     def __init__(self):
@@ -61,7 +59,7 @@ class AbsenceSheets:
     @staticmethod
     def __get_absences():
         result = sheets.get_service().spreadsheets().values().get(
-            spreadsheetId=AbsenceSheets.SPREADSHEET_GROVE_SUBMISSIONS,
+            spreadsheetId=config.MEMBER_ACTIVITY_SPREADSHEET_ID,
             range=AbsenceSheets.RANGE_ABSENCES).execute()
         absences_values = result.get('values', [])
         return list(map(lambda absences_value: Absence.from_sheets_value(absences_value), absences_values))
@@ -71,7 +69,7 @@ class AbsenceSheets:
             return sheets_absence.to_sheets_value()
 
         body = {'values': list(map(absence_to_sheets_values, new_sheets_absences))}
-        sheets.get_service().spreadsheets().values().append(spreadsheetId=self.SPREADSHEET_GROVE_SUBMISSIONS,
+        sheets.get_service().spreadsheets().values().append(spreadsheetId=config.MEMBER_ACTIVITY_SPREADSHEET_ID,
                                                             range=self.RANGE_ABSENCES, valueInputOption="RAW",
                                                             body=body).execute()
         self.__absences += new_sheets_absences
@@ -89,12 +87,12 @@ class AbsenceSheets:
             return
 
         delete_body = {"requests": [{"deleteDimension": {
-            "range": {"sheetId": self.SHEET_GROVE_SUBMISSIONS_ABSENCES, "dimension": "ROWS",
+            "range": {"sheetId": config.MEMBER_ACTIVITY_SHEET_ID_ABSENCES, "dimension": "ROWS",
                       "startIndex": delete_index + 1,
                       # Offset by 1 due to header row
                       "endIndex": delete_index + 2}}}]}
         try:
-            sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=self.SPREADSHEET_GROVE_SUBMISSIONS,
+            sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_ACTIVITY_SPREADSHEET_ID,
                                                             body=delete_body).execute()
 
             deleted_sheets_absence = self.__absences[delete_index]
@@ -126,14 +124,14 @@ class AbsenceSheets:
             return []
 
         delete_request = ({"deleteDimension": {
-            "range": {"sheetId": self.SHEET_GROVE_SUBMISSIONS_ABSENCES, "dimension": "ROWS",
+            "range": {"sheetId": config.MEMBER_ACTIVITY_SHEET_ID_ABSENCES, "dimension": "ROWS",
                       # Offset by 1 due to header row
                       "startIndex": delete_index + 1,
                       "endIndex": delete_index + delete_count + 1}}})
 
         delete_body = {"requests": delete_request}
         try:
-            sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=self.SPREADSHEET_GROVE_SUBMISSIONS,
+            sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_ACTIVITY_SPREADSHEET_ID,
                                                             body=delete_body).execute()
 
             deleted_sheets_absences = self.__absences[delete_index:delete_index + delete_count]

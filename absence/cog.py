@@ -18,7 +18,12 @@ class AbsenceGroup(app_commands.Group, name='absence', description='Commands to 
         await interaction.response.defer(ephemeral=True)
         await absence.schedule(interaction, start_date, start_reset_offset, end_date, end_reset_offset)
 
-    @app_commands.command(name='clear', description='Clear any existing and future scheduled absences')
+    @app_commands.command(name='status', description='Check the status of your scheduled absence')
+    async def status(self, interaction):
+        await interaction.response.defer(ephemeral=True)
+        await absence.status(interaction)
+
+    @app_commands.command(name='clear', description='Clear any existing and future scheduled absence')
     async def clear(self, interaction):
         await interaction.response.defer(ephemeral=True)
         await absence.clear(interaction)
