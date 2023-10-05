@@ -139,26 +139,6 @@ class Bossing:
                         # Member already has the fill role
                         return
 
-                if (sheets_party.status == SheetsParty.PartyStatus.new or
-                        sheets_party.status == SheetsParty.PartyStatus.open or
-                        sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                    # Added to a party. Remove from LFG
-                    lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].lfg_role_id
-                    discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
-                    try:
-                        sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                sheets_party.role_id == lfg_party_id)
-                    except StopIteration:
-                        await self.__send(interaction,
-                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                          ephemeral=True)
-                        return
-                    try:
-                        await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
-                    except UserWarning:
-                        # Member did not have the LFG role
-                        return
-
                 if (sheets_party.status == SheetsParty.PartyStatus.open or
                         sheets_party.status == SheetsParty.PartyStatus.exclusive):
                     # Added party status is not New. Remove from fill
@@ -176,6 +156,26 @@ class Bossing:
                     except UserWarning:
                         # Member did not have the fill role
                         return
+
+            # Remove from LFG party if added to a new, open, or exclusive party
+            if (sheets_party.status == SheetsParty.PartyStatus.new or
+                    sheets_party.status == SheetsParty.PartyStatus.open or
+                    sheets_party.status == SheetsParty.PartyStatus.exclusive):
+                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].lfg_role_id
+                discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
+                try:
+                    sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                            sheets_party.role_id == lfg_party_id)
+                except StopIteration:
+                    await self.__send(interaction,
+                                      f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                      ephemeral=True)
+                    return
+                try:
+                    await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
+                except UserWarning:
+                    # Member did not have the LFG role
+                    return
 
     async def _add(self, interaction, member, discord_party, job, sheets_party, silent=False):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
@@ -685,12 +685,12 @@ class Bossing:
         await self.__send(interaction, f'{discord_party.mention} has been retired.', ephemeral=True)
 
     async def exclusive(self, interaction, discord_party):
-        await self.__update_status(interaction, discord_party, SheetsParty.PartyStatus.exclusive)
+        await self.__update_active_status(interaction, discord_party, SheetsParty.PartyStatus.exclusive)
 
     async def open(self, interaction, discord_party):
-        await self.__update_status(interaction, discord_party, SheetsParty.PartyStatus.open)
+        await self.__update_active_status(interaction, discord_party, SheetsParty.PartyStatus.open)
 
-    async def __update_status(self, interaction, discord_party, status):
+    async def __update_active_status(self, interaction, discord_party, status):
         async with self.lock:
             sheets_parties = self.sheets_bossing.parties
             try:

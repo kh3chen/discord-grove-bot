@@ -73,7 +73,7 @@ class Party:
         self.role_id = str(role_id)
         self.boss_name = str(boss_name)
         self.party_number = str(party_number)
-        self.status = Party.PartyStatus[status]
+        self.status = Party.PartyStatus[status or Party.PartyStatus.new.value]
         self.member_count = str(member_count)
         self.weekday = str(weekday)
         self.hour = str(hour)
