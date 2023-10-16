@@ -62,7 +62,37 @@ class Bossing:
 
         # Update parties data
         async with self.lock:
-            parties_pairs = self.__update_with_new_parties(discord_parties)
+            def get_parties_pairs_from_discord_parties(discord_parties):
+                parties_pairs = []
+                # get list of parties from sheet
+                sheets_parties = self.sheets_bossing.parties
+                added_sheets_parties = []
+                parties_values_index = 0
+
+                for discord_party in discord_parties:
+                    if parties_values_index == len(sheets_parties):
+                        # More party roles than in data, new party at the end
+                        new_sheets_party = SheetsParty.from_discord_party(discord_party)
+                        sheets_parties.append(new_sheets_party)
+                        added_sheets_parties.append(new_sheets_party)
+                        parties_pairs.append((discord_party, new_sheets_party))
+                    elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
+                        # Party role doesn't match data, there must be a new record
+                        new_sheets_party = SheetsParty.from_discord_party(discord_party)
+                        sheets_parties.insert(parties_values_index, new_sheets_party)
+                        added_sheets_parties.append(new_sheets_party)
+                        parties_pairs.append((discord_party, new_sheets_party))
+                    else:  # Data exists
+                        parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
+
+                    parties_values_index += 1
+
+                # Update parties
+                self.sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
+
+                return parties_pairs
+
+            parties_pairs = get_parties_pairs_from_discord_parties(discord_parties)
 
             # Update members data
             new_sheets_members = []
@@ -393,24 +423,24 @@ class Bossing:
             return
 
         async with self.lock:
-            discord_parties = self.__get_boss_parties(interaction.guild.roles)
             new_party_boss_index = self.sheets_bossing.get_boss_names().index(boss_name)
+            sheets_parties: list[SheetsParty] = self.sheets_bossing.parties
+            sheets_parties_index = 0
             party_number = 1
-            new_boss_party = None
-
-            # Find the correct position for the new role
-            for discord_party in discord_parties:
-                party_boss_index = self.sheets_bossing.get_boss_names().index(
-                    discord_party.name[0:discord_party.name.find(' ')])
-                if boss_name in discord_party.name:
-                    if 'LFG' in discord_party.name:
-                        # Found LFG party for the corresponding bossing, insert new party above it
+            new_sheets_party = None
+            for sheets_party in sheets_parties:
+                party_boss_index = self.sheets_bossing.get_boss_names().index(sheets_party.boss_name)
+                if party_boss_index == new_party_boss_index:
+                    # Found LFG or Fill party for the corresponding bossing, insert new party above it
+                    if sheets_party.party_number == 'LFG' or sheets_party.party_number == 'Fill':
                         new_boss_party = await interaction.guild.create_role(name=f'{boss_name} Party {party_number}',
                                                                              colour=self.sheets_bossing.bosses_dict[
                                                                                  boss_name].get_role_colour(),
                                                                              mentionable=True)
-                        await new_boss_party.edit(position=discord_party.position)
-                        discord_parties.insert(discord_parties.index(discord_party), new_boss_party)
+                        await new_boss_party.edit(
+                            position=interaction.guild.get_role(int(sheets_party.role_id)).position)
+                        new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                        sheets_parties.insert(sheets_parties_index, new_sheets_party)
                         break
                     else:
                         party_number += 1
@@ -421,20 +451,26 @@ class Bossing:
                                                                          colour=self.sheets_bossing.bosses_dict[
                                                                              boss_name].get_role_colour(),
                                                                          mentionable=True)
-                    await new_boss_party.edit(position=discord_party.position)
-                    discord_parties.insert(discord_parties.index(discord_party), new_boss_party)
+                    await new_boss_party.edit(
+                        position=interaction.guild.get_role(int(sheets_party.role_id)).position)
+                    new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                    sheets_parties.insert(sheets_parties_index, new_sheets_party)
                     break
 
-            if new_boss_party is None:
+                sheets_parties_index += 1
+
+            if new_sheets_party is None:
                 # Couldn't find any of the above, new party must come last
                 new_boss_party = await interaction.guild.create_role(name=f'{boss_name} Party {party_number}',
                                                                      colour=self.sheets_bossing.bosses_dict[
                                                                          boss_name].get_role_colour(), mentionable=True)
-                await new_boss_party.edit(position=discord_parties[-1].position)
-                discord_parties.append(new_boss_party)
+                await new_boss_party.edit(
+                    position=interaction.guild.get_role(int(sheets_parties[-1].role_id)).position - 1)
+                new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                sheets_parties.append(new_sheets_party)
 
             # Update spreadsheet
-            self.__update_with_new_parties(discord_parties)
+            self.sheets_bossing.update_parties(sheets_parties, [new_sheets_party])
 
             # Create thread
             boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))

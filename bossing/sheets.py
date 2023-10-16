@@ -266,7 +266,10 @@ class BossingSheets:
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
 
-    def update_parties(self, new_sheets_parties: list[Party], added_parties: list[Party] = []):
+    def update_parties(self, new_sheets_parties: list[Party], added_parties=None):
+        if added_parties is None:
+            added_parties = []
+
         def party_to_sheets_values(sheets_party: Party):
             return sheets_party.to_sheets_value()
 
