@@ -37,7 +37,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(None, message, sheets_party)
+                await self.__update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread
@@ -46,7 +46,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(None, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
 
         self.boss_time_service = BossTimeService(on_reminder, on_update)
 
@@ -62,37 +62,32 @@ class Bossing:
 
         # Update parties data
         async with self.lock:
-            def get_parties_pairs_from_discord_parties(discord_parties):
-                parties_pairs = []
-                # get list of parties from sheet
-                sheets_parties = self.sheets_bossing.parties
-                added_sheets_parties = []
-                parties_values_index = 0
+            parties_pairs = []
+            # get list of parties from sheet
+            sheets_parties = self.sheets_bossing.parties
+            added_sheets_parties = []
+            parties_values_index = 0
 
-                for discord_party in discord_parties:
-                    if parties_values_index == len(sheets_parties):
-                        # More party roles than in data, new party at the end
-                        new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                        sheets_parties.append(new_sheets_party)
-                        added_sheets_parties.append(new_sheets_party)
-                        parties_pairs.append((discord_party, new_sheets_party))
-                    elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
-                        # Party role doesn't match data, there must be a new record
-                        new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                        sheets_parties.insert(parties_values_index, new_sheets_party)
-                        added_sheets_parties.append(new_sheets_party)
-                        parties_pairs.append((discord_party, new_sheets_party))
-                    else:  # Data exists
-                        parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
+            for discord_party in discord_parties:
+                if parties_values_index == len(sheets_parties):
+                    # More party roles than in data, new party at the end
+                    new_sheets_party = SheetsParty.from_discord_party(discord_party)
+                    sheets_parties.append(new_sheets_party)
+                    added_sheets_parties.append(new_sheets_party)
+                    parties_pairs.append((discord_party, new_sheets_party))
+                elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
+                    # Party role doesn't match data, there must be a new record
+                    new_sheets_party = SheetsParty.from_discord_party(discord_party)
+                    sheets_parties.insert(parties_values_index, new_sheets_party)
+                    added_sheets_parties.append(new_sheets_party)
+                    parties_pairs.append((discord_party, new_sheets_party))
+                else:  # Data exists
+                    parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
 
-                    parties_values_index += 1
+                parties_values_index += 1
 
-                # Update parties
-                self.sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
-
-                return parties_pairs
-
-            parties_pairs = get_parties_pairs_from_discord_parties(discord_parties)
+            # Update parties
+            self.sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
 
             # Update members data
             new_sheets_members = []
@@ -268,7 +263,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
@@ -398,7 +393,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
@@ -566,7 +561,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(interaction, message, sheets_party)
+                await self.__update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -575,7 +570,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
                 await party_thread.send(
                     f'<@&{sheets_party.role_id}> time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
 
@@ -634,7 +629,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(interaction, message, sheets_party)
+                await self.__update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -643,7 +638,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
                 await party_thread.send(f'<@&{sheets_party.role_id}> time has been cleared.')
 
     async def retire(self, interaction, discord_party):
@@ -716,7 +711,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
 
         await self.__send(interaction, f'{discord_party.mention} has been retired.', ephemeral=True)
 
@@ -797,7 +792,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(interaction, party_thread, party_message, sheets_party)
+                await self.__update_thread(party_thread, party_message, sheets_party)
 
     async def listremake(self, interaction):
         # Confirmation
@@ -889,7 +884,7 @@ class Bossing:
             message = await bossing_parties_channel.send(f'{sheets_party.boss_name} Party {sheets_party.party_number}')
             sheets_party.boss_list_message_id = str(message.id)
 
-            await self.__update_boss_party_list_message(interaction, message, sheets_party,
+            await self.__update_boss_party_list_message(message, sheets_party,
                                                         self.sheets_bossing.members_dict[sheets_party.role_id])
 
         etiquette_message = ('# Bossing etiquette'
@@ -965,17 +960,13 @@ class Bossing:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-    async def __update_boss_party_list_message(self, interaction, message: discord.Message, sheets_party: SheetsParty,
+    async def __update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty,
                                                party_sheets_members: list[SheetsMember] = None):
         if party_sheets_members is None:
             party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
 
         message_content = self.__get_boss_party_list_message(sheets_party, party_sheets_members)
         await message.edit(content=message_content)
-
-        await self.__send(interaction,
-                          content=f'Boss party list message updated for <@&{sheets_party.role_id}>:\n{message.jump_url}',
-                          ephemeral=True, suppress_embeds=True)
 
     @staticmethod
     def __get_boss_party_list_message(sheets_party, party_sheets_members):
@@ -997,8 +988,8 @@ class Bossing:
             message_content += '*No members available to fill at this time*'
         return message_content
 
-    async def __update_thread(self, interaction, party_thread: discord.Thread, party_message: discord.Message,
-                              sheets_party: SheetsParty):
+    @staticmethod
+    async def __update_thread(party_thread: discord.Thread, party_message: discord.Message, sheets_party: SheetsParty):
         # Open and unlock thread
         await party_thread.edit(archived=False, locked=False)
 
@@ -1027,10 +1018,6 @@ class Bossing:
                 await party_message.edit(content=message)
 
             await party_thread.edit(name=title)
-
-        await self.__send(interaction,
-                          content=f'Boss party thread updated for <@&{sheets_party.role_id}>:\n{party_thread.mention}',
-                          ephemeral=True, suppress_embeds=True)
 
     @staticmethod
     async def __send(interaction, content, ephemeral=False, suppress_embeds=False):
