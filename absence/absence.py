@@ -86,15 +86,13 @@ class Absence:
         now = datetime.now()
 
         try:
-            start_date = datetime.strptime(start_date_str, '%m-%d').replace(year=now.year, tzinfo=timezone.utc)
+            start_date = datetime.strptime(start_date_str, '%y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
-                f'Error - start_date parameter must be in the format MM-DD, e.g. September 21 as 09-21.',
+                f'Error - start_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.',
                 ephemeral=True)
             return
         start_date = start_date + timedelta(hours=start_reset_offset)
-        if start_date.timestamp() - now.timestamp() < 0:
-            start_date = start_date.replace(year=start_date.year + 1)
 
         days_in_advance = (start_date.timestamp() - now.timestamp()) / Absence.ONE_DAY_IN_SECONDS
         if days_in_advance > 28:
@@ -104,16 +102,23 @@ class Absence:
             return
 
         try:
-            end_date = datetime.strptime(end_date_str, '%m-%d').replace(year=now.year, tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
-                f'Error - end_date parameter must be in the format MM-DD, e.g. September 21 as 09-21.')
+                f'Error - end_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.')
             return
         end_date = end_date + timedelta(hours=end_reset_offset)
-        while end_date.timestamp() - start_date.timestamp() < 0:
-            end_date = end_date.replace(year=end_date.year + 1)
+
+        if end_date.timestamp() - now.timestamp() < 0:
+            await interaction.followup.send(
+                f'Error - Absence cannot be in the past.')
+            return
 
         duration = (end_date.timestamp() - start_date.timestamp()) / Absence.ONE_DAY_IN_SECONDS
+        if duration < 0:
+            await interaction.followup.send(
+                f'Error - Absence cannot end before it starts.')
+            return
 
         member_parties = []
         for sheet_party in self.sheets_bossing.parties:

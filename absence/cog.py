@@ -9,9 +9,9 @@ absence: Absence
 class AbsenceGroup(app_commands.Group, name='absence', description='Commands to manage Away role and requests'):
 
     @app_commands.command(name='schedule', description='Schedule an absence')
-    @app_commands.describe(start_date='The start date of your absence. Format: MM-DD')
+    @app_commands.describe(start_date='The start date of your absence. Format: YYYY-MM-DD')
     @app_commands.describe(start_reset_offset='The start time of your absence, relative to MapleStory reset in hours.')
-    @app_commands.describe(end_date='The end date of your absence. Format: MM-DD')
+    @app_commands.describe(end_date='The end date of your absence. Format: YYYY-MM-DD')
     @app_commands.describe(end_reset_offset='The end time of your absence, relative to MapleStory reset in hours.')
     async def schedule(self, interaction, start_date: str, start_reset_offset: float, end_date: str,
                        end_reset_offset: float):
@@ -42,7 +42,6 @@ class AbsenceCog(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member):
         await absence.on_member_remove(member)
-
 
     absence_group = AbsenceGroup()
 
