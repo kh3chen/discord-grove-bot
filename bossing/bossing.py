@@ -243,7 +243,7 @@ class Bossing:
 
         # Success
         await self.__send(interaction, f'Successfully added {member.mention} *{job}* to {discord_party.mention}.',
-                          ephemeral=True)
+                          ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -373,7 +373,7 @@ class Bossing:
         # Success
         await self.__send(interaction,
                           f'Successfully removed {member.mention} *{removed_sheets_member.job}* from {discord_party.mention}.',
-                          ephemeral=True)
+                          ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -471,9 +471,6 @@ class Bossing:
             boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
             party_thread_with_message = await boss_forum.create_thread(name=f'{new_boss_party.name} - New',
                                                                        content=f'{new_boss_party.mention}')
-            await self.__send(interaction,
-                              f'Created thread {party_thread_with_message.thread.mention} for {new_boss_party.mention}.',
-                              ephemeral=True)
             sheets_parties = self.sheets_bossing.parties
             for sheets_party in sheets_parties:
                 if sheets_party.role_id == str(new_boss_party.id):
@@ -482,7 +479,9 @@ class Bossing:
                     break
             self.sheets_bossing.update_parties(sheets_parties)
 
-            await self.__send(interaction, f'Successfully created {new_boss_party.name}.', ephemeral=True)
+            await self.__send(interaction,
+                              f'Successfully created {new_boss_party.name} {party_thread_with_message.thread.mention}',
+                              ephemeral=True, log=True)
 
             # Remake bossing party list
             await self.__remake_boss_party_list(interaction)
@@ -713,7 +712,7 @@ class Bossing:
                     party_message = None
                 await self.__update_thread(party_thread, party_message, sheets_party)
 
-        await self.__send(interaction, f'{discord_party.mention} has been retired.', ephemeral=True)
+        await self.__send(interaction, f'{discord_party.mention} has been retired.', ephemeral=True, log=True)
 
     async def exclusive(self, interaction, discord_party):
         await self.__update_active_status(interaction, discord_party, SheetsParty.PartyStatus.exclusive)
@@ -777,7 +776,8 @@ class Bossing:
 
             sheets_party.status = status
             self.sheets_bossing.update_parties(sheets_parties)
-            await self.__send(interaction, f'{discord_party.name} is now {sheets_party.status.value}.', ephemeral=True)
+            await self.__send(interaction, f'{discord_party.name} is now {sheets_party.status.value}.', ephemeral=True,
+                              log=True)
 
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -1019,8 +1019,11 @@ class Bossing:
 
             await party_thread.edit(name=title)
 
-    @staticmethod
-    async def __send(interaction, content, ephemeral=False, suppress_embeds=False):
+    async def __send(self, interaction, content, ephemeral=False, suppress_embeds=False, log=False):
         if interaction:
             return await interaction.followup.send(content=content, ephemeral=ephemeral,
                                                    suppress_embeds=suppress_embeds)
+        if log:
+            # Send to log channel
+            member_activity_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
+            await member_activity_channel.send(content)
