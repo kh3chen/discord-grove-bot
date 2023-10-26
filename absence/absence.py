@@ -86,7 +86,7 @@ class Absence:
         now = datetime.now()
 
         try:
-            start_date = datetime.strptime(start_date_str, '%y-%m-%d').replace(tzinfo=timezone.utc)
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
                 f'Error - start_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.',
@@ -102,7 +102,7 @@ class Absence:
             return
 
         try:
-            end_date = datetime.strptime(end_date_str, '%y-%m-%d').replace(tzinfo=timezone.utc)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
                 f'Error - end_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.')
