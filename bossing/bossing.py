@@ -249,7 +249,7 @@ class Bossing:
             # Update bossing list message
             bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-            await self.__update_boss_party_list_message(interaction, message, sheets_party)
+            await self.__update_boss_party_list_message(message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
@@ -379,7 +379,7 @@ class Bossing:
             # Update bossing list message
             bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-            await self.__update_boss_party_list_message(interaction, message, sheets_party)
+            await self.__update_boss_party_list_message(message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
@@ -783,7 +783,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(interaction, message, sheets_party)
+                await self.__update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -884,8 +884,7 @@ class Bossing:
             message = await bossing_parties_channel.send(f'{sheets_party.boss_name} Party {sheets_party.party_number}')
             sheets_party.boss_list_message_id = str(message.id)
 
-            await self.__update_boss_party_list_message(message, sheets_party,
-                                                        self.sheets_bossing.members_dict[sheets_party.role_id])
+            await self.__update_boss_party_list_message(message, sheets_party)
 
         etiquette_message = ('# Bossing etiquette'
                              '\n\nWith organized bossing, it is important that all party members are in attendance to ensure a smooth clear. Out of respect for your fellow guildmates, please follow Grove\'s bossing etiquette:'
@@ -960,11 +959,8 @@ class Bossing:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-    async def __update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty,
-                                               party_sheets_members: list[SheetsMember] = None):
-        if party_sheets_members is None:
-            party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
-
+    async def __update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty):
+        party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
         message_content = self.__get_boss_party_list_message(sheets_party, party_sheets_members)
         await message.edit(content=message_content)
 
