@@ -6,6 +6,7 @@ import config
 from birthday.service import BirthdayService
 from birthday.sheets import Birthday as SheetsBirthday
 from birthday.sheets import BirthdaySheets
+from utils.constants import ONE_DAY_IN_SECONDS, GROVE_GREEN
 
 
 class Birthday:
@@ -57,9 +58,9 @@ class Birthday:
 
     async def set(self, interaction: discord.Interaction, birthday_str: str, reset_offset: float):
         now = datetime.now()
-
+        new_sheets_birthday = SheetsBirthday(interaction.user.id, birthday_str, reset_offset)
         try:
-            next_birthday = SheetsBirthday.get_next_birthday(birthday_str, reset_offset)
+            new_birthday_timestamp = new_sheets_birthday.get_next_birthday().timestamp()
         except ValueError:
             await interaction.followup.send(
                 f'Error - birthday_str parameter must be in the format MM-DD, e.g. November 3 as 11-03.',
@@ -67,22 +68,16 @@ class Birthday:
             return
 
         existing_sheets_birthday = None
-        existing_birthday = None
         try:
             existing_sheets_birthday = next(sheets_birthday for sheets_birthday in self.sheets_birthday.birthdays if
                                             sheets_birthday.user_id == interaction.user.id)
-            existing_birthday = SheetsBirthday.get_next_birthday(existing_sheets_birthday.birthday_str,
-                                                                 existing_sheets_birthday.reset_offset)
-        except StopIteration:
-            pass
-
-        if existing_birthday:
+            existing_birthday_timestamp = existing_sheets_birthday.get_next_birthday().timestamp()
             message = f'Do you want to update your birthday?\n\n'
-            message += f'Your existing birthday: <t:{int(existing_birthday.timestamp())}:F>\n'
-            message += f'Your updated birthday: <t:{int(next_birthday.timestamp())}:F>'
-        else:
+            message += f'Your existing birthday: <t:{int(existing_birthday_timestamp)}:F>\n'
+            message += f'Your updated birthday: <t:{int(new_birthday_timestamp)}:F>'
+        except StopIteration:
             message = f'Do you want to set your birthday?\n\n'
-            message += f'Your birthday: <t:{int(next_birthday.timestamp())}:F>'
+            message += f'Your birthday: <t:{int(new_birthday_timestamp)}:F>'
 
         class Buttons(discord.ui.View):
             def __init__(self, *, timeout=180):
@@ -104,17 +99,16 @@ class Birthday:
                     existing_sheets_birthday.reset_offset = reset_offset
                     self.sheets_birthday.update_birthdays(self.sheets_birthday.birthdays)
                 else:
-                    self.sheets_birthday.append_birthday(
-                        SheetsBirthday(interaction.user.id, birthday_str, reset_offset))
+                    self.sheets_birthday.append_birthday(new_sheets_birthday)
 
                 self._restart_service()
 
                 confirm_message = 'Your birthday has been set!\n\n'
 
-                if next_birthday.timestamp() - now.timestamp() < 0:
-                    confirm_message += f'It\'s your birthday today! It started on <t:{int(next_birthday.timestamp())}:F>.\n\nHappy Birthday! :birthday:'
+                if new_birthday_timestamp - now.timestamp() < 0:
+                    confirm_message += f'It\'s your birthday today! It started on <t:{int(new_birthday_timestamp)}:F>.\n\nHappy Birthday! :birthday:'
                 else:
-                    confirm_message += f'Your next birthday is on <t:{int(next_birthday.timestamp())}:F>.'
+                    confirm_message += f'Your next birthday is on <t:{int(new_birthday_timestamp)}:F>.'
 
                 await interaction.followup.send(confirm_message, ephemeral=True)
 
@@ -164,4 +158,21 @@ class Birthday:
             await interaction.followup.send(f'No set birthday to clear.', ephemeral=True)
 
     async def upcoming(self, interaction: discord.Interaction):
-        await interaction.followup.send(f'Sorry, this functionality is not available yet.', ephemeral=True)
+        now = datetime.now()
+        sorted_birthdays = sorted(self.sheets_birthday.birthdays,
+                                  key=lambda sheets_birthday: sheets_birthday.get_next_birthday())
+
+        upcoming_birthdays = []
+        for birthday in sorted_birthdays:
+            if birthday.get_next_birthday().timestamp() - now.timestamp() < 28 * ONE_DAY_IN_SECONDS:
+                upcoming_birthdays.append(birthday)
+            else:
+                break
+
+        description = ''
+        for upcoming_birthday in upcoming_birthdays:
+            description += f'{upcoming_birthday.readable}: <@{upcoming_birthday.user_id}>\n'
+
+        embed = discord.Embed(title='Upcoming Grove birthdays 🎂', description=description, colour=GROVE_GREEN)
+
+        await interaction.followup.send(embed=embed)

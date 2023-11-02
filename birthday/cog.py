@@ -27,7 +27,7 @@ class BirthdayGroup(app_commands.Group, name='birthday', description='Commands t
 
     @app_commands.command(name='upcoming', description='Get a list of upcoming birthdays')
     async def upcoming(self, interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         await birthday.upcoming(interaction)
 
 

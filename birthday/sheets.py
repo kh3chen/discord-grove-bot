@@ -27,6 +27,11 @@ class Birthday:
     def __repr__(self):
         return self.__str__()
 
+    @property
+    def readable(self):
+        birthday = datetime.strptime(self.birthday_str, '%m-%d').replace(tzinfo=timezone.utc)
+        return birthday.strftime('%b %d')
+
     @staticmethod
     def from_sheets_value(birthdays_value):
         return Birthday(int(birthdays_value[Birthday.INDEX_USER_ID]),
@@ -36,12 +41,12 @@ class Birthday:
     def to_sheets_value(self):
         return [str(self.user_id), str(self.birthday_str), str(self.reset_offset)]
 
-    @staticmethod
-    def get_next_birthday(birthday_str: str, reset_offset: float):
+    def get_next_birthday(self):
+        print("get next birthday")
         now = datetime.now()
-        next_birthday = datetime.strptime(birthday_str, '%m-%d').replace(year=now.year,
-                                                                         tzinfo=timezone.utc)
-        next_birthday = next_birthday + timedelta(hours=reset_offset)
+        next_birthday = datetime.strptime(self.birthday_str, '%m-%d').replace(year=now.year,
+                                                                              tzinfo=timezone.utc)
+        next_birthday = next_birthday + timedelta(hours=self.reset_offset)
         if next_birthday.timestamp() - now.timestamp() < -1 * ONE_DAY_IN_SECONDS:
             # If it is less than 24 hours after the start of the birthday, return this year's birthday
             next_birthday = next_birthday.replace(year=next_birthday.year + 1)
