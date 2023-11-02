@@ -87,9 +87,17 @@ class Birthday:
         class Buttons(discord.ui.View):
             def __init__(self, *, timeout=180):
                 super().__init__(timeout=timeout)
+                self.message = None
+                self.interacted = False
+
+            async def on_timeout(self) -> None:
+                if not self.interacted:
+                    await self.message.edit(view=None)
+                    await interaction.followup.send('Error - Your command has timed out.', ephemeral=True)
 
             @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
             async def green_button(_self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                _self.interacted = True
                 await button_interaction.response.edit_message(view=None)
                 if existing_sheets_birthday:
                     existing_sheets_birthday.birthday_str = birthday_str
@@ -112,10 +120,12 @@ class Birthday:
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                self.interacted = True
                 await button_interaction.response.edit_message(view=None)
                 await interaction.followup.send('Setting your birthday has been cancelled.', ephemeral=True)
 
-        await interaction.followup.send(message, view=Buttons(), ephemeral=True)
+        buttonsView = Buttons()
+        buttonsView.message = await interaction.followup.send(message, view=buttonsView, ephemeral=True)
 
     async def status(self, interaction: discord.Interaction):
         user_sheets_birthday = None
