@@ -1,6 +1,6 @@
 __pycache__/
 .idea/
-config.py
+grove_config.py
 credentials.json
 token.json
 *.log

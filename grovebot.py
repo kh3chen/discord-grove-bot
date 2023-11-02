@@ -2,8 +2,10 @@ import discord
 from discord.ext import commands
 
 import config
+import grove_config
 from utils import version
 
+grove_config.set_configs()
 MY_GUILD = discord.Object(id=config.GROVE_GUILD_ID)
 
 
@@ -15,6 +17,7 @@ class GroveBot(commands.Bot):
         await self.load_extension('member.cog')
         await self.load_extension('bossing.cog')
         await self.load_extension('absence.cog')
+        await self.load_extension('birthday.cog')
         print('Cogs loaded.')
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)

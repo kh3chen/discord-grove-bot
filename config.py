@@ -1,3 +1,9 @@
+# Override these values in another config file
+# e.g.
+#
+# import config
+# config.BOT_TOKEN = 'your_bot_token'
+
 BOT_TOKEN = ''
 
 # Member Tracking spreadsheet IDs
@@ -18,7 +24,9 @@ GROVE_GUILD_ID = 0
 GROVE_CHANNEL_ID_ANNOUNCEMENTS = 0
 GROVE_CHANNEL_ID_BOSSING_PARTIES = 0
 GROVE_CHANNEL_ID_MEMBER_ACTIVITY = 0
+GROVE_CHANNEL_ID_GENERAL = 0
 
+GROVE_ROLE_ID_BIRTHDAY = 0
 GROVE_ROLE_ID_AWAY = 0
 GROVE_ROLE_ID_JUNIOR = 0
 GROVE_ROLE_ID_SPIRIT = 0
