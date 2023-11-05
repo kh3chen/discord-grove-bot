@@ -176,7 +176,7 @@ class Birthday:
         else:
             birthdays_field_value = 'No upcoming birthdays'
 
-        embed = discord.Embed(title='Upcoming Grove birthdays 🎂', description=birthdays_field_value, colour=GROVE_GREEN)
+        embed = discord.Embed(title='Upcoming Grove birthdays 🎂', colour=GROVE_GREEN)
         embed.add_field(name="Next 28 days", value=birthdays_field_value)
 
         await interaction.followup.send(embed=embed)
