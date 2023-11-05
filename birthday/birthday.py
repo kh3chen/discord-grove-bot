@@ -169,10 +169,14 @@ class Birthday:
             else:
                 break
 
-        description = ''
-        for upcoming_birthday in upcoming_birthdays:
-            description += f'{upcoming_birthday.readable}: <@{upcoming_birthday.user_id}>\n'
+        birthdays_field_value = ''
+        if len(upcoming_birthdays) > 0:
+            for upcoming_birthday in upcoming_birthdays:
+                birthdays_field_value += f'{upcoming_birthday.readable}: <@{upcoming_birthday.user_id}>\n'
+        else:
+            birthdays_field_value = 'No upcoming birthdays'
 
-        embed = discord.Embed(title='Upcoming Grove birthdays 🎂', description=description, colour=GROVE_GREEN)
+        embed = discord.Embed(title='Upcoming Grove birthdays 🎂', description=birthdays_field_value, colour=GROVE_GREEN)
+        embed.add_field(name="Next 28 days", value=birthdays_field_value)
 
         await interaction.followup.send(embed=embed)
