@@ -131,8 +131,7 @@ class Birthday:
 
         if user_sheets_birthday:
             now = datetime.now()
-            user_birthday = SheetsBirthday.get_next_birthday(user_sheets_birthday.birthday_str,
-                                                             user_sheets_birthday.reset_offset)
+            user_birthday = user_sheets_birthday.get_next_birthday()
             if user_birthday.timestamp() - now.timestamp() < 0:
                 await interaction.followup.send(
                     f'It\'s your birthday today! It started on <t:{int(user_birthday.timestamp())}:F>.\n\nHappy Birthday! :birthday:')
@@ -146,11 +145,11 @@ class Birthday:
             await interaction.user.remove_roles(
                 self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_BIRTHDAY))
 
-        delete_sheets_birthday = self.sheets_birthday.delete_user_birthday(interaction.user.id)
+        deleted_sheets_birthday = self.sheets_birthday.delete_user_birthday(interaction.user.id)
 
-        if delete_sheets_birthday:
-            deleted_next_birthday = SheetsBirthday.get_next_birthday(delete_sheets_birthday.birthday_str,
-                                                                     delete_sheets_birthday.reset_offset)
+        if deleted_sheets_birthday:
+            self._restart_service()
+            deleted_next_birthday = deleted_sheets_birthday.get_next_birthday()
             await interaction.followup.send(
                 f'Your set birthday on <t:{int(deleted_next_birthday.timestamp())}:F> has been cleared.',
                 ephemeral=True)
