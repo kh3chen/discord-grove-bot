@@ -83,8 +83,10 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
                 pass
             else:
                 announcement_body += f'Special thanks this week\'s <@&{config.GROVE_ROLE_ID_CELESTIAL}> Grovians:\n'
-                announcement_body = reduce(lambda body, member: body + f'{member.discord_mention} <:celestial:1174736926364934275>\n', new_celestials,
-                                           announcement_body)
+                announcement_body = reduce(
+                    lambda body, member: body + f'{member.discord_mention} <:celestial:1174736926364934275>\n',
+                    new_celestials,
+                    announcement_body)
                 announcement_body += '\n'
 
             # New members
@@ -166,4 +168,6 @@ def get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
 
 
 def get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
-    return list(filter(lambda wp: wp.rank == 'Spirit' and wp.ten_week_average >= 20, wp_list))
+    return list(filter(
+        lambda wp: (wp.rank == 'Spirit' or wp.rank == 'Guardian' or wp.rank == 'Warden') and wp.ten_week_average >= 20,
+        wp_list))
