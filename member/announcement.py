@@ -115,8 +115,30 @@ async def send_announcement(bot, interaction: discord.Interaction, emoji_id: str
 
 async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title):
     await leaderboard_thread.send(f'**{leaderboard_thread_title}**')
-    leaderboard = sheets_members.get_leaderboard()
+    leaderboard = get_leaderboard()
     for line in leaderboard:
         await leaderboard_thread.send(line)
     await leaderboard_thread.send(
         f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')
+
+
+def get_leaderboard():
+    wp_list = sheets_members.get_weekly_participation()
+    ordered_list = sorted(wp_list, key=lambda wp: wp.index)  # First sort by index, i.e. in-game order
+    sorted_list = sorted(ordered_list, key=lambda wp: wp.score, reverse=True)  # Then sort by score
+
+    output = []
+    current_score = None
+    line = ''
+    for wp in sorted_list:
+        if wp.score != current_score:
+            if current_score is not None:
+                output.append(line)
+            line = f'{wp.score} '
+        line += f'{wp.discord_id} '
+        current_score = wp.score
+
+    if current_score is not None:
+        output.append(line)
+
+    return output
