@@ -519,8 +519,9 @@ class Bossing:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
     async def __settime(self, interaction, sheets_party: SheetsParty, weekday_str, hour, minute):
-        weekday = SheetsParty.Weekday[weekday_str]
-        if not weekday:
+        try:
+            weekday = SheetsParty.Weekday[weekday_str.lower()]
+        except KeyError:
             await self.__send(interaction,
                               'Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]',
                               ephemeral=True)
