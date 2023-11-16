@@ -117,7 +117,7 @@ class WeeklyParticipation:
     INDEX_NAME = 2
     INDEX_MULE_IGNS = 3
     INDEX_SCORE = 4
-    INDEX_DISCORD_ID = 5
+    INDEX_DISCORD_MENTION = 5
     INDEX_INTROED = 6
     INDEX_JOINED = 7
     INDEX_NOTES = 8
@@ -125,7 +125,7 @@ class WeeklyParticipation:
     INDEX_CONTRIBUTION = 10
     INDEX_TEN_WEEK_AVERAGE = 11
 
-    def __init__(self, index, grove_igns, name, mule_igns, score, discord_id, introed, joined, notes, rank,
+    def __init__(self, index, grove_igns, name, mule_igns, score, discord_mention, introed, joined, notes, rank,
                  contribution, ten_week_average):
         try:
             self.index = int(index)
@@ -138,7 +138,7 @@ class WeeklyParticipation:
             self.score = int(score)
         except ValueError:
             self.score = 0
-        self.discord_id = str(discord_id)
+        self.discord_mention = str(discord_mention)
         self.introed = str(introed)
         self.joined = str(joined)
         self.notes = str(notes)
@@ -152,6 +152,10 @@ class WeeklyParticipation:
         except ValueError:
             self.ten_week_average = float(0)
 
+    @property
+    def discord_id(self):
+        return int(self.discord_mention.strip('<@>'))
+
     @staticmethod
     def from_sheets_value(wp_value: list[str]):
         wp_value = wp_value[:WeeklyParticipation.LENGTH] + [''] * (WeeklyParticipation.LENGTH - len(wp_value))
@@ -160,7 +164,7 @@ class WeeklyParticipation:
                                    wp_value[WeeklyParticipation.INDEX_NAME],
                                    wp_value[WeeklyParticipation.INDEX_MULE_IGNS],
                                    wp_value[WeeklyParticipation.INDEX_SCORE],
-                                   wp_value[WeeklyParticipation.INDEX_DISCORD_ID],
+                                   wp_value[WeeklyParticipation.INDEX_DISCORD_MENTION],
                                    wp_value[WeeklyParticipation.INDEX_INTROED],
                                    wp_value[WeeklyParticipation.INDEX_JOINED],
                                    wp_value[WeeklyParticipation.INDEX_NOTES], wp_value[WeeklyParticipation.INDEX_RANK],
@@ -179,4 +183,8 @@ def get_weekly_participation():
         return
 
     wp_list = list(map(lambda wp_value: WeeklyParticipation.from_sheets_value(wp_value), values))
-    return list(filter(lambda wp: wp.index != -1, wp_list))
+    filtered = list(filter(lambda wp: wp.index != -1, wp_list))  # Remove invalid entries
+    ordered_list = sorted(filtered, key=lambda wp: wp.index)  # First sort by index, i.e. in-game order
+    sorted_list = sorted(ordered_list, key=lambda wp: wp.score, reverse=True)  # Then sort by score, descending
+
+    return sorted_list
