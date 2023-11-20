@@ -6,6 +6,14 @@ RANGE_MEMBERS = 'Member List!D3:F'
 RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:L'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
+ROLE_NAME_SPIRIT = 'Spirit'
+CONTRIBUTION_THRESHOLD_SPIRIT = 450000
+AVERAGE_THRESHOLD_SPIRIT = 20
+ROLE_NAME_TREE = 'Tree'
+CONTRIBUTION_THRESHOLD_TREE = 150000
+ROLE_NAME_SAPLING = 'Sapling'
+ROLE_NAME_MOSS = 'Moss'
+
 
 class Member:
     LENGTH = 3
@@ -103,7 +111,7 @@ def update_member_rank(member_id: int, grove_role_name: str):
 
         body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                            range=RANGE_MEMBERS, valueInputOption="RAW",
+                                                            range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
     except StopIteration:
         return

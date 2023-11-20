@@ -6,6 +6,7 @@ from discord.ext import commands
 
 import config
 import member.sheets as sheets_members
+from member import rank
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
@@ -62,16 +63,39 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
                     'Error - unable to find the member tracking data for this week\'s announcement. Announcement has been cancelled.')
                 return
 
+            # Promotions to Tree and Spirit
+            spirit_promotions = []
+            tree_promotions = []
+            pre_promotions_wp_list = sheets_members.get_weekly_participation()
+            for wp in pre_promotions_wp_list:
+                if wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT:
+                    spirit_promotions.append(wp)
+                    await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+                elif wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
+                    tree_promotions.append(wp)
+                    await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+
+            # Send to log channel
+            member_activity_channel = bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
+            promotions_message = f'# Week {guild_week} promotions\n'
+            promotions_message += f'## <@&{config.GROVE_ROLE_ID_SPIRIT}> promotions\n'
+            for spirit in spirit_promotions:
+                promotions_message += f'- {spirit.grove_igns}\t{spirit.discord_mention}\n'
+            promotions_message += f'## <@&{config.GROVE_ROLE_ID_TREE}> promotions\n'
+            for tree in tree_promotions:
+                promotions_message += f'- {tree.grove_igns}\t{tree.discord_mention}\n'
+            promotions_message += '\nPlease react when the above promotions have also been reflected in-game.'
+            await member_activity_channel.send(promotions_message)
+
             # Create and format announcement message
             announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
-            # Celestials
-            celestial_role = bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL)
-
             # Remove last week's Celestials
+            celestial_role = bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL)
             for member in celestial_role.members:
                 await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
 
+            # This week's Celestials
             wp_list = sheets_members.get_weekly_participation()
             new_celestials = get_celestials(wp_list)
 
@@ -169,5 +193,6 @@ def get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
 
 def get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
     return list(filter(
-        lambda wp: (wp.rank == 'Spirit' or wp.rank == 'Guardian' or wp.rank == 'Warden') and wp.ten_week_average >= 20,
+        lambda
+            wp: wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
         wp_list))

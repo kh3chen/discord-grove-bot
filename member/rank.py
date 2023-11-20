@@ -2,11 +2,7 @@ import discord
 
 import config
 from member import sheets
-
-ROLE_NAME_SPIRIT = 'Spirit'
-ROLE_NAME_TREE = 'Tree'
-ROLE_NAME_SAPLING = 'Sapling'
-ROLE_NAME_MOSS = 'Moss'
+from member.sheets import ROLE_NAME_SPIRIT, ROLE_NAME_TREE, ROLE_NAME_SAPLING, ROLE_NAME_MOSS
 
 
 async def spirit(interaction: discord.Interaction, member: discord.Member):
