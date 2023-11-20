@@ -68,10 +68,11 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             tree_promotions = []
             pre_promotions_wp_list = sheets_members.get_weekly_participation()
             for wp in pre_promotions_wp_list:
-                if wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT:
+                if ((wp.rank == sheets_members.ROLE_NAME_TREE or wp.rank == sheets_members.ROLE_NAME_SAPLING)
+                        and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT):
                     spirit_promotions.append(wp)
                     await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
-                elif wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
+                elif wp.rank == sheets_members.ROLE_NAME_SAPLING and wp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
                     tree_promotions.append(wp)
                     await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
 
@@ -193,6 +194,7 @@ def get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
 
 def get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
     return list(filter(
-        lambda
-            wp: wp.rank != sheets_members.ROLE_NAME_MOSS and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
+        lambda wp: (wp.rank == sheets_members.ROLE_NAME_WARDEN
+                    or wp.rank == sheets_members.ROLE_NAME_GUARDIAN
+                    or wp.rank == sheets_members.ROLE_NAME_SPIRIT) and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
         wp_list))
