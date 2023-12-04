@@ -55,8 +55,6 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             _self.interacted = True
             await button_interaction.response.edit_message(view=None)
 
-            await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>')
-
             # Validate the spreadsheet has a column for this week's announcement
             if not sheets_members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
                 await interaction.followup.send(
@@ -64,34 +62,52 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
                 return
 
             # Promotions to Tree and Spirit
+            await interaction.followup.send('Promoting Spirit and Tree rank members...')
+
             spirit_promotions = []
             tree_promotions = []
+            left_discord = []
             pre_promotions_wp_list = sheets_members.get_weekly_participation()
             for wp in pre_promotions_wp_list:
                 if ((wp.rank == sheets_members.ROLE_NAME_TREE or wp.rank == sheets_members.ROLE_NAME_SAPLING)
                         and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT):
-                    spirit_promotions.append(wp)
-                    await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+                    try:
+                        await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+                        spirit_promotions.append(wp)
+                    except AttributeError:
+                        left_discord.append(wp)
                 elif wp.rank == sheets_members.ROLE_NAME_SAPLING and wp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
-                    tree_promotions.append(wp)
-                    await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+                    try:
+                        await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
+                        tree_promotions.append(wp)
+                    except AttributeError:
+                        left_discord.append(wp)
 
             # Send to log channel
             member_activity_channel = bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
-            promotions_message = f'# Week {guild_week} promotions\n'
-            promotions_message += f'## <@&{config.GROVE_ROLE_ID_SPIRIT}> promotions\n'
-            for spirit in spirit_promotions:
-                promotions_message += f'- {spirit.grove_igns}\t{spirit.discord_mention}\n'
-            promotions_message += f'## <@&{config.GROVE_ROLE_ID_TREE}> promotions\n'
-            for tree in tree_promotions:
-                promotions_message += f'- {tree.grove_igns}\t{tree.discord_mention}\n'
-            promotions_message += '\nPlease react when the above promotions have also been reflected in-game.'
-            await member_activity_channel.send(promotions_message)
+            if len(spirit_promotions) > 0 or len(tree_promotions) > 0:
+                promotions_message = f'# Week {guild_week} promotions\n'
+                if len(spirit_promotions) > 0:
+                    promotions_message += f'## <@&{config.GROVE_ROLE_ID_SPIRIT}> promotions\n'
+                    for spirit in spirit_promotions:
+                        promotions_message += f'- {spirit.grove_igns}\t{spirit.discord_mention}\n'
+                if len(tree_promotions) > 0:
+                    promotions_message += f'## <@&{config.GROVE_ROLE_ID_TREE}> promotions\n'
+                    for tree in tree_promotions:
+                        promotions_message += f'- {tree.grove_igns}\t{tree.discord_mention}\n'
+                promotions_message += '\nPlease react when the above promotions have also been reflected in-game.'
+                await member_activity_channel.send(promotions_message)
 
-            # Create and format announcement message
-            announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
+            if len(left_discord) > 0:
+                left_discord_message = f'# Week {guild_week} leavers\n'
+                for leaver in left_discord:
+                    left_discord_message += f'- {leaver.grove_igns}\t{leaver.discord_mention}\n'
+                left_discord_message += '\nPlease react when the above leavers have been removed from the guild and updated in the spreadsheet.'
+                await member_activity_channel.send(left_discord_message)
 
             # Remove last week's Celestials
+            await interaction.followup.send('Updating Celestials for the week...')
+
             celestial_role = bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL)
             for member in celestial_role.members:
                 await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
@@ -103,6 +119,10 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             for wp in new_celestials:
                 member = bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id)
                 await member.add_roles(celestial_role)
+
+            # Create and format announcement message
+            await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>...')
+            announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
             if len(new_celestials) == 0:
                 pass
@@ -148,7 +168,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             # Set the new members as introed
             sheets_members.update_introed_new_members()
 
-            await interaction.followup.send("Done!")
+            await interaction.followup.send("Announcement complete!")
 
         @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
         async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
