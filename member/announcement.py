@@ -7,6 +7,7 @@ from discord.ext import commands
 import config
 import member.sheets as sheets_members
 from member import rank
+from utils.constants import SPIRIT_PURPLE, GROVE_GREEN
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
@@ -114,7 +115,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
 
             # This week's Celestials
             wp_list = sheets_members.get_weekly_participation()
-            new_celestials = get_celestials(wp_list)
+            new_celestials = _get_celestials(wp_list)
 
             for wp in new_celestials:
                 member = bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id)
@@ -124,16 +125,6 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>...')
             announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
-            if len(new_celestials) == 0:
-                pass
-            else:
-                announcement_body += f'Special thanks this week\'s <@&{config.GROVE_ROLE_ID_CELESTIAL}> Grovians:\n'
-                announcement_body = reduce(
-                    lambda body, member: body + f'{member.discord_mention} <:celestial:1174736926364934275>\n',
-                    new_celestials,
-                    announcement_body)
-                announcement_body += '\n'
-
             # New members
             new_members = sheets_members.get_new_members()
             if len(new_members) == 0:
@@ -142,7 +133,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
                 announcement_body += f'Welcome to our new member this week:\n{new_members[0]}\n\n'
             else:
                 announcement_body += 'Welcome to our new members this week:\n'
-                announcement_body = reduce(lambda body, member: body + f'{member}\n', new_members, announcement_body)
+                announcement_body += reduce(lambda body, member: body + f'{member}\n', new_members, "")
                 announcement_body += '\n'
 
             if custom_message:
@@ -152,7 +143,10 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
 
             # Send announcement
             send_channel = bot.get_channel(ANNOUNCEMENT_CHANNEL_ID)
-            announcement_message = await send_channel.send(announcement_body)
+            announcement_message = await send_channel.send(content=announcement_body,
+                                                           embeds=_get_announcement_embeds(guild_week, new_celestials,
+                                                                                           spirit_promotions,
+                                                                                           tree_promotions))
             await announcement_message.add_reaction(emoji)
 
             # Create leaderboard thread and add link to main announcement
@@ -163,7 +157,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             await announcement_message.edit(content=announcement_body)
 
             # Send leaderboard ranking messages
-            await announce_leaderboard(leaderboard_thread, leaderboard_thread_title, wp_list)
+            await _announce_leaderboard(leaderboard_thread, leaderboard_thread_title, wp_list)
 
             # Set the new members as introed
             sheets_members.update_introed_new_members()
@@ -184,17 +178,17 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
     buttonsView.message = await interaction.followup.send(confirmation_message_body, view=buttonsView)
 
 
-async def announce_leaderboard(leaderboard_thread, leaderboard_thread_title,
-                               wp_list: list[sheets_members.WeeklyParticipation]):
+async def _announce_leaderboard(leaderboard_thread, leaderboard_thread_title,
+                                wp_list: list[sheets_members.WeeklyParticipation]):
     await leaderboard_thread.send(f'**{leaderboard_thread_title}**')
-    leaderboard = get_leaderboard_output(wp_list)
+    leaderboard = _get_leaderboard_output(wp_list)
     for line in leaderboard:
         await leaderboard_thread.send(line)
     await leaderboard_thread.send(
         f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')
 
 
-def get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
+def _get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
     output = []
     current_score = None
     line = ''
@@ -212,9 +206,48 @@ def get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
     return output
 
 
-def get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
+def _get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
     return list(filter(
         lambda wp: (wp.rank == sheets_members.ROLE_NAME_WARDEN
                     or wp.rank == sheets_members.ROLE_NAME_GUARDIAN
                     or wp.rank == sheets_members.ROLE_NAME_SPIRIT) and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
         wp_list))
+
+
+def _get_announcement_embeds(guild_week: int,
+                             celestials: list[sheets_members.WeeklyParticipation],
+                             spirit_promotions: list[sheets_members.WeeklyParticipation],
+                             tree_promotions: list[sheets_members.WeeklyParticipation]):
+    announcement_embeds = []
+    if len(celestials) > 0:
+        announcement_embeds.append(_get_celestial_embed(guild_week, celestials))
+    if len(spirit_promotions) > 0 or len(tree_promotions) > 0:
+        announcement_embeds.append(_get_promotions_embed(guild_week, spirit_promotions, tree_promotions))
+
+    return announcement_embeds
+
+
+def _get_celestial_embed(guild_week: int,
+                         celestials: list[sheets_members.WeeklyParticipation]):
+    description = f'Special thanks this week\'s <@&{config.GROVE_ROLE_ID_CELESTIAL}> Grovians:\n'
+    description += reduce(
+        lambda body, member: body + f'{member.discord_mention} <:celestial:1174736926364934275>\n',
+        celestials,
+        "")
+    description += '\n'
+    return discord.Embed(title=f'Week {guild_week} Celestials', description=description, colour=SPIRIT_PURPLE)
+
+
+def _get_promotions_embed(guild_week: int,
+                          spirit_promotions: list[sheets_members.WeeklyParticipation],
+                          tree_promotions: list[sheets_members.WeeklyParticipation]):
+    embed = discord.Embed(title=f'Week {guild_week} Promotions')
+    if len(spirit_promotions) > 0:
+        embed.add_field(name='',
+                        value=reduce(lambda body, member: body + f'{member.discord_mention}\n', spirit_promotions,
+                                     f'<@&{config.GROVE_ROLE_ID_SPIRIT}>\n'))
+    if len(tree_promotions) > 0:
+        embed.add_field(name='',
+                        value=reduce(lambda body, member: body + f'{member.discord_mention}\n', tree_promotions,
+                                     f'<@&{config.GROVE_ROLE_ID_TREE}>\n'))
+    return embed
