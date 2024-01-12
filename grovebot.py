@@ -41,4 +41,16 @@ async def _version(ctx):
     await ctx.send(version.version_name)
 
 
+@grove_bot.command(name='batch-add-role')
+async def add_role(ctx, role: discord.Role, *members: discord.Member):
+    for member in members:
+        await member.add_roles(role)
+        await ctx.send(f'Added {role.name} to {member.name}.')
+
+
+@add_role.error
+async def add_role_error(ctx, error):
+    await ctx.send('Error - Command format must be `>add-role [role] [members]`.')
+
+
 grove_bot.run(config.BOT_TOKEN)
