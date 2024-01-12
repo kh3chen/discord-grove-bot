@@ -56,58 +56,6 @@ class Bossing:
     def on_ready(self):
         self.__restart_service()
 
-    async def scrape(self, interaction):
-        """ Used in the initial set up for the Boss Parties spreadsheet data, this function should no longer have any use."""
-        discord_parties = self.__get_boss_parties(interaction.guild.roles)
-
-        # Update parties data
-        async with self.lock:
-            parties_pairs = []
-            # get list of parties from sheet
-            sheets_parties = self.sheets_bossing.parties
-            added_sheets_parties = []
-            parties_values_index = 0
-
-            for discord_party in discord_parties:
-                if parties_values_index == len(sheets_parties):
-                    # More party roles than in data, new party at the end
-                    new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                    sheets_parties.append(new_sheets_party)
-                    added_sheets_parties.append(new_sheets_party)
-                    parties_pairs.append((discord_party, new_sheets_party))
-                elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
-                    # Party role doesn't match data, there must be a new record
-                    new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                    sheets_parties.insert(parties_values_index, new_sheets_party)
-                    added_sheets_parties.append(new_sheets_party)
-                    parties_pairs.append((discord_party, new_sheets_party))
-                else:  # Data exists
-                    parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
-
-                parties_values_index += 1
-
-            # Update parties
-            self.sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
-
-            # Update members data
-            new_sheets_members = []
-            for discord_party, sheets_party in parties_pairs:
-                for member in discord_party.members:
-                    member_user_id = str(member.id)
-                    try:
-                        next(
-                            sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
-                            sheets_member.user_id == member_user_id and sheets_member.party_role_id == sheets_party.role_id)
-                    except StopIteration:
-                        # Not found in member sheet data, add new member
-                        new_sheets_members.append(
-                            SheetsMember(boss_name=sheets_party.boss_name, party_number=sheets_party.party_number,
-                                         party_role_id=sheets_party.role_id, user_id=member_user_id, job=''))
-                        continue
-
-            self.sheets_bossing.append_members(new_sheets_members)
-        await self.__send(interaction, 'Scrape complete.', ephemeral=True)
-
     async def sync(self, interaction):
         async with self.lock:
             self.sheets_bossing.sync_data()
@@ -409,11 +357,30 @@ class Bossing:
 
         return removed_sheets_member
 
-    async def new(self, interaction, boss_name):
+    async def new(self, interaction, boss_name, difficulty):
         if boss_name not in self.sheets_bossing.get_boss_names():
             await self.__send(interaction,
                               f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
                               f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.get_boss_names())}`',
+                              ephemeral=True)
+            return
+
+        if len(self.sheets_bossing.bosses_dict[boss_name].difficulties) > 0:
+            if difficulty == "":
+                await self.__send(interaction,
+                                  f'Error - `{boss_name}` requires a difficulty. Valid difficulties for `{boss_name}` are as follows:\n'
+                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties)}`',
+                                  ephemeral=True)
+                return
+            elif difficulty not in self.sheets_bossing.bosses_dict[boss_name].difficulties:
+                await self.__send(interaction,
+                                  f'Error - `{difficulty}` is not a valid difficulty for `{boss_name}`. Valid difficulties are as follows:\n'
+                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties)}`',
+                                  ephemeral=True)
+                return
+        elif difficulty != "" and len(self.sheets_bossing.bosses_dict[boss_name].difficulties) == 0:
+            await self.__send(interaction,
+                              f'Error - `{boss_name}` does not support multiple difficulties.',
                               ephemeral=True)
             return
 
@@ -428,13 +395,14 @@ class Bossing:
                 if party_boss_index == new_party_boss_index:
                     # Found LFG or Fill party for the corresponding bossing, insert new party above it
                     if sheets_party.party_number == 'LFG' or sheets_party.party_number == 'Fill':
-                        new_boss_party = await interaction.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                                             colour=self.sheets_bossing.bosses_dict[
-                                                                                 boss_name].get_role_colour(),
-                                                                             mentionable=True)
+                        new_boss_party = await interaction.guild.create_role(
+                            name=f'{difficulty}{boss_name} Party {party_number}',
+                            colour=self.sheets_bossing.bosses_dict[
+                                boss_name].get_role_colour(),
+                            mentionable=True)
                         await new_boss_party.edit(
                             position=interaction.guild.get_role(int(sheets_party.role_id)).position)
-                        new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                        new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
                         sheets_parties.insert(sheets_parties_index, new_sheets_party)
                         break
                     else:
@@ -442,13 +410,14 @@ class Bossing:
 
                 elif party_boss_index > new_party_boss_index:
                     # Found a party bossing that comes after, insert new party above it
-                    new_boss_party = await interaction.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                                         colour=self.sheets_bossing.bosses_dict[
-                                                                             boss_name].get_role_colour(),
-                                                                         mentionable=True)
+                    new_boss_party = await interaction.guild.create_role(
+                        name=f'{difficulty}{boss_name} Party {party_number}',
+                        colour=self.sheets_bossing.bosses_dict[
+                            boss_name].get_role_colour(),
+                        mentionable=True)
                     await new_boss_party.edit(
                         position=interaction.guild.get_role(int(sheets_party.role_id)).position)
-                    new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                    new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
                     sheets_parties.insert(sheets_parties_index, new_sheets_party)
                     break
 
@@ -456,12 +425,13 @@ class Bossing:
 
             if new_sheets_party is None:
                 # Couldn't find any of the above, new party must come last
-                new_boss_party = await interaction.guild.create_role(name=f'{boss_name} Party {party_number}',
-                                                                     colour=self.sheets_bossing.bosses_dict[
-                                                                         boss_name].get_role_colour(), mentionable=True)
+                new_boss_party = await interaction.guild.create_role(
+                    name=f'{difficulty}{boss_name} Party {party_number}',
+                    colour=self.sheets_bossing.bosses_dict[
+                        boss_name].get_role_colour(), mentionable=True)
                 await new_boss_party.edit(
                     position=interaction.guild.get_role(int(sheets_parties[-1].role_id)).position - 1)
-                new_sheets_party = SheetsParty.from_discord_party(new_boss_party)
+                new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
                 sheets_parties.append(new_sheets_party)
 
             # Update spreadsheet
@@ -469,8 +439,9 @@ class Bossing:
 
             # Create thread
             boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
-            party_thread_with_message = await boss_forum.create_thread(name=f'{new_boss_party.name} - New',
-                                                                       content=f'{new_boss_party.mention}')
+            party_thread_with_message = await boss_forum.create_thread(
+                name=f'{new_boss_party.difficulty}{new_boss_party.name} - New',
+                content=f'{new_boss_party.mention}')
             sheets_parties = self.sheets_bossing.parties
             for sheets_party in sheets_parties:
                 if sheets_party.role_id == str(new_boss_party.id):
@@ -795,6 +766,59 @@ class Bossing:
                     party_message = None
                 await self.__update_thread(party_thread, party_message, sheets_party)
 
+    async def difficulty(self, interaction, discord_party: discord.Role, difficulty: str):
+        async with self.lock:
+            sheets_parties = self.sheets_bossing.parties
+
+            try:
+                sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                    sheets_party.role_id == str(discord_party.id))
+            except StopIteration:
+                await self.__send(interaction, f'Error - {discord_party.mention} is not a bossing party.',
+                                  ephemeral=True)
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.retired:
+                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
+                return
+
+            if len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) > 0:
+                if difficulty not in self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties:
+                    await self.__send(interaction,
+                                      f'Error - `{difficulty}` is not a valid difficulty for `{sheets_party.boss_name}`. Valid difficulties are as follows:\n'
+                                      f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties)}`',
+                                      ephemeral=True)
+                    return
+            elif difficulty != "" and len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) == 0:
+                await self.__send(interaction,
+                                  f'Error - `{sheets_party.boss_name}` does not support multiple difficulties.',
+                                  ephemeral=True)
+                return
+
+            # Update party sheet
+            sheets_party.difficulty = difficulty
+            # Update role name
+            discord_party = await discord_party.edit(
+                name=f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
+
+            self.sheets_bossing.update_parties(sheets_parties)
+            await self.__send(interaction, f'{discord_party.name} is now {sheets_party.difficulty} difficulty.',
+                              ephemeral=True,
+                              log=True)
+
+            if sheets_party.party_thread_id:
+                # Update thread title
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                if sheets_party.party_message_id:
+                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                else:
+                    party_message = None
+                await self.__update_thread(party_thread, party_message, sheets_party)
+
     async def listremake(self, interaction):
         # Confirmation
         confirmation_message_body = f'Are you sure you want to remake the bossing party list in <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>?\n'
@@ -912,36 +936,6 @@ class Bossing:
         parties.reverse()  # Roles are ordered bottom up
         return parties
 
-    def __update_with_new_parties(self, discord_parties):
-        parties_pairs = []
-        # get list of parties from sheet
-        sheets_parties = self.sheets_bossing.parties
-        added_sheets_parties = []
-        parties_values_index = 0
-
-        for discord_party in discord_parties:
-            if parties_values_index == len(sheets_parties):
-                # More party roles than in data, new party at the end
-                new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                sheets_parties.append(new_sheets_party)
-                added_sheets_parties.append(new_sheets_party)
-                parties_pairs.append((discord_party, new_sheets_party))
-            elif sheets_parties[parties_values_index].role_id != str(discord_party.id):
-                # Party role doesn't match data, there must be a new record
-                new_sheets_party = SheetsParty.from_discord_party(discord_party)
-                sheets_parties.insert(parties_values_index, new_sheets_party)
-                added_sheets_parties.append(new_sheets_party)
-                parties_pairs.append((discord_party, new_sheets_party))
-            else:  # Data exists
-                parties_pairs.append((discord_party, sheets_parties[parties_values_index]))
-
-            parties_values_index += 1
-
-        # Update parties
-        self.sheets_bossing.update_parties(sheets_parties, added_sheets_parties)
-
-        return parties_pairs
-
     def __update_existing_party(self, discord_party):
         # Update party status and member count
         new_sheets_parties = self.sheets_bossing.parties
@@ -991,7 +985,7 @@ class Bossing:
         await party_thread.edit(archived=False, locked=False)
 
         # Update thread title
-        title = f'{sheets_party.boss_name} Party {sheets_party.party_number} - '
+        title = f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number} - '
         if sheets_party.status == SheetsParty.PartyStatus.retired:
             if party_message:
                 message = f'<@&{sheets_party.role_id}>'

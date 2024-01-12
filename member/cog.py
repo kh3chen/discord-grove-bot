@@ -48,7 +48,7 @@ class MemberCog(commands.Cog):
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     @app_commands.describe(emoji='The seasonal Grove tree emoji')
     @app_commands.describe(custom_msg_id='The message ID you want to copy for the custom announcement')
-    async def _announcement(self, interaction, emoji: str, custom_msg_id: str = None):
+    async def announcement(self, interaction, emoji: str, custom_msg_id: str = None):
         await interaction.response.defer()
         await announcement.send_announcement(self.bot, interaction, emoji, custom_msg_id)
 

@@ -66,9 +66,9 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
 
         @app_commands.command(name='new', description='Create a new bossing party')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def new(self, interaction: discord.Interaction, boss_name: str):
+        async def new(self, interaction: discord.Interaction, boss_name: str, difficulty: str = ""):
             await interaction.response.defer(ephemeral=True)
-            await bossing.new(interaction, boss_name)
+            await bossing.new(interaction, boss_name, difficulty)
 
         @app_commands.command(name='open', description='Make a new or exclusive party open')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
@@ -87,6 +87,13 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         async def retire(self, interaction: discord.Interaction, boss_party_role: discord.Role):
             await interaction.response.defer()
             await bossing.retire(interaction, boss_party_role)
+
+        @app_commands.command(name='difficulty',
+                              description='Set a boss party difficulty for bosses that support it')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def retire(self, interaction: discord.Interaction, boss_party_role: discord.Role, difficulty: str):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.difficulty(interaction, boss_party_role, difficulty)
 
 
 class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
