@@ -440,7 +440,7 @@ class Bossing:
             # Create thread
             boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
             party_thread_with_message = await boss_forum.create_thread(
-                name=f'{new_sheets_party.difficulty}{new_sheets_party.name} Party {new_sheets_party.party_number} - New',
+                name=f'{new_sheets_party.difficulty}{new_sheets_party.boss_name} Party {new_sheets_party.party_number} - New',
                 content=f'{new_boss_party.mention}')
             sheets_parties = self.sheets_bossing.parties
             for sheets_party in sheets_parties:
