@@ -91,7 +91,7 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         @app_commands.command(name='difficulty',
                               description='Set a boss party difficulty for bosses that support it')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def retire(self, interaction: discord.Interaction, boss_party_role: discord.Role, difficulty: str):
+        async def difficulty(self, interaction: discord.Interaction, boss_party_role: discord.Role, difficulty: str):
             await interaction.response.defer(ephemeral=True)
             await bossing.difficulty(interaction, boss_party_role, difficulty)
 
