@@ -23,19 +23,22 @@ async def moss(interaction: discord.Interaction, member: discord.Member):
 
 async def __set_grove_role(interaction: discord.Interaction, member: discord.Member, grove_role_id: int,
                            grove_role_name: str):
-    await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
-    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
-                           interaction.guild.get_role(grove_role_id))
-
     # Update spreadsheet
-    sheets.update_member_rank(member.id, grove_role_name)
+    member_exists = sheets.update_member_rank(member.id, grove_role_name)
+    if member_exists:
 
-    await interaction.followup.send(f'{member.mention} is now a <@&{grove_role_id}>.')
+        await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
+        await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
+                               interaction.guild.get_role(grove_role_id))
+
+        await interaction.followup.send(f'{member.mention} is now a <@&{grove_role_id}>.')
+    else:
+        await interaction.followup.send(f'Error - {member.mention} has not been added to member tracking.')
 
 
 async def guest(interaction: discord.Interaction, member: discord.Member):

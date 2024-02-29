@@ -103,7 +103,7 @@ def update_member_rank(member_id: int, grove_role_name: str):
 
     if not values:
         print('No data found.')
-        return []
+        return False
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     try:
@@ -115,8 +115,9 @@ def update_member_rank(member_id: int, grove_role_name: str):
         sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                             range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
+        return True
     except StopIteration:
-        return
+        return False
 
 
 class WeeklyParticipation:
