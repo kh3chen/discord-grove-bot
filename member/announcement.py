@@ -123,7 +123,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
 
             # Create and format announcement message
             await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>...')
-            announcement_body = f'<@&{config.GROVE_ROLE_ID_GROVE}>\n\nThanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
+            announcement_body = f'Thanks everyone for another great week of Grove! Here\'s our week {guild_week} recap:\n<#LEADERBOARD_THREAD_ID_HERE>\n\n'
 
             # New members
             new_members = sheets_members.get_new_members()
@@ -174,36 +174,39 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             await button_interaction.response.edit_message(view=None)
             await interaction.followup.send('Announcement has been cancelled.')
 
-    buttonsView = Buttons()
-    buttonsView.message = await interaction.followup.send(confirmation_message_body, view=buttonsView)
+    buttons_view = Buttons()
+    buttons_view.message = await interaction.followup.send(confirmation_message_body, view=buttons_view)
 
 
 async def _announce_leaderboard(leaderboard_thread, leaderboard_thread_title,
                                 wp_list: list[sheets_members.WeeklyParticipation]):
-    await leaderboard_thread.send(f'**{leaderboard_thread_title}**')
-    leaderboard = _get_leaderboard_output(wp_list)
-    for line in leaderboard:
-        await leaderboard_thread.send(line)
+    await leaderboard_thread.send(f'# {leaderboard_thread_title}')
+    leaderboard_embeds = _get_leaderboard_embeds(wp_list)
+    for embed in leaderboard_embeds:
+        await leaderboard_thread.send(embed=embed)
     await leaderboard_thread.send(
         f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')
 
 
-def _get_leaderboard_output(wp_list: list[sheets_members.WeeklyParticipation]):
-    output = []
+def _get_leaderboard_embeds(wp_list: list[sheets_members.WeeklyParticipation]):
+    embeds = []
     current_score = None
     line = ''
     for wp in wp_list:
-        if wp.score != current_score:
-            if current_score is not None:
-                output.append(line)
-            line = f'{wp.score} '
+        if current_score is None:
+            current_score = wp.score
+
+        elif current_score != wp.score:
+            if line != '':
+                embeds.append(discord.Embed(title=f'{current_score} Points', description=line, colour=GROVE_GREEN))
+            current_score = wp.score
+            line = ''
         line += f'{wp.discord_mention} '
-        current_score = wp.score
 
-    if current_score is not None:
-        output.append(line)
+    if current_score is not None and line != '':
+        embeds.append(discord.Embed(title=f'{current_score} Points', description=line, colour=GROVE_GREEN))
 
-    return output
+    return embeds
 
 
 def _get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
