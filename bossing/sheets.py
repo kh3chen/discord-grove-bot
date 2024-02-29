@@ -180,7 +180,7 @@ class Member:
 class BossingSheets:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
-    RANGE_BOSSES = 'Bosses!A2:G'
+    RANGE_BOSSES = 'Bosses!A2:H'
     RANGE_PARTIES = 'Parties!A2:M'
     RANGE_MEMBERS = 'Members!A2:E'
 
