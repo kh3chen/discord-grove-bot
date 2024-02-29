@@ -10,10 +10,10 @@ from member import rank
 from utils.constants import SPIRIT_PURPLE, GROVE_GREEN
 
 GUILD_CREATED_ON = datetime.date(2021, 12, 19)
-ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_ANNOUNCEMENTS
+ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_LEADERBOARD
 
 
-async def send_announcement(bot: commands.Bot, interaction: discord.Interaction, emoji_id: str, custom_message_id: str):
+async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, emoji_id: str):
     today = datetime.date.today()
     sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
     guild_week = (sunday - GUILD_CREATED_ON).days // 7
@@ -27,14 +27,7 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
             'Error - invalid emoji, please use an emoji from this server. Announcement has been cancelled.')
         return
 
-    custom_message = None
-    if custom_message_id:
-        channel = bot.get_channel(interaction.channel_id)
-        custom_message = await channel.fetch_message(custom_message_id)
-
     confirmation_message_body = f'Are you sure you want to send the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>?\n\nWeek {guild_week}\n{sunday}\n{sunday.year} Leaderboard Week {leaderboard_week}\n{emoji_id}\n\n'
-    if custom_message:
-        confirmation_message_body += f'Custom message:\n```{custom_message.content}```\n\n'
 
     class Buttons(discord.ui.View):
         def __init__(self, *, timeout=180):
@@ -135,9 +128,6 @@ async def send_announcement(bot: commands.Bot, interaction: discord.Interaction,
                 announcement_body += 'Welcome to our new members this week:\n'
                 announcement_body += reduce(lambda body, member: body + f'{member}\n', new_members, "")
                 announcement_body += '\n'
-
-            if custom_message:
-                announcement_body += f'{custom_message.content}\n\n'
 
             announcement_body += f'Happy Mapling, Go Grove! {emoji_id}'
 
