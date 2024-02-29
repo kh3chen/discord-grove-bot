@@ -37,6 +37,12 @@ class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member 
         await interaction.response.defer(ephemeral=True)
         await rank.guest(interaction, member)
 
+    @app_commands.command(name='retiree', description='Set the Discord member rank to Retiree')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def retiree(self, interaction: discord.Interaction, member: discord.Member):
+        await interaction.response.defer(ephemeral=True)
+        await rank.retiree(interaction, member)
+
 
 class MemberCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:

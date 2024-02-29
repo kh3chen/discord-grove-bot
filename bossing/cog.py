@@ -129,7 +129,19 @@ class BossingCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        await bossing.on_member_remove(member)
+        await bossing.remove_member_from_bossing_parties(member, True)
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        try:
+            new_roles = [role for role in after.roles if role not in before.roles]
+            retiree_role = next(role for role in new_roles if
+                                role.id == config.GROVE_ROLE_ID_RETIREE)
+            # Retiree role was added
+            print(f'{after.mention} is retiree, removing from bossing parties')
+            await bossing.remove_member_from_bossing_parties(after, False)
+        except StopIteration:
+            return
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error):
         await interaction.response.defer(ephemeral=True)

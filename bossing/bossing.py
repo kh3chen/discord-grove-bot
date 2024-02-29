@@ -841,7 +841,7 @@ class Bossing:
         async with self.lock:
             await self.__remake_boss_party_list(interaction)
 
-    async def on_member_remove(self, member: discord.Member):
+    async def remove_member_from_bossing_parties(self, member: discord.Member, left_server: bool):
         async with self.lock:
             discord_parties = self.__get_boss_parties(member.roles)
             for discord_party in discord_parties:
@@ -863,7 +863,7 @@ class Bossing:
                 try:
                     await self._remove(None, member, discord_party, sheets_member.job, sheets_party,
                                        silent=sheets_party.status == SheetsParty.PartyStatus.fill,
-                                       left_server=True)
+                                       left_server=left_server)
                 except Exception as e:
                     await self.__send(None, str(e))
 
@@ -925,15 +925,19 @@ class Bossing:
     def __get_boss_parties(self, discord_roles):
         """Returns the subset of Grove bossing party roles from a list of Discord roles."""
         # get all bossing party roles by matching their names to the bosses
+        sheets_parties = self.sheets_bossing.parties
         parties = []
         for role in discord_roles:
-            if role.name.find(' ') == -1 or role.name.find('Practice') != -1:
+            if role.name.find('Party') == -1 and role.name.find('LFG') == -1 and role.name.find('Fill') == -1:
                 continue
 
-            if role.name[0:role.name.find(' ')] in self.sheets_bossing.get_boss_names():
-                parties.append(role)
+            for sheets_party in sheets_parties:
+                if (sheets_party.party_number == 'LFG' and role.name == f'{sheets_party.boss_name} LFG' or
+                        sheets_party.party_number == 'Fill' and role.name == f'{sheets_party.boss_name} Fill' or
+                        role.name == f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}'):
+                    parties.append(role)
+                    break
 
-        parties.reverse()  # Roles are ordered bottom up
         return parties
 
     def __update_existing_party(self, discord_party):

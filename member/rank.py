@@ -27,7 +27,8 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                            interaction.guild.get_role(grove_role_id))
 
@@ -43,6 +44,17 @@ async def guest(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_GUEST}>.')
+
+
+async def retiree(interaction: discord.Interaction, member: discord.Member):
+    await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
+    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
+    await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_RETIREE}>.')
