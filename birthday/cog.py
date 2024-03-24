@@ -43,7 +43,7 @@ class BirthdayCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        await birthday.on_member_remove(member)
+        birthday.on_member_remove(member)
 
     absence_group = BirthdayGroup()
 

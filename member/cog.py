@@ -65,11 +65,14 @@ class MemberCog(commands.Cog):
     async def on_member_join(self, member: discord.Member):
         await member.add_roles(self.bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_GROVE))
 
+        created_at_ago = self.relative_delta_text(
+            relativedelta.relativedelta(datetime.utcnow().replace(tzinfo=timezone.utc), member.created_at))
+
         # Send to log channel
         member_join_remove_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE)
         join_embed = discord.Embed(title='Member joined',
                                    description=f'{member.mention}'
-                                               f'\ncreated <t:{int(member.created_at.timestamp())}:F> <t:{int(member.created_at.timestamp())}:R>',
+                                               f'\ncreated {created_at_ago} ago',
                                    colour=int('0x53DDAC', 16))
         join_embed.set_author(name=member.name, icon_url=member.avatar.url)
         await member_join_remove_channel.send(embed=join_embed)
@@ -79,37 +82,41 @@ class MemberCog(commands.Cog):
         # Send to log channel
         member_join_remove_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE)
         member_roles = reduce(lambda acc, val: acc + (" " if acc else "") + val,
-                              list(map(lambda role: role.mention, member.roles))[1:])  # Remove @everyone
+                              map(lambda role: role.mention, sorted(member.roles[1:], key=lambda role: role.position,
+                                                                    reverse=True)))  # Remove @everyone, sort by position descending
 
-        diff = relativedelta.relativedelta(member.joined_at, datetime.utcnow().replace(tzinfo=timezone.utc))
-
-        if diff.years > 0:
-            member_joined_ago = f'{diff.years} year{"s"[:diff.years ^ 1]}' + (
-                f', {diff.months} month{"s"[:diff.months ^ 1]}' if diff.months > 0 else '') + (
-                                    f', {diff.days} day{"s"[:diff.days ^ 1]}' if diff.days > 0 else '')
-        elif diff.months > 0:
-            member_joined_ago = f'{diff.months} month{"s"[:diff.months ^ 1]}' + (
-                f', {diff.days} day{"s"[:diff.days ^ 1]}' if diff.days > 0 else '')
-        elif diff.days >= 7:
-            member_joined_ago = f'{diff.days} day{"s"[:diff.days ^ 1]}'
-        elif diff.days > 0:
-            member_joined_ago = f'{diff.days} day{"s"[:diff.days ^ 1]}' + (
-                f', {diff.hours} hour{"s"[:diff.hours ^ 1]}' if diff.hours > 0 else '')
-        elif diff.hours > 0:
-            member_joined_ago = f'{diff.hours} hour{"s"[:diff.hours ^ 1]}' + (
-                f', {diff.minutes} minute{"s"[:diff.minutes ^ 1]}' if diff.minutes > 0 else '')
-        elif diff.minutes > 0:
-            member_joined_ago = f'{diff.minutes} minute{"s"[:diff.minutes ^ 1]}' + (
-                f', {diff.seconds} second{"s"[:diff.seconds ^ 1]}' if diff.seconds > 0 else '')
-        else:
-            member_joined_ago = f'{diff.seconds} second{"s"[:diff.seconds ^ 1]}'
+        joined_at_ago = self.relative_delta_text(
+            relativedelta.relativedelta(datetime.utcnow().replace(tzinfo=timezone.utc), member.joined_at))
 
         join_embed = discord.Embed(title='Member left',
-                                   description=f'{member.mention} joined {member_joined_ago} ago'
+                                   description=f'{member.mention} joined {joined_at_ago} ago'
                                                f'\n**Roles:** {member_roles}',
                                    colour=int('0xFFF5AF', 16))
         join_embed.set_author(name=member.name, icon_url=member.avatar.url)
         await member_join_remove_channel.send(embed=join_embed)
+
+    @staticmethod
+    def relative_delta_text(delta: relativedelta):
+        if delta.years > 0:
+            return f'{delta.years} year{"s"[:delta.years ^ 1]}' + (
+                f', {delta.months} month{"s"[:delta.months ^ 1]}' if delta.months > 0 else '') + (
+                f', {delta.days} day{"s"[:delta.days ^ 1]}' if delta.days > 0 else '')
+        elif delta.months > 0:
+            return f'{delta.months} month{"s"[:delta.months ^ 1]}' + (
+                f', {delta.days} day{"s"[:delta.days ^ 1]}' if delta.days > 0 else '')
+        elif delta.days >= 7:
+            return f'{delta.days} day{"s"[:delta.days ^ 1]}'
+        elif delta.days > 0:
+            return f'{delta.days} day{"s"[:delta.days ^ 1]}' + (
+                f', {delta.hours} hour{"s"[:delta.hours ^ 1]}' if delta.hours > 0 else '')
+        elif delta.hours > 0:
+            return f'{delta.hours} hour{"s"[:delta.hours ^ 1]}' + (
+                f', {delta.minutes} minute{"s"[:delta.minutes ^ 1]}' if delta.minutes > 0 else '')
+        elif delta.minutes > 0:
+            return f'{delta.minutes} minute{"s"[:delta.minutes ^ 1]}' + (
+                f', {delta.seconds} second{"s"[:delta.seconds ^ 1]}' if delta.seconds > 0 else '')
+        else:
+            return f'{delta.seconds} second{"s"[:delta.seconds ^ 1]}'
 
 
 async def setup(bot):
