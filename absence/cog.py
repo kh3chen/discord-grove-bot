@@ -41,7 +41,7 @@ class AbsenceCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        await absence.on_member_remove(member)
+        absence.on_member_remove(member)
 
     absence_group = AbsenceGroup()
 

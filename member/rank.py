@@ -14,7 +14,15 @@ async def tree(interaction: discord.Interaction, member: discord.Member):
 
 
 async def sapling(interaction: discord.Interaction, member: discord.Member):
-    await __set_grove_role(interaction, member, config.GROVE_ROLE_ID_SAPLING, ROLE_NAME_SAPLING)
+    sapling_role_given = await __set_grove_role(interaction, member, config.GROVE_ROLE_ID_SAPLING, ROLE_NAME_SAPLING)
+
+    if sapling_role_given:
+        # Welcome message
+        member_welcome_channel = interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MAPLE_CHAT)
+        await member_welcome_channel.send(
+            f'**Welcome to Grove, {member.mention}!**'
+            f'\n'
+            f'\nPlease update your Grove Discord nickname to **Preferred Name (IGN)**. You can ping <@&{config.GROVE_ROLE_ID_JUNIOR}> for any questions you may have about MapleStory and our community! <:grove:924924448916795403>')
 
 
 async def moss(interaction: discord.Interaction, member: discord.Member):
@@ -39,6 +47,8 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
         await interaction.followup.send(f'{member.mention} is now a <@&{grove_role_id}>.')
     else:
         await interaction.followup.send(f'Error - {member.mention} has not been added to member tracking.')
+
+    return member_exists
 
 
 async def guest(interaction: discord.Interaction, member: discord.Member):
