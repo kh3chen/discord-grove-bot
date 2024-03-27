@@ -1,8 +1,10 @@
+from enum import Enum
+
 import config
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
-RANGE_MEMBERS = 'Member List!D3:F'
+RANGE_MEMBERS = 'Member List!D3:G'
 RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:L'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 
@@ -18,21 +20,24 @@ CONTRIBUTION_THRESHOLD_TREE = 150
 
 
 class Member:
-    LENGTH = 3
+    LENGTH = 4
 
     INDEX_DISCORD_MENTION = 0
-    INDEX_INTROED = 1
-    INDEX_RANK = 2
+    INDEX_VERIFIED_MAIN = 1
+    INDEX_INTROED = 2
+    INDEX_RANK = 3
 
-    def __init__(self, discord_mention: str, introed: str, rank: str):
+    def __init__(self, discord_mention: str, verified_main: str, introed: str, rank: str):
         self.discord_mention = discord_mention
         self.introed = introed
+        self.verified_main = verified_main
         self.rank = rank
 
     @staticmethod
     def from_sheets_value(members_value: list[str]):
         members_value = members_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(members_value))
         return Member(members_value[Member.INDEX_DISCORD_MENTION],
+                      members_value[Member.INDEX_VERIFIED_MAIN],
                       members_value[Member.INDEX_INTROED],
                       members_value[Member.INDEX_RANK])
 
@@ -43,7 +48,7 @@ class Member:
         return self.__str__()
 
     def to_sheets_value(self):
-        return [self.discord_mention, self.introed, self.rank]
+        return [self.discord_mention, self.verified_main, self.introed, self.rank]
 
 
 def is_valid(week, datestr):
@@ -71,7 +76,9 @@ def get_new_members():
         return []
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
-    new_members = filter(lambda member: member.discord_mention != '' and member.introed == '', members)
+    new_members = filter(
+        lambda member: member.discord_mention != '' and member.introed == '' and member.rank == ROLE_NAME_SAPLING,
+        members)
     return list(map(lambda member: member.discord_mention, new_members))
 
 
@@ -87,12 +94,18 @@ def update_introed_new_members():
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     for member in members:
         if member.discord_mention != '' and member.introed == '':
-            member.introed = 'Y'
+            member.introed = 'TRUE'
 
     body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
     sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                         range=RANGE_MEMBERS, valueInputOption="RAW",
                                                         body=body).execute()
+
+
+class UpdateMemberRankResult(Enum):
+    Success = 0
+    NotFound = 1
+    NotVerified = 2
 
 
 def update_member_rank(member_id: int, grove_role_name: str):
@@ -103,21 +116,23 @@ def update_member_rank(member_id: int, grove_role_name: str):
 
     if not values:
         print('No data found.')
-        return False
+        return UpdateMemberRankResult.NotFound
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     try:
         member = next(member for member in members if
                       member.discord_mention == f'<@{member_id}>')
+        if member.verified_main != 'TRUE':
+            return UpdateMemberRankResult.NotVerified
         member.rank = grove_role_name
 
         body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                             range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
-        return True
+        return UpdateMemberRankResult.Success
     except StopIteration:
-        return False
+        return UpdateMemberRankResult.NotFound
 
 
 class WeeklyParticipation:

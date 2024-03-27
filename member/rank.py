@@ -2,7 +2,7 @@ import discord
 
 import config
 from member import sheets
-from member.sheets import ROLE_NAME_SPIRIT, ROLE_NAME_TREE, ROLE_NAME_SAPLING, ROLE_NAME_MOSS
+from member.sheets import ROLE_NAME_SPIRIT, ROLE_NAME_TREE, ROLE_NAME_SAPLING, ROLE_NAME_MOSS, UpdateMemberRankResult
 
 
 async def spirit(interaction: discord.Interaction, member: discord.Member):
@@ -14,15 +14,17 @@ async def tree(interaction: discord.Interaction, member: discord.Member):
 
 
 async def sapling(interaction: discord.Interaction, member: discord.Member):
-    sapling_role_given = await __set_grove_role(interaction, member, config.GROVE_ROLE_ID_SAPLING, ROLE_NAME_SAPLING)
+    update_member_rank_result = await __set_grove_role(interaction, member, config.GROVE_ROLE_ID_SAPLING,
+                                                       ROLE_NAME_SAPLING)
 
-    if sapling_role_given:
+    if update_member_rank_result == UpdateMemberRankResult.Success:
         # Welcome message
         member_welcome_channel = interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MAPLE_CHAT)
         await member_welcome_channel.send(
-            f'**Welcome to Grove, {member.mention}!**'
-            f'\n'
-            f'\nPlease update your Grove Discord nickname to **Preferred Name (IGN)**. You can ping <@&{config.GROVE_ROLE_ID_JUNIOR}> for any questions you may have about MapleStory and our community! <:grove:924924448916795403>')
+            f'## Welcome to Grove, {member.mention}!'
+            f'\n- Please update your Grove Discord nickname to **Preferred Name (IGN)**'
+            f'\n- You can choose your visible channels and selected roles at <id:customize>'
+            f'\n\nReach out to any <@&{config.GROVE_ROLE_ID_JUNIOR}> for any questions you may have about MapleStory and our community! <:grove:924924448916795403>')
 
 
 async def moss(interaction: discord.Interaction, member: discord.Member):
@@ -32,8 +34,8 @@ async def moss(interaction: discord.Interaction, member: discord.Member):
 async def __set_grove_role(interaction: discord.Interaction, member: discord.Member, grove_role_id: int,
                            grove_role_name: str):
     # Update spreadsheet
-    member_exists = sheets.update_member_rank(member.id, grove_role_name)
-    if member_exists:
+    update_member_rank_result = sheets.update_member_rank(member.id, grove_role_name)
+    if update_member_rank_result == UpdateMemberRankResult.Success:
 
         await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
@@ -45,10 +47,12 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
                                interaction.guild.get_role(grove_role_id))
 
         await interaction.followup.send(f'{member.mention} is now a <@&{grove_role_id}>.')
-    else:
+    elif update_member_rank_result == UpdateMemberRankResult.NotFound:
         await interaction.followup.send(f'Error - {member.mention} has not been added to member tracking.')
+    elif update_member_rank_result == UpdateMemberRankResult.NotVerified:
+        await interaction.followup.send(f'Error - {member.mention} has not verified their main.')
 
-    return member_exists
+    return update_member_rank_result
 
 
 async def guest(interaction: discord.Interaction, member: discord.Member):
