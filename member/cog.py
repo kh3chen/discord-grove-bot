@@ -74,7 +74,12 @@ class MemberCog(commands.Cog):
                                    description=f'{member.mention}'
                                                f'\ncreated {created_at_ago} ago',
                                    colour=int('0x53DDAC', 16))
-        join_embed.set_author(name=member.name, icon_url=member.avatar.url)
+        try:
+            icon_url = member.avatar.url
+        except AttributeError:
+            icon_url = None
+            pass
+        join_embed.set_author(name=member.name, icon_url=icon_url)
         await member_join_remove_channel.send(embed=join_embed)
 
     @commands.Cog.listener()
@@ -92,7 +97,12 @@ class MemberCog(commands.Cog):
                                    description=f'{member.mention} joined {joined_at_ago} ago'
                                                f'\n**Roles:** {member_roles}',
                                    colour=int('0xFFF5AF', 16))
-        join_embed.set_author(name=member.name, icon_url=member.avatar.url)
+        try:
+            icon_url = member.avatar.url
+        except AttributeError:
+            icon_url = None
+            pass
+        join_embed.set_author(name=member.name, icon_url=icon_url)
         await member_join_remove_channel.send(embed=join_embed)
 
     @staticmethod
