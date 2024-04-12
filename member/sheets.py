@@ -98,7 +98,7 @@ def update_introed_new_members():
 
     body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
     sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                        range=RANGE_MEMBERS, valueInputOption="RAW",
+                                                        range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
                                                         body=body).execute()
 
 
