@@ -77,7 +77,7 @@ def get_new_members():
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     new_members = filter(
-        lambda member: member.discord_mention != '' and member.introed == '' and member.rank == ROLE_NAME_SAPLING,
+        lambda member: member.discord_mention != '' and member.introed == 'FALSE' and member.rank == ROLE_NAME_SAPLING,
         members)
     return list(map(lambda member: member.discord_mention, new_members))
 
@@ -93,7 +93,7 @@ def update_introed_new_members():
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     for member in members:
-        if member.discord_mention != '' and member.introed == '':
+        if member.discord_mention != '' and member.introed == 'FALSE':
             member.introed = 'TRUE'
 
     body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
