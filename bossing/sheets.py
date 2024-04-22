@@ -224,8 +224,6 @@ class BossingSheets:
             bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[
                 difficulties_value[Difficulty.INDEX_DIFFICULTY]] = Difficulty(difficulties_value)
 
-        print(bosses)
-
         return bosses
 
     @staticmethod

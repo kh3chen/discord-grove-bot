@@ -90,7 +90,7 @@ class Bossing:
                 return
 
             # Add/remove from fill party based on joined party status
-            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                 sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
 
@@ -135,7 +135,7 @@ class Bossing:
             if (sheets_party.status == SheetsParty.PartyStatus.new or
                     sheets_party.status == SheetsParty.PartyStatus.open or
                     sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                     sheets_party.difficulty].lfg_role_id
                 discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
                 try:
@@ -250,7 +250,7 @@ class Bossing:
                 return
 
             # Remove from fill if the party is new or LFG
-            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                 sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
                 if (sheets_party.status == SheetsParty.PartyStatus.new or
@@ -349,14 +349,9 @@ class Bossing:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
                     int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
-                if sheets_party.status == SheetsParty.PartyStatus.lfg:
-                    # Do not mention role
-                    await sign_up_thread.send(
-                        f'{member.mention} *{removed_sheets_member.job}* has been removed from {sheets_party.boss_name} LFG.')
-                elif sheets_party.status == SheetsParty.PartyStatus.fill:
-                    # Do not mention role
-                    await sign_up_thread.send(
-                        f'{member.mention} *{removed_sheets_member.job}* has been removed from {sheets_party.boss_name} Fill.')
+                # Do not mention role
+                await sign_up_thread.send(
+                    f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.name}.')
 
         return removed_sheets_member
 
@@ -722,7 +717,7 @@ class Bossing:
 
             if sheets_party.status == SheetsParty.PartyStatus.new:
                 # Remove fill roles of members if changing status from new
-                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                     sheets_party.difficulty].fill_role_id
                 if fill_party_id:  # Fill party exists
                     discord_fill_party = interaction.guild.get_role(int(fill_party_id))
