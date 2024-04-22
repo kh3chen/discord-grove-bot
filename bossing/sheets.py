@@ -10,30 +10,55 @@ from utils import sheets
 
 
 class Boss:
-    LENGTH = 8
+    LENGTH = 5
 
     INDEX_BOSS_NAME = 0
-    INDEX_DIFFICULTIES = 1
-    INDEX_ROLE_COLOUR = 2
-    INDEX_HUMAN_READABLE_NAME = 3
-    INDEX_FORUM_CHANNEL_ID = 4
-    INDEX_SIGN_UP_THREAD_ID = 5
-    INDEX_LFG_ROLE_ID = 6
-    INDEX_FILL_ROLE_ID = 7
+    INDEX_ROLE_COLOUR = 1
+    INDEX_HUMAN_READABLE_NAME = 2
+    INDEX_FORUM_CHANNEL_ID = 3
+    INDEX_SIGN_UP_THREAD_ID = 4
 
     def __init__(self, bosses_value):
         bosses_value = bosses_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(bosses_value))
         self.boss_name = bosses_value[Boss.INDEX_BOSS_NAME]
-        self.difficulties = bosses_value[Boss.INDEX_DIFFICULTIES].split()
         self._role_colour = bosses_value[Boss.INDEX_ROLE_COLOUR]
         self.human_readable_name = bosses_value[Boss.INDEX_HUMAN_READABLE_NAME]
         self.forum_channel_id = bosses_value[Boss.INDEX_FORUM_CHANNEL_ID]
         self.sign_up_thread_id = bosses_value[Boss.INDEX_SIGN_UP_THREAD_ID]
-        self.lfg_role_id = bosses_value[Boss.INDEX_LFG_ROLE_ID]
-        self.fill_role_id = bosses_value[Boss.INDEX_FILL_ROLE_ID]
+        self.difficulties = {}
 
     def get_role_colour(self):
         return int(self._role_colour, 16)
+
+    def __str__(self):
+        return str(
+            [str(self.boss_name), str(self._role_colour), str(self.human_readable_name), str(self.forum_channel_id),
+             str(self.sign_up_thread_id), str(self.difficulties)])
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class Difficulty:
+    LENGTH = 4
+
+    INDEX_BOSS_NAME = 0
+    INDEX_DIFFICULTY = 1
+    INDEX_LFG_ROLE_ID = 2
+    INDEX_FILL_ROLE_ID = 3
+
+    NONE = "none"
+
+    def __init__(self, difficulties_value):
+        difficulties_value = difficulties_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(difficulties_value))
+        self.lfg_role_id = difficulties_value[Difficulty.INDEX_LFG_ROLE_ID]
+        self.fill_role_id = difficulties_value[Difficulty.INDEX_FILL_ROLE_ID]
+
+    def __str__(self):
+        return str([str(self.lfg_role_id), str(self.fill_role_id)])
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Party:
@@ -180,7 +205,8 @@ class Member:
 class BossingSheets:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
-    RANGE_BOSSES = 'Bosses!A2:H'
+    RANGE_BOSSES = 'Bosses!A2:E'
+    RANGE_DIFFICULTIES = 'Difficulties!A2:D'
     RANGE_PARTIES = 'Parties!A2:M'
     RANGE_MEMBERS = 'Members!A2:E'
 
@@ -191,7 +217,21 @@ class BossingSheets:
         bosses_values = result.get('values', [])
         bosses = {}
         for bosses_value in bosses_values:
-            bosses[bosses_value[0]] = Boss(bosses_value)
+            bosses[bosses_value[Boss.INDEX_BOSS_NAME]] = Boss(bosses_value)
+
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
+                                                                  range=BossingSheets.RANGE_DIFFICULTIES).execute()
+        difficulties_values = result.get('values', [])
+        for difficulties_value in difficulties_values:
+            if difficulties_value[Difficulty.INDEX_DIFFICULTY] == '':
+                bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[Difficulty.NONE] = Difficulty(
+                    difficulties_value)
+            else:
+                bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[
+                    difficulties_value[Difficulty.INDEX_DIFFICULTY]] = Difficulty(difficulties_value)
+
+        print(bosses)
+
         return bosses
 
     @staticmethod

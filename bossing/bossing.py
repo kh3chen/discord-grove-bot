@@ -365,20 +365,20 @@ class Bossing:
                               ephemeral=True)
             return
 
-        if len(self.sheets_bossing.bosses_dict[boss_name].difficulties) > 0:
+        if len(self.sheets_bossing.bosses_dict[boss_name].difficulties) > 1:
             if difficulty == "":
                 await self.__send(interaction,
                                   f'Error - `{boss_name}` requires a difficulty. Valid difficulties for `{boss_name}` are as follows:\n'
-                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties)}`',
+                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
                                   ephemeral=True)
                 return
-            elif difficulty not in self.sheets_bossing.bosses_dict[boss_name].difficulties:
+            elif difficulty not in self.sheets_bossing.bosses_dict[boss_name].difficulties.keys():
                 await self.__send(interaction,
                                   f'Error - `{difficulty}` is not a valid difficulty for `{boss_name}`. Valid difficulties are as follows:\n'
-                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties)}`',
+                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
                                   ephemeral=True)
                 return
-        elif difficulty != "" and len(self.sheets_bossing.bosses_dict[boss_name].difficulties) == 0:
+        elif difficulty != "" and len(self.sheets_bossing.bosses_dict[boss_name].difficulties) == 1:
             await self.__send(interaction,
                               f'Error - `{boss_name}` does not support multiple difficulties.',
                               ephemeral=True)
@@ -786,14 +786,14 @@ class Bossing:
                 await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
                 return
 
-            if len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) > 0:
-                if difficulty not in self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties:
+            if len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) > 1:
+                if difficulty not in self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys():
                     await self.__send(interaction,
                                       f'Error - `{difficulty}` is not a valid difficulty for `{sheets_party.boss_name}`. Valid difficulties are as follows:\n'
-                                      f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties)}`',
+                                      f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys())}`',
                                       ephemeral=True)
                     return
-            elif difficulty != "" and len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) == 0:
+            elif len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) == 1:
                 await self.__send(interaction,
                                   f'Error - `{sheets_party.boss_name}` does not support multiple difficulties.',
                                   ephemeral=True)
@@ -898,7 +898,7 @@ class Bossing:
             # Send section title
             if not current_sheets_boss or current_sheets_boss.boss_name != sheets_party.boss_name:
                 current_sheets_boss = self.sheets_bossing.bosses_dict[sheets_party.boss_name]
-                section_title_content = f'# {current_sheets_boss.human_readable_name}'
+                section_title_content = f'_ _\n# {current_sheets_boss.human_readable_name} <#{current_sheets_boss.sign_up_thread_id}>'
                 message = await bossing_parties_channel.send(section_title_content)
                 sheets_party.boss_list_decorator_id = str(message.id)
             else:
@@ -906,12 +906,13 @@ class Bossing:
                 sheets_party.boss_list_decorator_id = str(message.id)
 
             # Placeholder first to avoid mention
-            message = await bossing_parties_channel.send(f'{sheets_party.boss_name} Party {sheets_party.party_number}')
+            message = await bossing_parties_channel.send(
+                f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
             sheets_party.boss_list_message_id = str(message.id)
 
             await self.__update_boss_party_list_message(message, sheets_party)
 
-        etiquette_message = ('# Bossing etiquette'
+        etiquette_message = ('_ _\n# Bossing etiquette'
                              '\n\nWith organized bossing, it is important that all party members are in attendance to ensure a smooth clear. Out of respect for your fellow guildmates, please follow Grove\'s bossing etiquette:'
                              '\n1. Be on time.'
                              '\n2. If you are unable to make bossing run time for the week, let your party know as soon as possible, and organize another time for your party that week.'
