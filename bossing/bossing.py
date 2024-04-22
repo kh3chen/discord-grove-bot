@@ -46,29 +46,29 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
 
         self.boss_time_service = BossTimeService(on_reminder, on_update)
 
-    def __restart_service(self):
+    def _restart_service(self):
         self.boss_time_service.restart_service(self.sheets_bossing.parties)
 
     def on_ready(self):
-        self.__restart_service()
+        self._restart_service()
 
     async def sync(self, interaction):
         async with self.lock:
             self.sheets_bossing.sync_data()
-        self.__restart_service()
+        self._restart_service()
 
-        await self.__send(interaction, 'Sync complete.', ephemeral=True)
+        await self._send(interaction, 'Sync complete.', ephemeral=True)
 
     async def add(self, interaction, member, discord_party, job):
         # Validate job
         if job not in self.JOBS:
-            await self.__send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
-                                           f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
-                              ephemeral=True)
+            await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
+                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                             ephemeral=True)
             return
 
         async with self.lock:
@@ -77,16 +77,16 @@ class Bossing:
                 sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                     sheets_party.role_id == str(discord_party.id))
             except StopIteration:
-                await self.__send(interaction,
-                                  f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                  ephemeral=True)
+                await self._send(interaction,
+                                 f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                 ephemeral=True)
                 return
 
             # Add member to the party
             try:
                 await self._add(interaction, member, discord_party, job, sheets_party)
             except Exception as e:
-                await self.__send(interaction, str(e), ephemeral=True)
+                await self._send(interaction, str(e), ephemeral=True)
                 return
 
             # Add/remove from fill party based on joined party status
@@ -102,9 +102,9 @@ class Bossing:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
-                        await self.__send(interaction,
-                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                          ephemeral=True)
+                        await self._send(interaction,
+                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
                         return
 
                     try:
@@ -121,9 +121,9 @@ class Bossing:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
-                        await self.__send(interaction,
-                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                          ephemeral=True)
+                        await self._send(interaction,
+                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
                         return
                     try:
                         await self._remove(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
@@ -142,9 +142,9 @@ class Bossing:
                     sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                             sheets_party.role_id == lfg_party_id)
                 except StopIteration:
-                    await self.__send(interaction,
-                                      f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                      ephemeral=True)
+                    await self._send(interaction,
+                                     f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                     ephemeral=True)
                     return
                 try:
                     await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
@@ -189,11 +189,11 @@ class Bossing:
                                                          job=job)])
 
         # Update party data
-        self.__update_existing_party(discord_party)
+        self._update_existing_party(discord_party)
 
         # Success
-        await self.__send(interaction, f'Successfully added {member.mention} *{job}* to {discord_party.mention}.',
-                          ephemeral=True, log=True)
+        await self._send(interaction, f'Successfully added {member.mention} *{job}* to {discord_party.mention}.',
+                         ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -213,7 +213,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
@@ -236,9 +236,9 @@ class Bossing:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(interaction,
-                              f'Error - Unable to find party {discord_party.id} in the bossing parties data.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - Unable to find party {discord_party.id} in the bossing parties data.',
+                             ephemeral=True)
             return
 
         async with self.lock:
@@ -246,7 +246,7 @@ class Bossing:
             try:
                 removed_sheets_member = await self._remove(interaction, member, discord_party, job, sheets_party)
             except Exception as e:
-                await self.__send(interaction, str(e), ephemeral=True)
+                await self._send(interaction, str(e), ephemeral=True)
                 return
 
             # Remove from fill if the party is new or LFG
@@ -261,9 +261,9 @@ class Bossing:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
                     except StopIteration:
-                        await self.__send(interaction,
-                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                          ephemeral=True)
+                        await self._send(interaction,
+                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
                         return
 
                     try:
@@ -319,12 +319,12 @@ class Bossing:
                          party_role_id=sheets_party.role_id, user_id=str(member.id), job=job))
 
         # Update party data
-        self.__update_existing_party(discord_party)
+        self._update_existing_party(discord_party)
 
         # Success
-        await self.__send(interaction,
-                          f'Successfully removed {member.mention} *{removed_sheets_member.job}* from {discord_party.mention}.',
-                          ephemeral=True, log=True)
+        await self._send(interaction,
+                         f'Successfully removed {member.mention} *{removed_sheets_member.job}* from {discord_party.mention}.',
+                         ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -344,7 +344,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
             else:
                 # Send LFG and Fill updates in Sign Up thread
                 sign_up_thread = self.client.get_channel(
@@ -357,29 +357,29 @@ class Bossing:
 
     async def new(self, interaction, boss_name, difficulty):
         if boss_name not in self.sheets_bossing.get_boss_names():
-            await self.__send(interaction,
-                              f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
-                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.get_boss_names())}`',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
+                             f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.get_boss_names())}`',
+                             ephemeral=True)
             return
 
         if len(self.sheets_bossing.bosses_dict[boss_name].difficulties) > 1:
             if difficulty == "":
-                await self.__send(interaction,
-                                  f'Error - `{boss_name}` requires a difficulty. Valid difficulties for `{boss_name}` are as follows:\n'
-                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
-                                  ephemeral=True)
+                await self._send(interaction,
+                                 f'Error - `{boss_name}` requires a difficulty. Valid difficulties for `{boss_name}` are as follows:\n'
+                                 f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
+                                 ephemeral=True)
                 return
             elif difficulty not in self.sheets_bossing.bosses_dict[boss_name].difficulties.keys():
-                await self.__send(interaction,
-                                  f'Error - `{difficulty}` is not a valid difficulty for `{boss_name}`. Valid difficulties are as follows:\n'
-                                  f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
-                                  ephemeral=True)
+                await self._send(interaction,
+                                 f'Error - `{difficulty}` is not a valid difficulty for `{boss_name}`. Valid difficulties are as follows:\n'
+                                 f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[boss_name].difficulties.keys())}`',
+                                 ephemeral=True)
                 return
         elif difficulty != "" and len(self.sheets_bossing.bosses_dict[boss_name].difficulties) == 1:
-            await self.__send(interaction,
-                              f'Error - `{boss_name}` does not support multiple difficulties.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - `{boss_name}` does not support multiple difficulties.',
+                             ephemeral=True)
             return
 
         async with self.lock:
@@ -448,9 +448,9 @@ class Bossing:
                     break
             self.sheets_bossing.update_parties(sheets_parties)
 
-            await self.__send(interaction,
-                              f'Successfully created {new_boss_party.name} {party_thread_with_message.thread.mention}',
-                              ephemeral=True, log=True)
+            await self._send(interaction,
+                             f'Successfully created {new_boss_party.name} {party_thread_with_message.thread.mention}',
+                             ephemeral=True, log=True)
 
             # Remake bossing party list
             await self.__remake_boss_party_list(interaction)
@@ -461,9 +461,9 @@ class Bossing:
             sheets_party = next(
                 sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(interaction,
-                              f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                             ephemeral=True)
             return
 
         await self.__settime(interaction, sheets_party, weekday_str, hour, minute)
@@ -474,9 +474,9 @@ class Bossing:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.party_thread_id == str(interaction.channel_id))
         except StopIteration:
-            await self.__send(interaction,
-                              f'Error - This command can only be used in a boss party thread.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - This command can only be used in a boss party thread.',
+                             ephemeral=True)
             return
 
         try:
@@ -491,40 +491,40 @@ class Bossing:
         try:
             weekday = SheetsParty.Weekday[weekday_str.lower()]
         except KeyError:
-            await self.__send(interaction,
-                              'Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]',
-                              ephemeral=True)
+            await self._send(interaction,
+                             'Error - Invalid weekday. Valid input values: [ mon | tue | wed | thu | fri | sat | sun ]',
+                             ephemeral=True)
             return
 
         if hour < 0 or hour > 23:
-            await self.__send(interaction, 'Error - Invalid hour. Hour must be from 0-23.', ephemeral=True)
+            await self._send(interaction, 'Error - Invalid hour. Hour must be from 0-23.', ephemeral=True)
             return
 
         if minute < 0 or minute > 59:
-            await self.__send(interaction, 'Error - Invalid minute. Minute must be from 0-59.', ephemeral=True)
+            await self._send(interaction, 'Error - Invalid minute. Minute must be from 0-59.', ephemeral=True)
             return
 
         async with self.lock:
             sheets_parties = self.sheets_bossing.parties
 
             if sheets_party.status == SheetsParty.PartyStatus.retired:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
                 return
 
             sheets_party.weekday = weekday.name
             sheets_party.hour = str(hour)
             sheets_party.minute = str(minute)
             self.sheets_bossing.update_parties(sheets_parties)
-            self.__restart_service()
+            self._restart_service()
             timestamp = sheets_party.next_scheduled_time()
 
             message_content = f'Set <@&{sheets_party.role_id}> time to {weekday.name} at +{hour}:{minute:02d}.\n'
             message_content += f'Next run: <t:{timestamp}:F>'
-            await self.__send(interaction, message_content, ephemeral=True)
+            await self._send(interaction, message_content, ephemeral=True)
 
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -539,7 +539,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
                 await party_thread.send(
                     f'<@&{sheets_party.role_id}> time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
 
@@ -549,9 +549,9 @@ class Bossing:
             sheets_party = next(
                 sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(interaction,
-                              f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                             ephemeral=True)
             return
 
         await self.__cleartime(interaction, sheets_party)
@@ -562,9 +562,9 @@ class Bossing:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.party_thread_id == str(interaction.channel_id))
         except StopIteration:
-            await self.__send(interaction,
-                              f'Error - This command can only be used in a boss party thread.',
-                              ephemeral=True)
+            await self._send(interaction,
+                             f'Error - This command can only be used in a boss party thread.',
+                             ephemeral=True)
             return
 
         try:
@@ -579,20 +579,20 @@ class Bossing:
             sheets_parties = self.sheets_bossing.parties
 
             if sheets_party.status == SheetsParty.PartyStatus.retired:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.')
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.')
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.')
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.')
                 return
 
             sheets_party.weekday = ''
             sheets_party.hour = ''
             sheets_party.minute = ''
             self.sheets_bossing.update_parties(sheets_parties)
-            self.__restart_service()
+            self._restart_service()
 
-            await self.__send(interaction, f'Cleared <@&{sheets_party.role_id}> time.', ephemeral=True)
+            await self._send(interaction, f'Cleared <@&{sheets_party.role_id}> time.', ephemeral=True)
 
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -607,7 +607,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
                 await party_thread.send(f'<@&{sheets_party.role_id}> time has been cleared.')
 
     async def retire(self, interaction, discord_party):
@@ -616,73 +616,85 @@ class Bossing:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                 sheets_party.role_id == str(discord_party.id))
         except StopIteration:
-            await self.__send(interaction, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
+            await self._send(interaction, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
             return
 
         if sheets_party.status == SheetsParty.PartyStatus.retired:
-            await self.__send(interaction, f'Error - {discord_party.mention} is already retired.', ephemeral=True)
+            await self._send(interaction, f'Error - {discord_party.mention} is already retired.', ephemeral=True)
             return
 
         if sheets_party.status == SheetsParty.PartyStatus.new:
-            await self.__send(interaction, f'Error - {discord_party.mention} is new, you cannot retire a new party.',
-                              ephemeral=True)
+            await self._send(interaction, f'Error - {discord_party.mention} is new, you cannot retire a new party.',
+                             ephemeral=True)
             return
 
         if (sheets_party.status == SheetsParty.PartyStatus.lfg or
                 sheets_party.status == SheetsParty.PartyStatus.fill):
-            await self.__send(interaction, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
+            await self._send(interaction, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
             return
 
         # Confirmation
-        confirmation_message_body = f'Are you sure you want to retire {discord_party.mention}? The following {len(discord_party.members)} member(s) will be removed from the party:\n'
+        confirmation_message = f'Are you sure you want to retire {discord_party.mention}? The following {len(discord_party.members)} member(s) will be removed from the party:\n'
         for member in discord_party.members:
-            confirmation_message_body += f'{member.mention}\n'
-        confirmation_message_body += f'\nReact with 👍 to proceed.'
+            confirmation_message += f'{member.mention}\n'
 
-        confirmation_message = await self.__send(interaction, confirmation_message_body)
-        await confirmation_message.add_reaction('👍')
+        class Buttons(discord.ui.View):
+            def __init__(self, *, timeout=180):
+                super().__init__(timeout=timeout)
+                self.message = None
+                self.interacted = False
 
-        def check(reaction, user):
-            print(reaction)
-            return user == interaction.user and str(reaction.emoji) == '👍'
+            async def on_timeout(self) -> None:
+                if not self.interacted:
+                    await self.message.edit(view=None)
+                    await interaction.followup.send('Error - Your command has timed out.', ephemeral=True)
 
-        try:
-            await self.client.wait_for('reaction_add', timeout=60.0, check=check)
-        except asyncio.TimeoutError:
-            await self.__send(interaction, 'Error - confirmation expired. Party retire has been cancelled.',
-                              ephemeral=True)
-            return
+            @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+            async def green_button(_self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                _self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                async with self.lock:
+                    # Remove members from party
+                    for member in discord_party.members:
+                        await self._remove(interaction, member, discord_party, '', sheets_party, silent=True)
 
-        async with self.lock:
-            # Remove members from party
-            for member in discord_party.members:
-                await self._remove(interaction, member, discord_party, '', sheets_party, silent=True)
+                    # Update party status to retired
+                    updated_discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)',
+                                                                     mentionable=False)
 
-            # Update party status to retired
-            discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)', mentionable=False)
+                    # Delete bossing party list messages
+                    bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
+                    if sheets_party.boss_list_message_id:
+                        message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
+                        await message.delete()
+                    if sheets_party.boss_list_decorator_id:
+                        message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_decorator_id)
+                        await message.delete()
 
-            # Delete bossing party list messages
-            bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
-            if sheets_party.boss_list_message_id:
-                message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await message.delete()
-            if sheets_party.boss_list_decorator_id:
-                message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_decorator_id)
-                await message.delete()
+                    self._update_existing_party(updated_discord_party)
+                    self._restart_service()
 
-            self.__update_existing_party(discord_party)
-            self.__restart_service()
+                    if sheets_party.party_thread_id:
+                        # Update thread title, message, and send update in party thread
+                        party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                        if sheets_party.party_message_id:
+                            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                        else:
+                            party_message = None
+                        await self._update_thread(party_thread, party_message, sheets_party)
 
-            if sheets_party.party_thread_id:
-                # Update thread title, message, and send update in party thread
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                if sheets_party.party_message_id:
-                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
-                else:
-                    party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._send(interaction, f'{updated_discord_party.mention} has been retired.', ephemeral=True,
+                                 log=True)
 
-        await self.__send(interaction, f'{discord_party.mention} has been retired.', ephemeral=True, log=True)
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+            async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                await interaction.followup.send(f'Retiring of {discord_party.mention} has been cancelled.',
+                                                ephemeral=True)
+
+        buttons_view = Buttons()
+        buttons_view.message = await interaction.followup.send(confirmation_message, view=buttons_view, ephemeral=True)
 
     async def exclusive(self, interaction, discord_party):
         await self.__update_active_status(interaction, discord_party, SheetsParty.PartyStatus.exclusive)
@@ -697,23 +709,23 @@ class Bossing:
                 sheets_party = next(
                     sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
             except StopIteration:
-                await self.__send(interaction, f'Error - {discord_party.mention} is not a bossing party.',
-                                  ephemeral=True)
+                await self._send(interaction, f'Error - {discord_party.mention} is not a bossing party.',
+                                 ephemeral=True)
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.retired:
-                await self.__send(interaction, f'Error - {discord_party.mention} is retired and cannot be reopened.',
-                                  ephemeral=True)
+                await self._send(interaction, f'Error - {discord_party.mention} is retired and cannot be reopened.',
+                                 ephemeral=True)
                 return
 
             if sheets_party.status == status:
-                await self.__send(interaction, f'Error - {discord_party.mention} is already {status.value}.',
-                                  ephemeral=True)
+                await self._send(interaction, f'Error - {discord_party.mention} is already {status.value}.',
+                                 ephemeral=True)
                 return
 
             if status != SheetsParty.PartyStatus.exclusive and status != SheetsParty.PartyStatus.open:
-                await self.__send(interaction, f'Error - {discord_party.mention} cannot be {status.value}.',
-                                  ephemeral=True)
+                await self._send(interaction, f'Error - {discord_party.mention} cannot be {status.value}.',
+                                 ephemeral=True)
 
             if sheets_party.status == SheetsParty.PartyStatus.new:
                 # Remove fill roles of members if changing status from new
@@ -735,20 +747,20 @@ class Bossing:
                                                        sheets_member.job,
                                                        sheets_fill_party, silent=True)
                                 except Exception as e:
-                                    await self.__send(interaction, str(e), ephemeral=True)
+                                    await self._send(interaction, str(e), ephemeral=True)
                             except StopIteration:
-                                await self.__send(interaction,
-                                                  f'Error - Unable to find {discord_member.mention} in {discord_party.mention}.',
-                                                  ephemeral=True)
+                                await self._send(interaction,
+                                                 f'Error - Unable to find {discord_member.mention} in {discord_party.mention}.',
+                                                 ephemeral=True)
                     except StopIteration:
-                        await self.__send(interaction,
-                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                          ephemeral=True)
+                        await self._send(interaction,
+                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
 
             sheets_party.status = status
             self.sheets_bossing.update_parties(sheets_parties)
-            await self.__send(interaction, f'{discord_party.name} is now {sheets_party.status.value}.', ephemeral=True,
-                              log=True)
+            await self._send(interaction, f'{discord_party.name} is now {sheets_party.status.value}.', ephemeral=True,
+                             log=True)
 
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -763,7 +775,7 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
 
     async def difficulty(self, interaction, discord_party: discord.Role, difficulty: str):
         async with self.lock:
@@ -773,29 +785,29 @@ class Bossing:
                 sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                     sheets_party.role_id == str(discord_party.id))
             except StopIteration:
-                await self.__send(interaction, f'Error - {discord_party.mention} is not a bossing party.',
-                                  ephemeral=True)
+                await self._send(interaction, f'Error - {discord_party.mention} is not a bossing party.',
+                                 ephemeral=True)
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.retired:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
                 return
 
             if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
-                await self.__send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
                 return
 
             if len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) > 1:
                 if difficulty not in self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys():
-                    await self.__send(interaction,
-                                      f'Error - `{difficulty}` is not a valid difficulty for `{sheets_party.boss_name}`. Valid difficulties are as follows:\n'
-                                      f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys())}`',
-                                      ephemeral=True)
+                    await self._send(interaction,
+                                     f'Error - `{difficulty}` is not a valid difficulty for `{sheets_party.boss_name}`. Valid difficulties are as follows:\n'
+                                     f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys())}`',
+                                     ephemeral=True)
                     return
             elif len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) == 1:
-                await self.__send(interaction,
-                                  f'Error - `{sheets_party.boss_name}` does not support multiple difficulties.',
-                                  ephemeral=True)
+                await self._send(interaction,
+                                 f'Error - `{sheets_party.boss_name}` does not support multiple difficulties.',
+                                 ephemeral=True)
                 return
 
             # Update party sheet
@@ -805,9 +817,9 @@ class Bossing:
                 name=f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
 
             self.sheets_bossing.update_parties(sheets_parties)
-            await self.__send(interaction, f'{discord_party.name} is now {sheets_party.difficulty} difficulty.',
-                              ephemeral=True,
-                              log=True)
+            await self._send(interaction, f'{discord_party.name} is now {sheets_party.difficulty} difficulty.',
+                             ephemeral=True,
+                             log=True)
 
             if sheets_party.party_thread_id:
                 # Update thread title
@@ -816,14 +828,14 @@ class Bossing:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
                 else:
                     party_message = None
-                await self.__update_thread(party_thread, party_message, sheets_party)
+                await self._update_thread(party_thread, party_message, sheets_party)
 
     async def listremake(self, interaction):
         # Confirmation
         confirmation_message_body = f'Are you sure you want to remake the bossing party list in <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>?\n'
         confirmation_message_body += f'\nReact with 👍 to proceed.'
 
-        confirmation_message = await self.__send(interaction, confirmation_message_body)
+        confirmation_message = await self._send(interaction, confirmation_message_body)
         await confirmation_message.add_reaction('👍')
 
         def check(reaction, user):
@@ -833,8 +845,8 @@ class Bossing:
         try:
             await self.client.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
-            await self.__send(interaction, 'Error - confirmation expired. Party retire has been cancelled.',
-                              ephemeral=True)
+            await self._send(interaction, 'Error - confirmation expired. Party retire has been cancelled.',
+                             ephemeral=True)
             return
 
         async with self.lock:
@@ -864,7 +876,7 @@ class Bossing:
                                        silent=sheets_party.status == SheetsParty.PartyStatus.fill,
                                        left_server=left_server)
                 except Exception as e:
-                    await self.__send(None, str(e))
+                    await self._send(None, str(e))
 
     async def __remake_boss_party_list(self, interaction):
         # Delete existing messages
@@ -872,7 +884,7 @@ class Bossing:
 
         new_sheets_parties = self.sheets_bossing.parties
 
-        await self.__send(interaction, 'Deleting the existing bossing party list...', ephemeral=True)
+        await self._send(interaction, 'Deleting the existing bossing party list...', ephemeral=True)
         await bossing_parties_channel.purge(limit=len(new_sheets_parties) * 2)
 
         try:
@@ -884,10 +896,10 @@ class Bossing:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-        await self.__send(interaction, 'Existing bossing party list deleted.', ephemeral=True)
+        await self._send(interaction, 'Existing bossing party list deleted.', ephemeral=True)
 
         # Send the bossing party messages
-        await self.__send(interaction, 'Creating the new bossing party list...', ephemeral=True)
+        await self._send(interaction, 'Creating the new bossing party list...', ephemeral=True)
 
         current_sheets_boss = None
         for sheets_party in new_sheets_parties:
@@ -922,7 +934,7 @@ class Bossing:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-        await self.__send(interaction, 'New bossing party list complete.', ephemeral=True)
+        await self._send(interaction, 'New bossing party list complete.', ephemeral=True)
 
     def __get_boss_parties(self, discord_roles):
         """Returns the subset of Grove bossing party roles from a list of Discord roles."""
@@ -942,7 +954,7 @@ class Bossing:
 
         return parties
 
-    def __update_existing_party(self, discord_party):
+    def _update_existing_party(self, discord_party):
         # Update party status and member count
         new_sheets_parties = self.sheets_bossing.parties
         for sheets_party in new_sheets_parties:
@@ -986,7 +998,7 @@ class Bossing:
         return message_content
 
     @staticmethod
-    async def __update_thread(party_thread: discord.Thread, party_message: discord.Message, sheets_party: SheetsParty):
+    async def _update_thread(party_thread: discord.Thread, party_message: discord.Message, sheets_party: SheetsParty):
         # Open and unlock thread
         await party_thread.edit(archived=False, locked=False)
 
@@ -998,7 +1010,8 @@ class Bossing:
                 await party_message.edit(content=message)
             title += 'Retired'
 
-            await party_thread.edit(name=title, archived=True, locked=True)
+            await party_thread.edit(name=title, locked=True)
+            await party_thread.edit(archived=True)
         else:
             if sheets_party.status == SheetsParty.PartyStatus.new:
                 title += 'New'
@@ -1016,7 +1029,7 @@ class Bossing:
 
             await party_thread.edit(name=title)
 
-    async def __send(self, interaction, content, ephemeral=False, suppress_embeds=False, log=False):
+    async def _send(self, interaction, content, ephemeral=False, suppress_embeds=False, log=False):
         if interaction:
             return await interaction.followup.send(content=content, ephemeral=ephemeral,
                                                    suppress_embeds=suppress_embeds)
