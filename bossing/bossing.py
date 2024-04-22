@@ -898,7 +898,8 @@ class Bossing:
             # Send section title
             if not current_sheets_boss or current_sheets_boss.boss_name != sheets_party.boss_name:
                 current_sheets_boss = self.sheets_bossing.bosses_dict[sheets_party.boss_name]
-                section_title_content = f'_ _\n# {current_sheets_boss.human_readable_name} <#{current_sheets_boss.sign_up_thread_id}>'
+                section_title_content = (f'_ _'
+                                         f'\n# {current_sheets_boss.human_readable_name} <#{current_sheets_boss.sign_up_thread_id}>')
                 message = await bossing_parties_channel.send(section_title_content)
                 sheets_party.boss_list_decorator_id = str(message.id)
             else:
@@ -912,7 +913,8 @@ class Bossing:
 
             await self.__update_boss_party_list_message(message, sheets_party)
 
-        etiquette_message = ('_ _\n# Bossing etiquette'
+        etiquette_message = ('_ _'
+                             '\n# Bossing etiquette'
                              '\n\nWith organized bossing, it is important that all party members are in attendance to ensure a smooth clear. Out of respect for your fellow guildmates, please follow Grove\'s bossing etiquette:'
                              '\n1. Be on time.'
                              '\n2. If you are unable to make bossing run time for the week, let your party know as soon as possible, and organize another time for your party that week.'
