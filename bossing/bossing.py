@@ -90,7 +90,8 @@ class Bossing:
                 return
 
             # Add/remove from fill party based on joined party status
-            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
+            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
 
                 if (sheets_party.status == SheetsParty.PartyStatus.new or
@@ -134,7 +135,8 @@ class Bossing:
             if (sheets_party.status == SheetsParty.PartyStatus.new or
                     sheets_party.status == SheetsParty.PartyStatus.open or
                     sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].lfg_role_id
+                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                    sheets_party.difficulty].lfg_role_id
                 discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
                 try:
                     sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -248,7 +250,8 @@ class Bossing:
                 return
 
             # Remove from fill if the party is new or LFG
-            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
+            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
                 if (sheets_party.status == SheetsParty.PartyStatus.new or
                         sheets_party.status == SheetsParty.PartyStatus.lfg):
@@ -719,7 +722,8 @@ class Bossing:
 
             if sheets_party.status == SheetsParty.PartyStatus.new:
                 # Remove fill roles of members if changing status from new
-                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].fill_role_id
+                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name][
+                    sheets_party.difficulty].fill_role_id
                 if fill_party_id:  # Fill party exists
                     discord_fill_party = interaction.guild.get_role(int(fill_party_id))
                     try:

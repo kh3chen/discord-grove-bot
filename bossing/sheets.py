@@ -47,8 +47,6 @@ class Difficulty:
     INDEX_LFG_ROLE_ID = 2
     INDEX_FILL_ROLE_ID = 3
 
-    NONE = "none"
-
     def __init__(self, difficulties_value):
         difficulties_value = difficulties_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(difficulties_value))
         self.lfg_role_id = difficulties_value[Difficulty.INDEX_LFG_ROLE_ID]
@@ -223,12 +221,8 @@ class BossingSheets:
                                                                   range=BossingSheets.RANGE_DIFFICULTIES).execute()
         difficulties_values = result.get('values', [])
         for difficulties_value in difficulties_values:
-            if difficulties_value[Difficulty.INDEX_DIFFICULTY] == '':
-                bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[Difficulty.NONE] = Difficulty(
-                    difficulties_value)
-            else:
-                bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[
-                    difficulties_value[Difficulty.INDEX_DIFFICULTY]] = Difficulty(difficulties_value)
+            bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[
+                difficulties_value[Difficulty.INDEX_DIFFICULTY]] = Difficulty(difficulties_value)
 
         print(bosses)
 
