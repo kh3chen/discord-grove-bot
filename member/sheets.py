@@ -27,6 +27,11 @@ class Member:
     INDEX_INTROED = 2
     INDEX_RANK = 3
 
+    INTROED_TRUE = 'TRUE'
+    INTROED_FALSE = 'FALSE'
+
+    VERIFIED_MAIN_YES = 'Yes'
+
     def __init__(self, discord_mention: str, verified_main: str, introed: str, rank: str):
         self.discord_mention = discord_mention
         self.introed = introed
@@ -77,7 +82,8 @@ def get_new_members():
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     new_members = filter(
-        lambda member: member.discord_mention != '' and member.introed == 'FALSE' and member.rank == ROLE_NAME_SAPLING,
+        lambda
+            member: member.discord_mention != '' and member.introed == Member.INTROED_FALSE and member.rank == ROLE_NAME_SAPLING,
         members)
     return list(map(lambda member: member.discord_mention, new_members))
 
@@ -93,8 +99,8 @@ def update_introed_new_members():
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
     for member in members:
-        if member.discord_mention != '' and member.introed == 'FALSE':
-            member.introed = 'TRUE'
+        if member.discord_mention != '' and member.introed == Member.INTROED_FALSE:
+            member.introed = Member.INTROED_TRUE
 
     body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
     sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
@@ -122,7 +128,7 @@ def update_member_rank(member_id: int, grove_role_name: str):
     try:
         member = next(member for member in members if
                       member.discord_mention == f'<@{member_id}>')
-        if member.verified_main != 'TRUE':
+        if member.verified_main != Member.VERIFIED_MAIN_YES:
             return UpdateMemberRankResult.NotVerified
         member.rank = grove_role_name
 
