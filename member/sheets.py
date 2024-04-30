@@ -30,7 +30,7 @@ class Member:
     INTROED_TRUE = 'TRUE'
     INTROED_FALSE = 'FALSE'
 
-    VERIFIED_MAIN_YES = 'Yes'
+    VERIFIED_MAIN_YES = 'Y'
 
     def __init__(self, discord_mention: str, verified_main: str, introed: str, rank: str):
         self.discord_mention = discord_mention
