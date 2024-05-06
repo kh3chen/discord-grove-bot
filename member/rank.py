@@ -1,3 +1,5 @@
+from functools import reduce
+
 import discord
 
 import config
@@ -75,3 +77,25 @@ async def retiree(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_RETIREE}>.')
+    await remove(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
+
+
+async def remove(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str = ''):
+    removed_member = sheets.remove_member(member.id, reason)
+    if removed_member is not None:
+        # Send to log channel
+        removed_member_message = f'## {removed_member.discord_mention} removed'
+        removed_member_message += f'\nReason: {reason}'
+        removed_member_message += f'\n### Grove IGNs'
+        removed_member_message += '\n- '
+        removed_member_message += reduce(lambda acc, val: acc + '\n- ' + val,
+                                         removed_member.grove_igns.split('\n'))
+        if removed_member.mule_igns != '':
+            removed_member_message += f'\n### Mule IGNs'
+            removed_member_message += '\n- '
+            removed_member_message += reduce(lambda acc, val: acc + '\n- ' + val,
+                                             removed_member.mule_igns.split('\n'))
+        removed_member_message += '\n'
+        removed_member_message += '\nPlease react when the above characters have been removed from the guild and the remove reason has been updated in the spreadsheet.'
+
+        await member_activity_channel.send(removed_member_message)

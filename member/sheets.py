@@ -1,12 +1,16 @@
+import datetime
 from enum import Enum
+
+from googleapiclient.errors import HttpError
 
 import config
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:G'
-RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:L'
+RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
+RANGE_PAST_MEMBERS = 'Past Members'
 
 ROLE_NAME_WARDEN = 'Warden'
 ROLE_NAME_GUARDIAN = 'Guardian'
@@ -141,13 +145,94 @@ def update_member_rank(member_id: int, grove_role_name: str):
         return UpdateMemberRankResult.NotFound
 
 
+def remove_member(member_id: int, reason: str = ''):
+    service = sheets.get_service()
+
+    # Weekly Participation
+    weekly_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                               range=RANGE_WEEKLY_PARTICIPATION).execute()
+    wp_values = weekly_participation.get('values', [])
+
+    if not wp_values:
+        print('No data found.')
+        return
+
+    member_wp_value = None
+    wp_delete_index = 1  # Offset by 1 due to header rows
+    for wp_value in wp_values:
+        if wp_value[WeeklyParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+            # Found the entry
+            member_wp_value = wp_value
+            break
+        wp_delete_index += 1
+
+    if wp_delete_index >= len(wp_values) or member_wp_value is None:
+        # Cannot find weekly participation value
+        return
+
+    # Append value to Past Members sheet
+    past_member_value = [datetime.date.today().strftime('%Y-%m-%d'), reason] + member_wp_value[1:]
+    body = {'values': [past_member_value]}
+    service.spreadsheets().values().append(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
+                                           range=RANGE_PAST_MEMBERS,
+                                           valueInputOption="USER_ENTERED",
+                                           body=body).execute()
+
+    # Delete Weekly Participation row
+    wp_delete_body = {"requests": [{"deleteDimension": {
+        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_WEEKLY_PARTICIPATION, "dimension": "ROWS",
+                  "startIndex": wp_delete_index,
+                  "endIndex": wp_delete_index + 1}}}]}
+    try:
+        service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
+                                           body=wp_delete_body).execute()
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise error
+
+    # Delete Member List row
+    member_list = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                      range=RANGE_MEMBERS).execute()
+    member_values = member_list.get('values', [])
+
+    if not member_values:
+        print('No data found.')
+        return
+
+    member_list_delete_index = 2  # Offset by 2 due to header rows
+    members = list(map(lambda value: Member.from_sheets_value(value), member_values))
+    for member in members:
+        if member.discord_mention == f'<@{member_id}>':
+            # Found the entry
+            break
+        member_list_delete_index += 1
+
+    if member_list_delete_index >= len(members):
+        # Cannot find delete_member in sheets_members_list
+        return
+
+    member_delete_body = {"requests": [{"deleteDimension": {
+        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_MEMBER_LIST, "dimension": "ROWS",
+                  "startIndex": member_list_delete_index,
+                  # Offset by 1 due to header row
+                  "endIndex": member_list_delete_index + 1}}}]}
+    try:
+        service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
+                                           body=member_delete_body).execute()
+        return WeeklyParticipation.from_sheets_value(member_wp_value)
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise error
+
+
 class WeeklyParticipation:
     LENGTH = 12
 
     INDEX_INDEX = 0
     INDEX_GROVE_IGNS = 1
-    INDEX_NAME = 2
-    INDEX_MULE_IGNS = 3
+    INDEX_MULE_IGNS = 2
+    INDEX_NAME = 3
     INDEX_SCORE = 4
     INDEX_DISCORD_MENTION = 5
     INDEX_INTROED = 6
@@ -157,15 +242,15 @@ class WeeklyParticipation:
     INDEX_CONTRIBUTION = 10
     INDEX_TEN_WEEK_AVERAGE = 11
 
-    def __init__(self, index, grove_igns, name, mule_igns, score, discord_mention, introed, joined, notes, rank,
+    def __init__(self, index, grove_igns, mule_igns, name, score, discord_mention, introed, joined, notes, rank,
                  contribution, ten_week_average):
         try:
             self.index = int(index)
         except ValueError:
             self.index = -1
         self.grove_igns = str(grove_igns)
-        self.name = str(name)
         self.mule_igns = str(mule_igns)
+        self.name = str(name)
         try:
             self.score = int(score)
         except ValueError:
@@ -193,8 +278,8 @@ class WeeklyParticipation:
         wp_value = wp_value[:WeeklyParticipation.LENGTH] + [''] * (WeeklyParticipation.LENGTH - len(wp_value))
         return WeeklyParticipation(wp_value[WeeklyParticipation.INDEX_INDEX],
                                    wp_value[WeeklyParticipation.INDEX_GROVE_IGNS],
-                                   wp_value[WeeklyParticipation.INDEX_NAME],
                                    wp_value[WeeklyParticipation.INDEX_MULE_IGNS],
+                                   wp_value[WeeklyParticipation.INDEX_NAME],
                                    wp_value[WeeklyParticipation.INDEX_SCORE],
                                    wp_value[WeeklyParticipation.INDEX_DISCORD_MENTION],
                                    wp_value[WeeklyParticipation.INDEX_INTROED],
