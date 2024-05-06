@@ -81,10 +81,10 @@ class MemberCog(commands.Cog):
             pass
         join_embed.set_author(name=member.name, icon_url=icon_url)
         join_message = await member_join_remove_channel.send(embed=join_embed)
-        await join_message.add_reaction(':envelope:')
-        await join_message.add_reaction(':white_check_mark:')
-        await join_message.add_reaction(':person_fencing:')
-        await join_message.add_reaction(':x:')
+        await join_message.add_reaction('✉')
+        await join_message.add_reaction('👍')
+        await join_message.add_reaction('🤺')
+        await join_message.add_reaction('❌')
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
