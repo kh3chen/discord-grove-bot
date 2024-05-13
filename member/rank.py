@@ -66,6 +66,8 @@ async def guest(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_GUEST}>.')
+    await remove(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
+                 'Left for another guild')
 
 
 async def retiree(interaction: discord.Interaction, member: discord.Member):
