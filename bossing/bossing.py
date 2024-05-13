@@ -101,35 +101,30 @@ class Bossing:
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
+                        await self._add(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
                     except StopIteration:
                         await self._send(interaction,
-                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
                                          ephemeral=True)
-                        return
-
-                    try:
-                        await self._add(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
                     except UserWarning:
                         # Member already has the fill role
-                        return
+                        pass
 
-                if (sheets_party.status == SheetsParty.PartyStatus.open or
-                        sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                    # Added party status is not New. Remove from fill
+                elif (sheets_party.status == SheetsParty.PartyStatus.open or
+                      sheets_party.status == SheetsParty.PartyStatus.exclusive):
+                    # Added party status is Open or Exclusive. Remove from fill
                     discord_fill_party = interaction.guild.get_role(int(fill_party_id))
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
+                        await self._remove(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
                     except StopIteration:
                         await self._send(interaction,
-                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
                                          ephemeral=True)
-                        return
-                    try:
-                        await self._remove(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
                     except UserWarning:
                         # Member did not have the fill role
-                        return
+                        pass
 
             # Remove from LFG party if added to a new, open, or exclusive party
             if (sheets_party.status == SheetsParty.PartyStatus.new or
@@ -141,16 +136,14 @@ class Bossing:
                 try:
                     sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                             sheets_party.role_id == lfg_party_id)
+                    await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
                 except StopIteration:
                     await self._send(interaction,
-                                     f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                     f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
                                      ephemeral=True)
-                    return
-                try:
-                    await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
                 except UserWarning:
                     # Member did not have the LFG role
-                    return
+                    pass
 
     async def _add(self, interaction, member, discord_party, job, sheets_party, silent=False):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
@@ -260,18 +253,15 @@ class Bossing:
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
                                                  sheets_party.role_id == fill_party_id)
-                    except StopIteration:
-                        await self._send(interaction,
-                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                         ephemeral=True)
-                        return
-
-                    try:
                         await self._remove(interaction, member, discord_fill_party, removed_sheets_member.job,
                                            sheets_fill_party, silent=True)
+                    except StopIteration:
+                        await self._send(interaction,
+                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
                     except UserWarning:
                         # Member did not have the fill role
-                        return
+                        pass
 
     async def _remove(self, interaction, member, discord_party, job, sheets_party, silent=False, left_server=False):
         if not left_server:
