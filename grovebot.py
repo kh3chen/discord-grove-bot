@@ -27,6 +27,7 @@ class GroveBot(commands.Bot):
 grove_bot_intents = discord.Intents.default()
 grove_bot_intents.members = True
 grove_bot_intents.message_content = True
+grove_bot_intents.reactions = True
 grove_bot = GroveBot(command_prefix='>', intents=grove_bot_intents)
 
 

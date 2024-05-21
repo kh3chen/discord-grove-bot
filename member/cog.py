@@ -78,11 +78,31 @@ class MemberCog(commands.Cog):
             icon_url = None
             pass
         join_embed.set_author(name=member.name, icon_url=icon_url)
-        join_message = await member_join_remove_channel.send(embed=join_embed)
+        join_message = await member_join_remove_channel.send(content=member.mention, embed=join_embed)
         await join_message.add_reaction('✉')
         await join_message.add_reaction('👍')
         await join_message.add_reaction('🤺')
         await join_message.add_reaction('❌')
+        await member_join_remove_channel.send(f'\n:envelope:: Messaged'
+                                              f'\n👍: Verification Complete'
+                                              f'\n🤺: Bossing Guest'
+                                              f'\n❌: Failed Verification')
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        channel = await self.bot.fetch_channel(payload.channel_id)
+        if channel.id != config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE:
+            return
+
+        message = await channel.fetch_message(payload.message_id)
+        member = await self.bot.fetch_user(payload.user_id)
+
+        emoji = payload.emoji.name
+        if member != self.bot.user and (emoji == '👍' or emoji == '🤺' or emoji == '❌'):
+            await message.remove_reaction('✉', self.bot.user)
+            await message.remove_reaction('👍', self.bot.user)
+            await message.remove_reaction('🤺', self.bot.user)
+            await message.remove_reaction('❌', self.bot.user)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
