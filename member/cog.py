@@ -108,9 +108,13 @@ class MemberCog(commands.Cog):
     async def on_member_remove(self, member: discord.Member):
         # Send to log channel
         member_join_remove_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE)
-        member_roles = reduce(lambda acc, val: acc + (" " if acc else "") + val,
-                              map(lambda role: role.mention, sorted(member.roles[1:], key=lambda role: role.position,
-                                                                    reverse=True)))  # Remove @everyone, sort by position descending
+        try:
+            member_roles = reduce(lambda acc, val: acc + (" " if acc else "") + val,
+                                  map(lambda role: role.mention,
+                                      sorted(member.roles[1:], key=lambda role: role.position,
+                                             reverse=True)))  # Remove @everyone, sort by position descending
+        except TypeError:
+            member_roles = "No roles"
 
         joined_at_ago = self.relative_delta_text(
             relativedelta.relativedelta(datetime.utcnow().replace(tzinfo=timezone.utc), member.joined_at))
