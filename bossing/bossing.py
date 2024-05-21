@@ -185,8 +185,12 @@ class Bossing:
         self._update_existing_party(discord_party)
 
         # Success
-        await self._send(interaction, f'Successfully added {member.mention} *{job}* to {discord_party.mention}.',
-                         ephemeral=True, log=True)
+        added_message = f'Added {member.mention} *{job}* to {discord_party.mention}'
+        if sheets_party.party_thread_id:
+            added_message += f' <#{sheets_party.party_thread_id}>'
+        elif sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+            added_message += f' <#{self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id}>'
+        await self._send(interaction, added_message, ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -312,9 +316,12 @@ class Bossing:
         self._update_existing_party(discord_party)
 
         # Success
-        await self._send(interaction,
-                         f'Successfully removed {member.mention} *{removed_sheets_member.job}* from {discord_party.mention}.',
-                         ephemeral=True, log=True)
+        removed_message = f'Removed {member.mention} *{removed_sheets_member.job}* from {discord_party.mention}'
+        if sheets_party.party_thread_id:
+            removed_message += f' <#{sheets_party.party_thread_id}>'
+        elif sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+            removed_message += f' <#{self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id}>'
+        await self._send(interaction, removed_message, ephemeral=True, log=True)
 
         if sheets_party.boss_list_message_id:
             # Update bossing list message
@@ -439,7 +446,7 @@ class Bossing:
             self.sheets_bossing.update_parties(sheets_parties)
 
             await self._send(interaction,
-                             f'Successfully created {new_boss_party.name} {party_thread_with_message.thread.mention}',
+                             f'Created {new_boss_party.name} {party_thread_with_message.thread.mention}',
                              ephemeral=True, log=True)
 
             # Remake bossing party list
