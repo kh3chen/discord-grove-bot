@@ -63,8 +63,6 @@ class MemberCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        await member.add_roles(self.bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_GROVE))
-
         created_at_ago = self.relative_delta_text(
             relativedelta.relativedelta(datetime.utcnow().replace(tzinfo=timezone.utc), member.created_at))
 
