@@ -26,6 +26,7 @@ async def sapling(interaction: discord.Interaction, member: discord.Member):
             f'## Welcome to Grove, {member.mention}!'
             f'\n- Please update your Grove Discord nickname to **Preferred Name (IGN)**'
             f'\n- You can choose your visible channels and selected roles at <id:customize>'
+            f'\n- Tell us a little about yourself in <#{config.GROVE_CHANNEL_ID_INTRODUCTIONS}>'
             f'\n\nReach out to any <@&{config.GROVE_ROLE_ID_JUNIOR}> for any questions you may have about MapleStory and our community! <:grove:924924448916795403>')
 
 
