@@ -71,6 +71,10 @@ async def guest(interaction: discord.Interaction, member: discord.Member):
                  'Left for another guild')
 
 
+async def onboard_guest(guild: discord.Guild, member: discord.Member):
+    await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_GUEST))
+
+
 async def retiree(interaction: discord.Interaction, member: discord.Member):
     await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),

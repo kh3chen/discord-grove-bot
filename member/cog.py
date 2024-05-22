@@ -39,7 +39,7 @@ class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member 
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     async def guest(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
-        await rank.guest(interaction, member)
+        await rank.onboard_guest(interaction, member)
 
     @app_commands.command(name='retiree', description='Set the Discord member rank to Retiree')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
@@ -85,7 +85,7 @@ class MemberCog(commands.Cog):
         await join_message.add_reaction('❌')
         await member_join_remove_channel.send(f'\n:envelope:: Messaged'
                                               f'\n👍: Verification Complete'
-                                              f'\n🤺: Bossing Guest'
+                                              f'\n🤺: Bossing Guest (will give role)'
                                               f'\n❌: Failed Verification')
 
     @commands.Cog.listener()
@@ -94,15 +94,24 @@ class MemberCog(commands.Cog):
         if channel.id != config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE:
             return
 
-        message = await channel.fetch_message(payload.message_id)
         member = await self.bot.fetch_user(payload.user_id)
+        if member == self.bot.user:
+            return
 
+        message = await channel.fetch_message(payload.message_id)
         emoji = payload.emoji.name
-        if member != self.bot.user and (emoji == '👍' or emoji == '🤺' or emoji == '❌'):
+        if emoji == '👍' or emoji == '🤺' or emoji == '❌':
             await message.remove_reaction('✉', self.bot.user)
             await message.remove_reaction('👍', self.bot.user)
             await message.remove_reaction('🤺', self.bot.user)
             await message.remove_reaction('❌', self.bot.user)
+
+        if emoji == '🤺':
+            # Onboard as bossing guest
+            guild = self.bot.get_guild(config.GROVE_GUILD_ID)
+            await rank.onboard_guest(
+                guild,
+                guild.get_member(int(message.content[message.content.find('<@') + 2:message.content.find('>')])))
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
