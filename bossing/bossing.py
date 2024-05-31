@@ -132,18 +132,19 @@ class Bossing:
                     sheets_party.status == SheetsParty.PartyStatus.exclusive):
                 lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                     sheets_party.difficulty].lfg_role_id
-                discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
-                try:
-                    sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                            sheets_party.role_id == lfg_party_id)
-                    await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
-                except StopIteration:
-                    await self._send(interaction,
-                                     f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                     ephemeral=True)
-                except UserWarning:
-                    # Member did not have the LFG role
-                    pass
+                if lfg_party_id != '':
+                    discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
+                    try:
+                        sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                                sheets_party.role_id == lfg_party_id)
+                        await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
+                    except StopIteration:
+                        await self._send(interaction,
+                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                         ephemeral=True)
+                    except UserWarning:
+                        # Member did not have the LFG role
+                        pass
 
     async def _add(self, interaction, member, discord_party, job, sheets_party, silent=False):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
@@ -746,9 +747,8 @@ class Bossing:
                                 except Exception as e:
                                     await self._send(interaction, str(e), ephemeral=True)
                             except StopIteration:
-                                await self._send(interaction,
-                                                 f'Error - Unable to find {discord_member.mention} in {discord_party.mention}.',
-                                                 ephemeral=True)
+                                # Member not in fill, silently handle exception
+                                pass
                     except StopIteration:
                         await self._send(interaction,
                                          f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',

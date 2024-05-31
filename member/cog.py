@@ -39,7 +39,7 @@ class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member 
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     async def guest(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
-        await rank.onboard_guest(interaction, member)
+        await rank.guest(interaction, member)
 
     @app_commands.command(name='retiree', description='Set the Discord member rank to Retiree')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
