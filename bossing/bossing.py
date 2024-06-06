@@ -29,7 +29,7 @@ class Bossing:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message = self.__get_boss_party_list_message(sheets_party,
                                                              self.sheets_bossing.members_dict[sheets_party.role_id])
-                message += f'\nReact to confirm your availability. If you are unable to make this run, please follow Grove\'s bossing etiquette found in <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>. Thank you!'
+                message += f'\n**React to confirm your availability.** If you are unable to run or unsure of availability, you __**must**__ follow the bossing etiquette as stated in <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}> out of respect to your fellow party members. Repeatedly breaking these rules may result in escalation to the leadership team and removal from Grove bossing parties.'
                 await party_thread.send(message)
 
         async def on_update(sheets_party: SheetsParty):
