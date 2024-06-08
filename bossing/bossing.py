@@ -39,6 +39,8 @@ class Bossing:
                 await message.add_reaction('✅')
                 await message.add_reaction('❌')
                 await message.add_reaction('🕒')
+                sheets_party.reminder_jump_url = message.jump_url
+                self.sheets_bossing.update_parties(self.sheets_bossing.parties)
 
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:

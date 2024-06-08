@@ -60,7 +60,7 @@ class Difficulty:
 
 
 class Party:
-    LENGTH = 13
+    LENGTH = 14
 
     INDEX_ROLE_ID = 0
     INDEX_BOSS_NAME = 1
@@ -75,6 +75,7 @@ class Party:
     INDEX_PARTY_MESSAGE_ID = 10
     INDEX_BOSS_LIST_MESSAGE_ID = 11
     INDEX_BOSS_LIST_DECORATOR_ID = 12
+    INDEX_REMINDER_JUMP_URL = 13
 
     class PartyStatus(Enum):
         new = "new"
@@ -93,9 +94,21 @@ class Party:
         sat = 6
         sun = 7
 
-    def __init__(self, role_id, boss_name, difficulty, party_number, status, member_count, weekday, hour, minute,
+    def __init__(self,
+                 role_id,
+                 boss_name,
+                 difficulty,
+                 party_number,
+                 status,
+                 member_count,
+                 weekday,
+                 hour,
+                 minute,
                  party_thread_id,
-                 party_message_id, boss_list_message_id, boss_list_decorator_id):
+                 party_message_id,
+                 boss_list_message_id,
+                 boss_list_decorator_id,
+                 reminder_jump_url):
         self.role_id = str(role_id)
         self.boss_name = str(boss_name)
         self.difficulty = str(difficulty)
@@ -109,17 +122,25 @@ class Party:
         self.party_message_id = str(party_message_id)
         self.boss_list_message_id = str(boss_list_message_id)
         self.boss_list_decorator_id = str(boss_list_decorator_id)
+        self.reminder_jump_url = reminder_jump_url
 
     @staticmethod
     def from_sheets_value(parties_value: list[str]):
         parties_value = parties_value[:Party.LENGTH] + [''] * (Party.LENGTH - len(parties_value))
-        return Party(parties_value[Party.INDEX_ROLE_ID], parties_value[Party.INDEX_BOSS_NAME],
-                     parties_value[Party.INDEX_DIFFICULTY], parties_value[Party.INDEX_PARTY_NUMBER],
-                     parties_value[Party.INDEX_STATUS], parties_value[Party.INDEX_MEMBER_COUNT],
-                     parties_value[Party.INDEX_WEEKDAY], parties_value[Party.INDEX_HOUR],
-                     parties_value[Party.INDEX_MINUTE], parties_value[Party.INDEX_PARTY_THREAD_ID],
-                     parties_value[Party.INDEX_PARTY_MESSAGE_ID], parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
-                     parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID])
+        return Party(parties_value[Party.INDEX_ROLE_ID],
+                     parties_value[Party.INDEX_BOSS_NAME],
+                     parties_value[Party.INDEX_DIFFICULTY],
+                     parties_value[Party.INDEX_PARTY_NUMBER],
+                     parties_value[Party.INDEX_STATUS],
+                     parties_value[Party.INDEX_MEMBER_COUNT],
+                     parties_value[Party.INDEX_WEEKDAY],
+                     parties_value[Party.INDEX_HOUR],
+                     parties_value[Party.INDEX_MINUTE],
+                     parties_value[Party.INDEX_PARTY_THREAD_ID],
+                     parties_value[Party.INDEX_PARTY_MESSAGE_ID],
+                     parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
+                     parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID],
+                     parties_value[Party.INDEX_REMINDER_JUMP_URL])
 
     @staticmethod
     def new_party(role_id: int, boss_name: str, difficulty: str, party_number: int):
@@ -142,9 +163,20 @@ class Party:
         return f'<@&{self.role_id}>'
 
     def to_sheets_value(self):
-        return [str(self.role_id), str(self.boss_name), str(self.difficulty), str(self.party_number), self.status.value,
-                str(self.member_count), str(self.weekday), str(self.hour), str(self.minute), str(self.party_thread_id),
-                str(self.party_message_id), str(self.boss_list_message_id), str(self.boss_list_decorator_id)]
+        return [str(self.role_id),
+                str(self.boss_name),
+                str(self.difficulty),
+                str(self.party_number),
+                self.status.value,
+                str(self.member_count),
+                str(self.weekday),
+                str(self.hour),
+                str(self.minute),
+                str(self.party_thread_id),
+                str(self.party_message_id),
+                str(self.boss_list_message_id),
+                str(self.boss_list_decorator_id),
+                self.reminder_jump_url]
 
     def next_scheduled_time(self):
         if not self.weekday or not self.hour or not self.minute:
@@ -205,7 +237,7 @@ class BossingSheets:
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:E'
     RANGE_DIFFICULTIES = 'Difficulties!A2:D'
-    RANGE_PARTIES = 'Parties!A2:M'
+    RANGE_PARTIES = 'Parties!A2:N'
     RANGE_MEMBERS = 'Members!A2:E'
 
     @staticmethod
