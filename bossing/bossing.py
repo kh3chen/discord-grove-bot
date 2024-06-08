@@ -27,10 +27,18 @@ class Bossing:
             # Send reminder in party thread
             if sheets_party.party_thread_id:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                message = self.__get_boss_party_list_message(sheets_party,
-                                                             self.sheets_bossing.members_dict[sheets_party.role_id])
-                message += f'\n**React to confirm your availability.** If you are unable to run or unsure of availability, you __**must**__ follow the bossing etiquette as stated in <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}> out of respect to your fellow party members. Repeatedly breaking these rules may result in escalation to the leadership team and removal from Grove bossing parties.'
-                await party_thread.send(message)
+                message_content = self.__get_boss_party_list_message(sheets_party,
+                                                                     self.sheets_bossing.members_dict[
+                                                                         sheets_party.role_id])
+                message_content += (f'\n**React with your availability:**'
+                                    f'\n✅ Accept'
+                                    f'\n❌ Decline'
+                                    f'\n🕒 Reschedule'
+                                    f'\n\nRepeated lack of communication with your party may result in removal from Grove bossing parties. Read the bossing etiquette here: <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>')
+                message = await party_thread.send(message_content)
+                await message.add_reaction('✅')
+                await message.add_reaction('❌')
+                await message.add_reaction('🕒')
 
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:
