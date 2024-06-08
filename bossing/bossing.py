@@ -7,6 +7,7 @@ import config
 from bossing.service import BossTimeService
 from bossing.sheets import BossingSheets
 from bossing.sheets import Member as SheetsMember
+from bossing.sheets import NoShow as SheetsNoShow
 from bossing.sheets import Party as SheetsParty
 
 
@@ -78,6 +79,24 @@ class Bossing:
                 else:
                     party_message = None
                 await self._update_thread(party_thread, party_message, sheets_party)
+
+                if sheets_party.check_in_message_id:
+                    # Track non-responders to the check-in
+                    check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
+                    reacted = set()
+                    for reaction in check_in_message.reactions:
+                        reacted.update(set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
+
+                    party_members_not_reacted = filter(lambda member: member.user_id not in reacted,
+                                                       self.sheets_bossing.members_dict[sheets_party.role_id])
+                    no_shows = list(map(lambda member: SheetsNoShow(int(sheets_party.next_scheduled_time()) - 604800,
+                                                                    member.user_id,
+                                                                    sheets_party.role_id,
+                                                                    sheets_party.boss_name,
+                                                                    sheets_party.party_number),
+                                        party_members_not_reacted))
+                    print(no_shows)
+                    self.sheets_bossing.append_no_shows(no_shows)
 
         self.boss_time_service = BossTimeService(on_check_in, on_reminder, on_update)
 
@@ -547,6 +566,7 @@ class Bossing:
             sheets_party.weekday = weekday.name
             sheets_party.hour = str(hour)
             sheets_party.minute = str(minute)
+            sheets_party.check_in_message_id = ''
             self.sheets_bossing.update_parties(sheets_parties)
             self._restart_service()
             timestamp = sheets_party.next_scheduled_time()
@@ -618,6 +638,7 @@ class Bossing:
             sheets_party.weekday = ''
             sheets_party.hour = ''
             sheets_party.minute = ''
+            sheets_party.check_in_message_id = ''
             self.sheets_bossing.update_parties(sheets_parties)
             self._restart_service()
 

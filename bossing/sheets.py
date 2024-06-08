@@ -125,22 +125,22 @@ class Party:
         self.check_in_message_id = str(check_in_message_id)
 
     @staticmethod
-    def from_sheets_value(parties_value: list[str]):
-        parties_value = parties_value[:Party.LENGTH] + [''] * (Party.LENGTH - len(parties_value))
-        return Party(parties_value[Party.INDEX_ROLE_ID],
-                     parties_value[Party.INDEX_BOSS_NAME],
-                     parties_value[Party.INDEX_DIFFICULTY],
-                     parties_value[Party.INDEX_PARTY_NUMBER],
-                     parties_value[Party.INDEX_STATUS],
-                     parties_value[Party.INDEX_MEMBER_COUNT],
-                     parties_value[Party.INDEX_WEEKDAY],
-                     parties_value[Party.INDEX_HOUR],
-                     parties_value[Party.INDEX_MINUTE],
-                     parties_value[Party.INDEX_PARTY_THREAD_ID],
-                     parties_value[Party.INDEX_PARTY_MESSAGE_ID],
-                     parties_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
-                     parties_value[Party.INDEX_BOSS_LIST_DECORATOR_ID],
-                     parties_value[Party.INDEX_CHECK_IN_MESSAGE_ID])
+    def from_sheets_value(party_value: list[str]):
+        party_value = party_value[:Party.LENGTH] + [''] * (Party.LENGTH - len(party_value))
+        return Party(party_value[Party.INDEX_ROLE_ID],
+                     party_value[Party.INDEX_BOSS_NAME],
+                     party_value[Party.INDEX_DIFFICULTY],
+                     party_value[Party.INDEX_PARTY_NUMBER],
+                     party_value[Party.INDEX_STATUS],
+                     party_value[Party.INDEX_MEMBER_COUNT],
+                     party_value[Party.INDEX_WEEKDAY],
+                     party_value[Party.INDEX_HOUR],
+                     party_value[Party.INDEX_MINUTE],
+                     party_value[Party.INDEX_PARTY_THREAD_ID],
+                     party_value[Party.INDEX_PARTY_MESSAGE_ID],
+                     party_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
+                     party_value[Party.INDEX_BOSS_LIST_DECORATOR_ID],
+                     party_value[Party.INDEX_CHECK_IN_MESSAGE_ID])
 
     @staticmethod
     def new_party(role_id: int, boss_name: str, difficulty: str, party_number: int):
@@ -216,11 +216,11 @@ class Member:
         self.job = str(job)
 
     @staticmethod
-    def from_sheets_value(members_value: list[str]):
-        members_value = members_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(members_value))
-        return Member(members_value[Member.INDEX_BOSS_NAME], members_value[Member.INDEX_PARTY_NUMBER],
-                      members_value[Member.INDEX_PARTY_ROLE_ID], members_value[Member.INDEX_USER_ID],
-                      members_value[Member.INDEX_JOB])
+    def from_sheets_value(member_value: list[str]):
+        member_value = member_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(member_value))
+        return Member(member_value[Member.INDEX_BOSS_NAME], member_value[Member.INDEX_PARTY_NUMBER],
+                      member_value[Member.INDEX_PARTY_ROLE_ID], member_value[Member.INDEX_USER_ID],
+                      member_value[Member.INDEX_JOB])
 
     def __str__(self):
         return str(self.to_sheets_value())
@@ -232,6 +232,50 @@ class Member:
         return [str(self.boss_name), str(self.party_number), str(self.party_role_id), str(self.user_id), str(self.job)]
 
 
+class NoShow:
+    LENGTH = 5
+
+    INDEX_TIMESTAMP = 0
+    INDEX_USER_ID = 1
+    INDEX_PARTY_ROLE_ID = 2
+    INDEX_BOSS_NAME = 3
+    INDEX_PARTY_NUMBER = 4
+
+    def __init__(self,
+                 timestamp: int,
+                 user_id: str,
+                 party_role_id: str,
+                 boss_name: str,
+                 party_number: str):
+        self.timestamp = timestamp
+        self.user_id = user_id
+        self.party_role_id = party_role_id
+        self.boss_name = boss_name
+        self.party_number = party_number
+
+    @staticmethod
+    def from_sheets_value(no_show_value: list[str]):
+        no_show_value = no_show_value[:NoShow.LENGTH] + [''] * (NoShow.LENGTH - len(no_show_value))
+        return NoShow(int(no_show_value[NoShow.INDEX_TIMESTAMP]),
+                      no_show_value[NoShow.INDEX_USER_ID],
+                      no_show_value[NoShow.INDEX_PARTY_ROLE_ID],
+                      no_show_value[NoShow.INDEX_BOSS_NAME],
+                      no_show_value[NoShow.INDEX_PARTY_NUMBER])
+
+    def __str__(self):
+        return str(self.to_sheets_value())
+
+    def __repr__(self):
+        return self.__str__()
+
+    def to_sheets_value(self):
+        return [str(self.timestamp),
+                str(self.user_id),
+                str(self.party_role_id),
+                str(self.boss_name),
+                str(self.party_number)]
+
+
 class BossingSheets:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
@@ -239,6 +283,7 @@ class BossingSheets:
     RANGE_DIFFICULTIES = 'Difficulties!A2:D'
     RANGE_PARTIES = 'Parties!A2:N'
     RANGE_MEMBERS = 'Members!A2:E'
+    RANGE_NO_SHOWS = 'No Shows!A2:E'
 
     @staticmethod
     def __get_bosses_dict():
@@ -262,8 +307,8 @@ class BossingSheets:
     def __get_parties():
         result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
                                                                   range=BossingSheets.RANGE_PARTIES).execute()
-        parties_values = result.get('values', [])
-        return list(map(lambda parties_value: Party.from_sheets_value(parties_value), parties_values))
+        party_values = result.get('values', [])
+        return list(map(lambda party_value: Party.from_sheets_value(party_value), party_values))
 
     @staticmethod
     def __get_members():
@@ -390,3 +435,12 @@ class BossingSheets:
         except HttpError as error:
             print(f"An error occurred: {error}")
             raise error
+
+    def append_no_shows(self, no_shows: list[NoShow]):
+        def no_show_to_sheets_values(no_show: NoShow):
+            return no_show.to_sheets_value()
+
+        body = {'values': list(map(no_show_to_sheets_values, no_shows))}
+        sheets.get_service().spreadsheets().values().append(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
+                                                            range=self.RANGE_NO_SHOWS, valueInputOption="RAW",
+                                                            body=body).execute()

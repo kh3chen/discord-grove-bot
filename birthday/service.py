@@ -65,7 +65,7 @@ class BirthdayService:
             now = datetime.now()
             sleep_duration = events[0].timestamp - int(now.timestamp())
             if sleep_duration > 0:
-                print(f'Bossing service sleeping for {sleep_duration} seconds.')
+                print(f'Birthday service sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
 
             # Fire event
