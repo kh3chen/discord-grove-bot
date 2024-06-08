@@ -6,7 +6,7 @@ from absence.absence import Absence
 absence: Absence
 
 
-class AbsenceGroup(app_commands.Group, name='absence', description='Commands to manage Away role and requests'):
+class AbsenceGroup(app_commands.Group, name='away', description='Commands to manage Away role and requests'):
 
     @app_commands.command(name='schedule', description='Schedule an absence')
     @app_commands.describe(start_date='The start date of your absence. Format: YYYY-MM-DD')
