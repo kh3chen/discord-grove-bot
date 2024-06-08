@@ -8,12 +8,16 @@ from bossing.sheets import Party as SheetsParty
 
 class BossTimeService:
     SEVEN_DAYS_IN_SECONDS = 604800
-    ONE_DAY_IN_SECONDS = 86400
-    ONE_HOUR_IN_SECONDS = 3600
+    CHECK_IN_OFFSET = -86400  # 24 hours before
+    REMINDER_ONE_OFFSET = -21600  # 6 hours before
+    REMINDER_TWO_OFFSET = -10800  # 3 hours before
+    REMINDER_THREE_OFFSET = -3600  # 1 hour before
+    UPDATE_OFFSET = 3600  # 1 hour after
 
     class Event:
 
         class Type(Enum):
+            check_in = "check_in"
             reminder = "reminder"
             update = "update"
 
@@ -28,7 +32,11 @@ class BossTimeService:
         def __repr__(self):
             return self.__str__()
 
-    def __init__(self, on_reminder: Callable[[SheetsParty], Coroutine], on_update: Callable[[SheetsParty], Coroutine]):
+    def __init__(self,
+                 on_check_in: Callable[[SheetsParty], Coroutine],
+                 on_reminder: Callable[[SheetsParty], Coroutine],
+                 on_update: Callable[[SheetsParty], Coroutine]):
+        self.on_check_in = on_check_in
         self.on_reminder = on_reminder
         self.on_update = on_update
         self.updater_task: asyncio.Task = None
@@ -46,29 +54,55 @@ class BossTimeService:
         for sheets_party in sheets_parties:
             next_scheduled_time = sheets_party.next_scheduled_time()
             if next_scheduled_time:
-                reminder_time = int(next_scheduled_time) - BossTimeService.ONE_DAY_IN_SECONDS
-                if reminder_time - now < 0:
-                    # Reminder time is in the past
-                    reminder_time += BossTimeService.SEVEN_DAYS_IN_SECONDS
-                index = 0
-                for event in events:
-                    if reminder_time < event.timestamp:
-                        break
-                    index += 1
-                events[index:index] = [
-                    BossTimeService.Event(reminder_time, BossTimeService.Event.Type.reminder, sheets_party)]
+                # Check-in
+                check_in_time = int(next_scheduled_time) + BossTimeService.CHECK_IN_OFFSET
+                if check_in_time - now < 0:
+                    # Check-in time is in the past
+                    check_in_time += BossTimeService.SEVEN_DAYS_IN_SECONDS
+                self.__insert_event(events,
+                                    BossTimeService.Event(check_in_time,
+                                                          BossTimeService.Event.Type.check_in,
+                                                          sheets_party))
 
-                update_time = int(next_scheduled_time) + BossTimeService.ONE_HOUR_IN_SECONDS
+                # Reminder 1
+                reminder_one_time = int(next_scheduled_time) + BossTimeService.REMINDER_ONE_OFFSET
+                if reminder_one_time - now < 0:
+                    # Reminder time is in the past
+                    reminder_one_time += BossTimeService.SEVEN_DAYS_IN_SECONDS
+                self.__insert_event(events,
+                                    BossTimeService.Event(reminder_one_time,
+                                                          BossTimeService.Event.Type.reminder,
+                                                          sheets_party))
+
+                # Reminder 2
+                reminder_two_time = int(next_scheduled_time) + BossTimeService.REMINDER_TWO_OFFSET
+                if reminder_two_time - now < 0:
+                    # Reminder time is in the past
+                    reminder_two_time += BossTimeService.SEVEN_DAYS_IN_SECONDS
+                self.__insert_event(events,
+                                    BossTimeService.Event(reminder_two_time,
+                                                          BossTimeService.Event.Type.reminder,
+                                                          sheets_party))
+
+                # Reminder 3
+                reminder_three_time = int(next_scheduled_time) + BossTimeService.REMINDER_THREE_OFFSET
+                if reminder_three_time - now < 0:
+                    # Reminder time is in the past
+                    reminder_three_time += BossTimeService.SEVEN_DAYS_IN_SECONDS
+                self.__insert_event(events,
+                                    BossTimeService.Event(reminder_three_time,
+                                                          BossTimeService.Event.Type.reminder,
+                                                          sheets_party))
+
+                # Update
+                update_time = int(next_scheduled_time) + BossTimeService.UPDATE_OFFSET
                 if update_time - now > BossTimeService.SEVEN_DAYS_IN_SECONDS:
                     # Update time is more than 7 days away, so now is within an hour of the last scheduled run before its corresponding update
                     update_time -= BossTimeService.SEVEN_DAYS_IN_SECONDS
-                index = 0
-                for event in events:
-                    if update_time < event.timestamp:
-                        break
-                    index += 1
-                events[index:index] = [
-                    BossTimeService.Event(update_time, BossTimeService.Event.Type.update, sheets_party)]
+                self.__insert_event(events,
+                                    BossTimeService.Event(update_time,
+                                                          BossTimeService.Event.Type.update,
+                                                          sheets_party))
 
         while True:
             # Sleep until next event
@@ -80,7 +114,9 @@ class BossTimeService:
                 await asyncio.sleep(sleep_duration)
 
             # Fire event
-            if events[0].update_type == BossTimeService.Event.Type.reminder:
+            if events[0].update_type == BossTimeService.Event.Type.check_in:
+                await self.on_check_in(events[0].sheets_party)
+            elif events[0].update_type == BossTimeService.Event.Type.reminder:
                 await self.on_reminder(events[0].sheets_party)
             elif events[0].update_type == BossTimeService.Event.Type.update:
                 await self.on_update(events[0].sheets_party)
@@ -88,3 +124,12 @@ class BossTimeService:
             # Push event to back, 7 days later
             events[0].timestamp += BossTimeService.SEVEN_DAYS_IN_SECONDS
             events = events[1:] + events[0:1]
+
+    @staticmethod
+    def __insert_event(events: list[Event], new_event: Event):
+        index = 0
+        for event in events:
+            if new_event.timestamp < event.timestamp:
+                break
+            index += 1
+        events[index:index] = [new_event]
