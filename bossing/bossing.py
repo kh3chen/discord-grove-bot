@@ -86,9 +86,11 @@ class Bossing:
                     reacted = set()
                     for reaction in check_in_message.reactions:
                         reacted.update(set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
-
-                    party_members_not_reacted = filter(lambda member: member.user_id not in reacted,
-                                                       self.sheets_bossing.members_dict[sheets_party.role_id])
+                    away = set(map(lambda member: str(member.id), self.client.get_guild(config.GROVE_GUILD_ID).get_role(
+                        config.GROVE_ROLE_ID_AWAY).members))
+                    party_members_not_reacted = filter(
+                        lambda member: member.user_id not in reacted and member.user_id not in away,
+                        self.sheets_bossing.members_dict[sheets_party.role_id])
                     no_shows = list(map(lambda member: SheetsNoShow(int(sheets_party.next_scheduled_time()) - 604800,
                                                                     member.user_id,
                                                                     sheets_party.role_id,
