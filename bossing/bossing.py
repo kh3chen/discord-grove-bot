@@ -31,7 +31,7 @@ class Bossing:
                 message_content = self.__get_boss_party_list_message(sheets_party,
                                                                      self.sheets_bossing.members_dict[
                                                                          sheets_party.role_id])
-                message_content += (f'\n**Check in for this schedule boss run:**'
+                message_content += (f'\n**Check in for your upcoming boss run:**'
                                     f'\n✅ Accept'
                                     f'\n❌ Decline'
                                     f'\n🕒 Reschedule'
@@ -55,7 +55,7 @@ class Bossing:
                 party_members_not_reacted = list(filter(lambda member: member.user_id not in reacted,
                                                         self.sheets_bossing.members_dict[sheets_party.role_id]))
                 if len(party_members_not_reacted) > 0:
-                    reminder_message_content = f'**Reminder to check in:** {check_in_message.jump_url}\n'
+                    reminder_message_content = f'**Reminder to check in for your upcoming boss run:** {check_in_message.jump_url}\n'
                     timestamp = sheets_party.next_scheduled_time()
                     if timestamp:
                         reminder_message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n\n'
