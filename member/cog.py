@@ -65,8 +65,11 @@ class MemberCog(commands.Cog):
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     @app_commands.describe(message_ids='IDs of the messages with the attached screenshots, separated with commas.')
     async def track(self, interaction, message_ids: str):
-        message_id_list = list(map(lambda message_id: int(message_id), message_ids.split(',')))
         await interaction.response.defer()
+        try:
+            message_id_list = list(map(lambda message_id: int(message_id), message_ids.split(',')))
+        except ValueError:
+            await interaction.followup.send('Error - Invalid message IDs.')
         await track.track(interaction, message_id_list)
 
     @commands.Cog.listener()
