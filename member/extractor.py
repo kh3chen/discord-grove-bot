@@ -3,6 +3,8 @@ import numpy as np
 from fuzzywuzzy import process
 from pytesseract import pytesseract
 
+import config
+
 
 class Result:
     def __init__(self, ign: str, weekly_mission: int, culvert: int, flag: int):
@@ -14,7 +16,7 @@ class Result:
 
 def extract(list_of_igns: list[str], custom_ign_map: dict[str, str], byte_images: list[bytes]) -> (
         list[Result], list[list[str]]):
-    path_to_tesseract = r"Tesseract-OCR/tesseract.exe"
+    path_to_tesseract = config.TESSERACT_OCR_PATH
     pytesseract.tesseract_cmd = path_to_tesseract
     text = ""
     i = 0

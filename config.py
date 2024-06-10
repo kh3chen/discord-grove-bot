@@ -4,6 +4,8 @@
 # import config
 # config.BOT_TOKEN = 'your_bot_token'
 
+TESSERACT_OCR_PATH = ''
+
 BOT_TOKEN = ''
 
 # Member Tracking spreadsheet IDs

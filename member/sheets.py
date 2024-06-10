@@ -10,6 +10,7 @@ SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the m
 RANGE_MEMBERS = 'Member List!D3:G'
 RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
+RANGE_WEEK = 'Weekly Participation!N2:N'
 RANGE_PAST_MEMBERS = 'Past Members'
 RANGE_CUSTOM_IGN_MAPPING = 'Custom IGN Mapping!A2:B'
 RANGE_TRACKING_DATA = 'Tracking Data'
@@ -338,6 +339,20 @@ def insert_weekly_participation_column(header: str):
         raise error
 
 
+def update_weekly_participation(scores: list[int]):
+    try:
+        values = list(map(lambda score: [score], scores))
+        body = {'values': values}
+        sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                            range=RANGE_WEEK,
+                                                            valueInputOption="USER_ENTERED",
+                                                            body=body).execute()
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise error
+
+
 def get_custom_ign_mapping():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
@@ -364,7 +379,7 @@ class Track:
     INDEX_CULVERT = 4
     INDEX_FLAG = 5
 
-    def __init__(self, date: str, discord_mention: str, ign: str, mission: str, culvert: int, flag: int):
+    def __init__(self, date: str, discord_mention: str, ign: str, mission: int, culvert: int, flag: int):
         self.date = date
         self.discord_mention = discord_mention
         self.ign = ign

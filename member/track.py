@@ -33,7 +33,7 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
     byte_images = []
     for attachment in attachments:
         byte_images.append(await attachment.read())
-    await interaction.followup.send(f'Tracking {len(byte_images)} screenshots...')
+    await interaction.followup.send(f'Tracking {len(byte_images)} screenshots. This might take a few minutes.')
     custom_ign_map = sheets.get_custom_ign_mapping()
     try:
         results, errors = extractor.extract(list(map(lambda character: character.ign, characters)), custom_ign_map,
@@ -58,13 +58,34 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
                 errors.append([sunday_string, character.ign, character.discord_mention, 'MISSING'])
         sheets.append_errors(errors)
 
-        await interaction.followup.send(f'Tracking complete\nSuccess: {len(tracks)}\nError: {len(errors)}')
+        await interaction.followup.send(f'Tracking data saved\nSuccess: {len(tracks)}\nError: {len(errors)}')
+
+        week_header = update_weekly_participation(tracks)
+        await interaction.followup.send(f'{week_header} tracking complete!')
     except Exception as e:
         await interaction.followup.send(f'Error - {e}')
 
 
-def update_weekly_participation():
+def update_weekly_participation(tracks: list[sheets.Track]):
     guild_week = common.guild_week()
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     if not sheets.is_valid(guild_week, sunday_string):
         sheets.insert_weekly_participation_column(f'Week {guild_week}\n{sunday_string}')
+
+    scores = []
+    for member in sheets.get_unsorted_weekly_participation():
+        score = None
+        for track in tracks:
+            if member.discord_mention == track.discord_mention:
+                new_score = track.mission
+                if track.culvert > 0:
+                    new_score += 10
+                if track.flag > 0:
+                    new_score += 10
+                if not score or new_score > score:
+                    score = new_score
+                tracks.remove(track)
+        scores.append(score)
+
+    sheets.update_weekly_participation(scores)
+    return f'Week {guild_week} {sunday_string}'
