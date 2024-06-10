@@ -16,10 +16,6 @@ class Character:
 
 
 async def track(interaction: discord.Interaction, message_ids: list[int]):
-    scores = sheets.get_weekly_participation()
-    print(scores)
-    return
-
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets.get_unsorted_weekly_participation():
