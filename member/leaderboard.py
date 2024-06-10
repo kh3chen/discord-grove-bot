@@ -60,21 +60,21 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             spirit_promotions = []
             tree_promotions = []
             left_discord = []
-            pre_promotions_wp_list = sheets_members.get_sorted_weekly_participation()
-            for wp in pre_promotions_wp_list:
-                if ((wp.rank == sheets_members.ROLE_NAME_TREE or wp.rank == sheets_members.ROLE_NAME_SAPLING)
-                        and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT):
+            pre_promotions_mp_list = sheets_members.get_sorted_member_participation()
+            for mp in pre_promotions_mp_list:
+                if ((mp.rank == sheets_members.ROLE_NAME_TREE or mp.rank == sheets_members.ROLE_NAME_SAPLING)
+                        and mp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and mp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT):
                     try:
-                        await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
-                        spirit_promotions.append(wp)
+                        await rank.spirit(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(mp.discord_id))
+                        spirit_promotions.append(mp)
                     except AttributeError:
-                        left_discord.append(wp)
-                elif wp.rank == sheets_members.ROLE_NAME_SAPLING and wp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
+                        left_discord.append(mp)
+                elif mp.rank == sheets_members.ROLE_NAME_SAPLING and mp.contribution >= sheets_members.CONTRIBUTION_THRESHOLD_TREE:
                     try:
-                        await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id))
-                        tree_promotions.append(wp)
+                        await rank.tree(interaction, bot.get_guild(config.GROVE_GUILD_ID).get_member(mp.discord_id))
+                        tree_promotions.append(mp)
                     except AttributeError:
-                        left_discord.append(wp)
+                        left_discord.append(mp)
 
             # Send to log channel
             member_activity_channel = bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY)
@@ -106,11 +106,11 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
                 await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
 
             # This week's Celestials
-            wp_list = sheets_members.get_sorted_weekly_participation()
-            new_celestials = _get_celestials(wp_list)
+            mp_list = sheets_members.get_sorted_member_participation()
+            new_celestials = _get_celestials(mp_list)
 
-            for wp in new_celestials:
-                member = bot.get_guild(config.GROVE_GUILD_ID).get_member(wp.discord_id)
+            for mp in new_celestials:
+                member = bot.get_guild(config.GROVE_GUILD_ID).get_member(mp.discord_id)
                 await member.add_roles(celestial_role)
 
             # Create and format announcement message
@@ -146,7 +146,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             await announcement_message.edit(content=announcement_body)
 
             # Send leaderboard ranking messages
-            await _announce_leaderboard(leaderboard_thread, leaderboard_thread_title, wp_list)
+            await _announce_leaderboard(leaderboard_thread, leaderboard_thread_title, mp_list)
 
             # Set the new members as introed
             sheets_members.update_introed_new_members()
@@ -168,29 +168,29 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
 
 
 async def _announce_leaderboard(leaderboard_thread, leaderboard_thread_title,
-                                wp_list: list[sheets_members.WeeklyParticipation]):
+                                mp_list: list[sheets_members.MemberParticipation]):
     await leaderboard_thread.send(f'# {leaderboard_thread_title}')
-    leaderboard_embeds = _get_leaderboard_embeds(wp_list)
+    leaderboard_embeds = _get_leaderboard_embeds(mp_list)
     for embed in leaderboard_embeds:
         await leaderboard_thread.send(embed=embed)
     await leaderboard_thread.send(
         f'*If you notice an error or have any questions or feedback, please let a <@&{config.GROVE_ROLE_ID_JUNIOR}> know. Thank you!*')
 
 
-def _get_leaderboard_embeds(wp_list: list[sheets_members.WeeklyParticipation]):
+def _get_leaderboard_embeds(mp_list: list[sheets_members.MemberParticipation]):
     embeds = []
     current_score = None
     line = ''
-    for wp in wp_list:
+    for mp in mp_list:
         if current_score is None:
-            current_score = wp.score
+            current_score = mp.score
 
-        elif current_score != wp.score:
+        elif current_score != mp.score:
             if line != '':
                 embeds.append(discord.Embed(title=f'{current_score} Points', description=line, colour=GROVE_GREEN))
-            current_score = wp.score
+            current_score = mp.score
             line = ''
-        line += f'{wp.discord_mention} '
+        line += f'{mp.discord_mention} '
 
     if current_score is not None and line != '':
         embeds.append(discord.Embed(title=f'{current_score} Points', description=line, colour=GROVE_GREEN))
@@ -198,18 +198,18 @@ def _get_leaderboard_embeds(wp_list: list[sheets_members.WeeklyParticipation]):
     return embeds
 
 
-def _get_celestials(wp_list: list[sheets_members.WeeklyParticipation]):
+def _get_celestials(mp_list: list[sheets_members.MemberParticipation]):
     return list(filter(
-        lambda wp: (wp.rank == sheets_members.ROLE_NAME_WARDEN
-                    or wp.rank == sheets_members.ROLE_NAME_GUARDIAN
-                    or wp.rank == sheets_members.ROLE_NAME_SPIRIT) and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
-        wp_list))
+        lambda mp: (mp.rank == sheets_members.ROLE_NAME_WARDEN
+                    or mp.rank == sheets_members.ROLE_NAME_GUARDIAN
+                    or mp.rank == sheets_members.ROLE_NAME_SPIRIT) and mp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT,
+        mp_list))
 
 
 def _get_announcement_embeds(guild_week: int,
-                             celestials: list[sheets_members.WeeklyParticipation],
-                             spirit_promotions: list[sheets_members.WeeklyParticipation],
-                             tree_promotions: list[sheets_members.WeeklyParticipation]):
+                             celestials: list[sheets_members.MemberParticipation],
+                             spirit_promotions: list[sheets_members.MemberParticipation],
+                             tree_promotions: list[sheets_members.MemberParticipation]):
     announcement_embeds = []
     if len(celestials) > 0:
         announcement_embeds.append(_get_celestial_embed(guild_week, celestials))
@@ -220,7 +220,7 @@ def _get_announcement_embeds(guild_week: int,
 
 
 def _get_celestial_embed(guild_week: int,
-                         celestials: list[sheets_members.WeeklyParticipation]):
+                         celestials: list[sheets_members.MemberParticipation]):
     description = f'Special thanks this week\'s <@&{config.GROVE_ROLE_ID_CELESTIAL}> Grovians:\n'
     description += reduce(
         lambda body, member: body + f'{member.discord_mention} <:celestial:1174736926364934275>\n',
@@ -231,8 +231,8 @@ def _get_celestial_embed(guild_week: int,
 
 
 def _get_promotions_embed(guild_week: int,
-                          spirit_promotions: list[sheets_members.WeeklyParticipation],
-                          tree_promotions: list[sheets_members.WeeklyParticipation]):
+                          spirit_promotions: list[sheets_members.MemberParticipation],
+                          tree_promotions: list[sheets_members.MemberParticipation]):
     embed = discord.Embed(title=f'Week {guild_week} Promotions')
     if len(spirit_promotions) > 0:
         embed.add_field(name='',

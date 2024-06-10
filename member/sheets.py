@@ -8,7 +8,7 @@ from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
 RANGE_MEMBERS = 'Member List!D3:G'
-RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
+RANGE_MEMBER_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 RANGE_WEEK = 'Weekly Participation!N2:N'
 RANGE_PAST_MEMBERS = 'Past Members'
@@ -152,30 +152,29 @@ def update_member_rank(member_id: int, grove_role_name: str):
 def remove_member(member_id: int, reason: str = ''):
     service = sheets.get_service()
 
-    # Weekly Participation
-    weekly_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                               range=RANGE_WEEKLY_PARTICIPATION).execute()
-    wp_values = weekly_participation.get('values', [])
+    member_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                               range=RANGE_MEMBER_PARTICIPATION).execute()
+    mp_values = member_participation.get('values', [])
 
-    if not wp_values:
+    if not mp_values:
         print('No data found.')
         return
 
-    member_wp_value = None
-    wp_delete_index = 1  # Offset by 1 due to header rows
-    for wp_value in wp_values:
-        if wp_value[WeeklyParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+    remove_mp_value = None
+    delete_mp_index = 1  # Offset by 1 due to header rows
+    for mp_value in mp_values:
+        if mp_value[MemberParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
             # Found the entry
-            member_wp_value = wp_value
+            remove_mp_value = mp_value
             break
-        wp_delete_index += 1
+        delete_mp_index += 1
 
-    if wp_delete_index >= len(wp_values) or member_wp_value is None:
+    if delete_mp_index >= len(mp_values) or remove_mp_value is None:
         # Cannot find weekly participation value
         return
 
     # Append value to Past Members sheet
-    past_member_value = [datetime.date.today().strftime('%Y-%m-%d'), reason] + member_wp_value[1:]
+    past_member_value = [datetime.date.today().strftime('%Y-%m-%d'), reason] + remove_mp_value[1:]
     body = {'values': [past_member_value]}
     service.spreadsheets().values().append(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
                                            range=RANGE_PAST_MEMBERS,
@@ -183,13 +182,13 @@ def remove_member(member_id: int, reason: str = ''):
                                            body=body).execute()
 
     # Delete Weekly Participation row
-    wp_delete_body = {"requests": [{"deleteDimension": {
+    mp_delete_body = {"requests": [{"deleteDimension": {
         "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_WEEKLY_PARTICIPATION, "dimension": "ROWS",
-                  "startIndex": wp_delete_index,
-                  "endIndex": wp_delete_index + 1}}}]}
+                  "startIndex": delete_mp_index,
+                  "endIndex": delete_mp_index + 1}}}]}
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
-                                           body=wp_delete_body).execute()
+                                           body=mp_delete_body).execute()
     except HttpError as error:
         print(f"An error occurred: {error}")
         raise error
@@ -223,14 +222,14 @@ def remove_member(member_id: int, reason: str = ''):
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
                                            body=member_delete_body).execute()
-        return WeeklyParticipation.from_sheets_value(member_wp_value)
+        return MemberParticipation.from_sheets_value(remove_mp_value)
 
     except HttpError as error:
         print(f"An error occurred: {error}")
         raise error
 
 
-class WeeklyParticipation:
+class MemberParticipation:
     LENGTH = 12
 
     INDEX_INDEX = 0
@@ -278,41 +277,41 @@ class WeeklyParticipation:
         return int(self.discord_mention.strip('<@>'))
 
     @staticmethod
-    def from_sheets_value(wp_value: list[str]):
-        wp_value = wp_value[:WeeklyParticipation.LENGTH] + [''] * (WeeklyParticipation.LENGTH - len(wp_value))
-        return WeeklyParticipation(wp_value[WeeklyParticipation.INDEX_INDEX],
-                                   wp_value[WeeklyParticipation.INDEX_GROVE_IGNS],
-                                   wp_value[WeeklyParticipation.INDEX_MULE_IGNS],
-                                   wp_value[WeeklyParticipation.INDEX_NAME],
-                                   wp_value[WeeklyParticipation.INDEX_SCORE],
-                                   wp_value[WeeklyParticipation.INDEX_DISCORD_MENTION],
-                                   wp_value[WeeklyParticipation.INDEX_INTROED],
-                                   wp_value[WeeklyParticipation.INDEX_JOINED],
-                                   wp_value[WeeklyParticipation.INDEX_NOTES], wp_value[WeeklyParticipation.INDEX_RANK],
-                                   wp_value[WeeklyParticipation.INDEX_CONTRIBUTION],
-                                   wp_value[WeeklyParticipation.INDEX_TEN_WEEK_AVERAGE])
+    def from_sheets_value(mp_value: list[str]):
+        mp_value = mp_value[:MemberParticipation.LENGTH] + [''] * (MemberParticipation.LENGTH - len(mp_value))
+        return MemberParticipation(mp_value[MemberParticipation.INDEX_INDEX],
+                                   mp_value[MemberParticipation.INDEX_GROVE_IGNS],
+                                   mp_value[MemberParticipation.INDEX_MULE_IGNS],
+                                   mp_value[MemberParticipation.INDEX_NAME],
+                                   mp_value[MemberParticipation.INDEX_SCORE],
+                                   mp_value[MemberParticipation.INDEX_DISCORD_MENTION],
+                                   mp_value[MemberParticipation.INDEX_INTROED],
+                                   mp_value[MemberParticipation.INDEX_JOINED],
+                                   mp_value[MemberParticipation.INDEX_NOTES], mp_value[MemberParticipation.INDEX_RANK],
+                                   mp_value[MemberParticipation.INDEX_CONTRIBUTION],
+                                   mp_value[MemberParticipation.INDEX_TEN_WEEK_AVERAGE])
 
 
-def get_sorted_weekly_participation():
-    wp_list = get_unsorted_weekly_participation()
-    filtered = list(filter(lambda wp: wp.index != -1, wp_list))  # Remove invalid entries
-    ordered_list = sorted(filtered, key=lambda wp: wp.index)  # First sort by index, i.e. in-game order
-    sorted_list = sorted(ordered_list, key=lambda wp: wp.score, reverse=True)  # Then sort by score, descending
+def get_sorted_member_participation():
+    mp_list = get_unsorted_member_participation()
+    filtered = list(filter(lambda mp: mp.index != -1, mp_list))  # Remove invalid entries
+    ordered_list = sorted(filtered, key=lambda mp: mp.index)  # First sort by index, i.e. in-game order
+    sorted_list = sorted(ordered_list, key=lambda mp: mp.score, reverse=True)  # Then sort by score, descending
 
     return sorted_list
 
 
-def get_unsorted_weekly_participation():
+def get_unsorted_member_participation():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                 range=RANGE_WEEKLY_PARTICIPATION).execute()
+                                                 range=RANGE_MEMBER_PARTICIPATION).execute()
     values = result.get('values', [])
 
     if not values:
         print('No data found.')
         return
 
-    return list(map(lambda wp_value: WeeklyParticipation.from_sheets_value(wp_value), values))
+    return list(map(lambda mp_value: MemberParticipation.from_sheets_value(mp_value), values))
 
 
 def insert_weekly_participation_column(header: str):
@@ -337,6 +336,19 @@ def insert_weekly_participation_column(header: str):
     except HttpError as error:
         print(f"An error occurred: {error}")
         raise error
+
+
+def get_weekly_participation():
+    service = sheets.get_service()
+    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                 range=RANGE_WEEK).execute()
+    values = result.get('values', [])
+
+    if not values:
+        print('No data found.')
+        return
+
+    return values
 
 
 def update_weekly_participation(scores: list[int]):
