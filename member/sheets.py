@@ -11,6 +11,9 @@ RANGE_MEMBERS = 'Member List!D3:G'
 RANGE_WEEKLY_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 RANGE_PAST_MEMBERS = 'Past Members'
+RANGE_CUSTOM_IGN_MAPPING = 'Custom IGN Mapping!A2:B'
+RANGE_TRACKING_DATA = 'Tracking Data'
+RANGE_TRACKING_ERRORS = 'Tracking Errors'
 
 ROLE_NAME_WARDEN = 'Warden'
 ROLE_NAME_GUARDIAN = 'Guardian'
@@ -289,7 +292,16 @@ class WeeklyParticipation:
                                    wp_value[WeeklyParticipation.INDEX_TEN_WEEK_AVERAGE])
 
 
-def get_weekly_participation():
+def get_sorted_weekly_participation():
+    wp_list = get_unsorted_weekly_participation()
+    filtered = list(filter(lambda wp: wp.index != -1, wp_list))  # Remove invalid entries
+    ordered_list = sorted(filtered, key=lambda wp: wp.index)  # First sort by index, i.e. in-game order
+    sorted_list = sorted(ordered_list, key=lambda wp: wp.score, reverse=True)  # Then sort by score, descending
+
+    return sorted_list
+
+
+def get_unsorted_weekly_participation():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_WEEKLY_PARTICIPATION).execute()
@@ -299,9 +311,89 @@ def get_weekly_participation():
         print('No data found.')
         return
 
-    wp_list = list(map(lambda wp_value: WeeklyParticipation.from_sheets_value(wp_value), values))
-    filtered = list(filter(lambda wp: wp.index != -1, wp_list))  # Remove invalid entries
-    ordered_list = sorted(filtered, key=lambda wp: wp.index)  # First sort by index, i.e. in-game order
-    sorted_list = sorted(ordered_list, key=lambda wp: wp.score, reverse=True)  # Then sort by score, descending
+    return list(map(lambda wp_value: WeeklyParticipation.from_sheets_value(wp_value), values))
 
-    return sorted_list
+
+def insert_weekly_participation_column(header: str):
+    insert_column_body = {"requests": [{"insertDimension": {
+        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_WEEKLY_PARTICIPATION,
+                  "dimension": "COLUMNS",
+                  "startIndex": 13,
+                  "endIndex": 14},
+        "inheritFromBefore": False
+    }}]}
+
+    try:
+        sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                        body=insert_column_body).execute()
+
+        body = {'values': [[header]]}
+        sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                            range=RANGE_WEEK_HEADER,
+                                                            valueInputOption="USER_ENTERED",
+                                                            body=body).execute()
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise error
+
+
+def get_custom_ign_mapping():
+    service = sheets.get_service()
+    result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                 range=RANGE_CUSTOM_IGN_MAPPING).execute()
+    values = result.get('values', [])
+
+    if not values:
+        print('No data found.')
+        return
+
+    custom_ign_mapping = {}
+    for value in values:
+        custom_ign_mapping[value[0]] = value[1]
+    return custom_ign_mapping
+
+
+class Track:
+    LENGTH = 6
+
+    INDEX_DATE = 0
+    INDEX_DISCORD_MENTION = 1
+    INDEX_IGN = 2
+    INDEX_MISSION = 3
+    INDEX_CULVERT = 4
+    INDEX_FLAG = 5
+
+    def __init__(self, date: str, discord_mention: str, ign: str, mission: str, culvert: int, flag: int):
+        self.date = date
+        self.discord_mention = discord_mention
+        self.ign = ign
+        self.mission = mission
+        self.culvert = culvert
+        self.flag = flag
+
+    def __str__(self):
+        return str(Track.to_sheets_value(self))
+
+    def __repr__(self):
+        return self.__str__()
+
+    def to_sheets_value(self):
+        return [self.date, self.discord_mention, self.ign, self.mission, self.culvert, self.flag]
+
+
+def append_tracks(tracks: list[Track]):
+    def track_to_sheets_values(sheets_track: Track):
+        return sheets_track.to_sheets_value()
+
+    body = {'values': list(map(track_to_sheets_values, tracks))}
+    sheets.get_service().spreadsheets().values().append(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                        range=RANGE_TRACKING_DATA, valueInputOption="USER_ENTERED",
+                                                        body=body).execute()
+
+
+def append_errors(errors: list[str]):
+    body = {'values': errors}
+    sheets.get_service().spreadsheets().values().append(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                        range=RANGE_TRACKING_ERRORS, valueInputOption="USER_ENTERED",
+                                                        body=body).execute()

@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-from member import leaderboard, rank
+from member import leaderboard, rank, track
 
 
 class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member rank commands'):
@@ -60,6 +60,14 @@ class MemberCog(commands.Cog):
     async def leaderboard(self, interaction, emoji: str):
         await interaction.response.defer()
         await leaderboard.send_leaderboard(self.bot, interaction, emoji)
+
+    @app_commands.command(name='mod-track', description='Track weekly Culvert and Flag Race')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    @app_commands.describe(message_ids='IDs of the messages with the attached screenshots, separated with commas.')
+    async def track(self, interaction, message_ids: str):
+        message_id_list = list(map(lambda message_id: int(message_id), message_ids.split(',')))
+        await interaction.response.defer()
+        await track.track(interaction, message_id_list)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

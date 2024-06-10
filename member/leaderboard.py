@@ -1,4 +1,3 @@
-import datetime
 from functools import reduce
 
 import discord
@@ -9,14 +8,14 @@ import member.sheets as sheets_members
 from member import rank
 from utils.constants import SPIRIT_PURPLE, GROVE_GREEN
 
-GUILD_CREATED_ON = datetime.date(2021, 12, 19)
 ANNOUNCEMENT_CHANNEL_ID = config.GROVE_CHANNEL_ID_LEADERBOARD
+
+from member import common
 
 
 async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, emoji_id: str):
-    today = datetime.date.today()
-    sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
-    guild_week = (sunday - GUILD_CREATED_ON).days // 7
+    sunday = common.sunday()
+    guild_week = common.guild_week()
     leaderboard_week = sunday.strftime('%U')
 
     # Confirmation
@@ -61,7 +60,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             spirit_promotions = []
             tree_promotions = []
             left_discord = []
-            pre_promotions_wp_list = sheets_members.get_weekly_participation()
+            pre_promotions_wp_list = sheets_members.get_sorted_weekly_participation()
             for wp in pre_promotions_wp_list:
                 if ((wp.rank == sheets_members.ROLE_NAME_TREE or wp.rank == sheets_members.ROLE_NAME_SAPLING)
                         and wp.contribution == sheets_members.CONTRIBUTION_THRESHOLD_SPIRIT and wp.ten_week_average >= sheets_members.AVERAGE_THRESHOLD_SPIRIT):
@@ -107,7 +106,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
                 await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
 
             # This week's Celestials
-            wp_list = sheets_members.get_weekly_participation()
+            wp_list = sheets_members.get_sorted_weekly_participation()
             new_celestials = _get_celestials(wp_list)
 
             for wp in new_celestials:
