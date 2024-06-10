@@ -18,7 +18,7 @@ class Character:
 async def track(interaction: discord.Interaction, message_ids: list[int]):
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
-    for sheets_member in sheets.get_unsorted_weekly_participation():
+    for sheets_member in sheets.get_unsorted_member_participation():
         for ign in sheets_member.grove_igns.split('\n'):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
@@ -74,7 +74,7 @@ def update_weekly_participation(tracks: list[sheets.Track]):
 
     mp_list = sheets.get_unsorted_member_participation()
     scores = sheets.get_weekly_participation()
-    scores = scores + [] * (len(mp_list) - len(scores))
+    scores = scores + [None] * (len(mp_list) - len(scores))
     for x in range(len(mp_list)):
         member = mp_list[x]
         score = scores[x]
@@ -86,9 +86,8 @@ def update_weekly_participation(tracks: list[sheets.Track]):
                 if track.flag > 0:
                     new_score += 10
                 if not score or new_score > score:
-                    score = new_score
+                    scores[x] = new_score
                 tracks.remove(track)
-        scores.append(score)
 
     sheets.update_weekly_participation(scores)
     return f'Week {guild_week} {sunday_string}'

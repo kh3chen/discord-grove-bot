@@ -339,6 +339,15 @@ def insert_weekly_participation_column(header: str):
 
 
 def get_weekly_participation():
+    def scores_from_sheets_value(sheets_value: list[int]):
+        try:
+            if len(sheets_value) == 0:
+                return None
+            else:
+                return int(sheets_value[0])
+        except ValueError:
+            return None
+
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_WEEK).execute()
@@ -348,7 +357,7 @@ def get_weekly_participation():
         print('No data found.')
         return
 
-    return values
+    return list(map(scores_from_sheets_value, values))
 
 
 def update_weekly_participation(scores: list[int]):
