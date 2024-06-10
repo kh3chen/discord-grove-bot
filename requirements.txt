@@ -1,2 +1,5 @@
 discord
 google-api-python-client google-auth-httplib2 google-auth-oauthlib
+fuzzywuzzy
+opencv-python
+pytesseract
