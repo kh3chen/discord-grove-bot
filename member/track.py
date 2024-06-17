@@ -36,8 +36,8 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
     await interaction.followup.send(f'Tracking {len(byte_images)} screenshots. This might take a few minutes.')
     custom_ign_map = sheets.get_custom_ign_mapping()
     try:
-        results, errors = extractor.extract(list(map(lambda character: character.ign, characters)), custom_ign_map,
-                                            byte_images)
+        results, errors = await extractor.extract(interaction, list(map(lambda character: character.ign, characters)),
+                                                  custom_ign_map, byte_images)
         tracks = []
         for result in results:
             try:
@@ -55,7 +55,7 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
         errors = list(map(lambda error: [sunday_string] + error, errors))
         for character in characters:
             if character.ign != '':
-                errors.append([sunday_string, character.ign, character.discord_mention, 'MISSING'])
+                errors.append([sunday_string, 'Missing', character.ign, character.discord_mention])
         sheets.append_errors(errors)
 
         await interaction.followup.send(f'Tracking data saved\nSuccess: {len(tracks)}\nError: {len(errors)}')
@@ -74,7 +74,10 @@ def update_weekly_participation(tracks: list[sheets.Track]):
 
     mp_list = sheets.get_unsorted_member_participation()
     scores = sheets.get_weekly_participation()
-    scores = scores + [None] * (len(mp_list) - len(scores))
+    if scores is None:
+        scores = [None] * len(mp_list)
+    else:
+        scores = scores + [None] * (len(mp_list) - len(scores))
     for x in range(len(mp_list)):
         member = mp_list[x]
         score = scores[x]
@@ -85,7 +88,7 @@ def update_weekly_participation(tracks: list[sheets.Track]):
                     new_score += 10
                 if track.flag > 0:
                     new_score += 10
-                if not score or new_score > score:
+                if score is None or new_score > score:
                     scores[x] = new_score
                 tracks.remove(track)
 

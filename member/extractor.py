@@ -1,4 +1,5 @@
 import cv2
+import discord
 import numpy as np
 from fuzzywuzzy import process
 from pytesseract import pytesseract
@@ -14,7 +15,8 @@ class Result:
         self.flag = flag
 
 
-def extract(list_of_igns: list[str], custom_ign_map: dict[str, str], byte_images: list[bytes]) -> (
+async def extract(interaction: discord.Interaction, list_of_igns: list[str], custom_ign_map: dict[str, str],
+                  byte_images: list[bytes]) -> (
         list[Result], list[list[str]]):
     path_to_tesseract = config.TESSERACT_OCR_PATH
     pytesseract.tesseract_cmd = path_to_tesseract
@@ -43,6 +45,7 @@ def extract(list_of_igns: list[str], custom_ign_map: dict[str, str], byte_images
         # I found psm 6 to be the best at parsing the columns and
         # putting the data into rows
         text += pytesseract.image_to_string(img, config='--psm 6 -l eng+ces+fra+spa') + "\n"
+        await interaction.followup.send(f'Extracted image {i}')
 
     # Formatting to prepare to extract data
     data = text.splitlines()
@@ -72,7 +75,7 @@ def extract(list_of_igns: list[str], custom_ign_map: dict[str, str], byte_images
             try:
                 result = Result(match, int(data[x][-3]), int(data[x][-2]), int(data[x][-1]))
                 print(
-                    f'Result - match={match}, percent={percent}, result={[result.ign, result.weekly_mission, result.culvert, result.flag]}')
+                    f'Result - match={match}, percent={percent}, ign={ign}, data={data[x]}')
                 results.append(result)
                 seen_igns.append(match)
                 list_of_igns.remove(match)
@@ -83,11 +86,11 @@ def extract(list_of_igns: list[str], custom_ign_map: dict[str, str], byte_images
         # Duped IGNs
         elif match in seen_igns and percent >= 90:
             print(f'Duplicate - match={match}, percent={percent}, data={data[x]}')
-            errors.append(data[x])
+            errors.append(['Duplicate'] + data[x])
         else:
             # Put IGNs that couldn't be matched into a list for debugging/manual solving
             print(f'Match error - match={match}, percent={percent}, data={data[x]}')
-            errors.append(data[x])
+            errors.append(['Match error'] + data[x])
     return results, errors
 
 
