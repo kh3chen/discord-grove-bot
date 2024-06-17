@@ -18,6 +18,9 @@ class Absence:
         self.sheets_absence = AbsenceSheets()
 
         async def on_start_absence(sheets_absence: SheetsAbsence):
+            # Delete the absence event
+            self.sheets_absence.delete_absence(sheets_absence)
+
             # Set the Away role
             member = self.client.get_guild(config.GROVE_GUILD_ID).get_member(sheets_absence.user_id)
             if member:
@@ -44,17 +47,16 @@ class Absence:
                     message = f'<@&{member_party.role_id}>\n\n'
                     message += f'{member.mention} is now away until <t:{sheets_absence.end}:F>, returning <t:{sheets_absence.end}:R>.'
                     await party_thread.send(message)
+
+        async def on_end_absence(sheets_absence: SheetsAbsence):
             # Delete the absence event
             self.sheets_absence.delete_absence(sheets_absence)
 
-        async def on_end_absence(sheets_absence: SheetsAbsence):
             # Clear the Away role
             member = self.client.get_guild(config.GROVE_GUILD_ID).get_member(sheets_absence.user_id)
             if member:
                 await member.remove_roles(
                     self.client.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_AWAY))
-            # Delete the absence event
-            self.sheets_absence.delete_absence(sheets_absence)
 
         self.absence_service = AbsenceService(on_start_absence, on_end_absence)
 
@@ -74,7 +76,7 @@ class Absence:
                        end_reset_offset: float):
         try:
             next(sheets_absence for sheets_absence in self.sheets_absence.absences if
-                 sheets_absence.user_id == str(interaction.user.id))
+                 sheets_absence.user_id == interaction.user.id)
             # Absence already exists
             await interaction.followup.send(
                 f'Error - You already have an absence scheduled, you must clear your existing absence before setting a new one.',
