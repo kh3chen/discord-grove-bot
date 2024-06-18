@@ -64,6 +64,7 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
         data[x] = data[x].replace('.', '')
         data[x] = data[x].replace('1]', '0')
         data[x] = data[x].replace('1}', '0')
+        data[x] = data[x].replace('O', '0')
         data[x] = data[x].split()
         ign = custom_ign_fixes(data[x][0], custom_ign_map)
         match, percent = process.extractOne(ign, list_of_igns)
@@ -82,7 +83,7 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
             except ValueError:
                 # Couldn't convert string to int
                 print(f'ValueError - match={match}, percent={percent}, data={data[x]}')
-                errors.append(data[x])
+                errors.append(['ValueError'] + data[x])
         # Duped IGNs
         elif match in seen_igns and percent >= 90:
             print(f'Duplicate - match={match}, percent={percent}, data={data[x]}')

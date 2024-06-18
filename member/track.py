@@ -1,6 +1,7 @@
 import discord
 
-from member import sheets, common, extractor
+from member import sheets, sheets_pasture, common, extractor
+from member.sheets_pasture import INDEX_MULE_COUNT, INDEX_MULE_CULVERT, INDEX_MULE_FLAG
 
 
 class Character:
@@ -15,7 +16,7 @@ class Character:
         return self.__str__()
 
 
-async def track(interaction: discord.Interaction, message_ids: list[int]):
+async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets.get_unsorted_member_participation():
@@ -23,6 +24,42 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
 
+    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Grove")
+
+    sheets.append_tracks(tracks)
+
+    for character in characters:
+        if character.ign != '':
+            errors.append([sunday_string, 'Missing', character.ign, character.discord_mention])
+    sheets.append_errors(errors)
+
+    await interaction.followup.send(f'### Tracking data saved for Grove\nSuccess: {len(tracks)}\nError: {len(errors)}')
+
+    week_header = __update_weekly_participation(tracks)
+    await interaction.followup.send(f'{week_header} Grove tracking complete!')
+
+
+async def track_pasture(interaction: discord.Interaction, message_ids: list[int]):
+    sunday_string = common.sunday().strftime('%Y-%m-%d')
+    characters = []
+    for sheets_member in sheets_pasture.get_unsorted_pasture_participation():
+        for ign in sheets_member.mule_igns.split('\n'):
+            characters.append(Character(ign, sheets_member.discord_mention))
+    print(f'Characters: {characters}')
+
+    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Pasture")
+    sheets.append_tracks(tracks)
+    sheets.append_errors(errors)
+
+    await interaction.followup.send(
+        f'### Tracking data saved for Pasture\nSuccess: {len(tracks)}\nError: {len(errors)}')
+
+    week_header = __update_pasture_participation(tracks)
+    await interaction.followup.send(f'{week_header} Pasture tracking complete!')
+
+
+async def __track(interaction: discord.Interaction, message_ids: list[int], day_string: str,
+                  characters: list[Character], guild: str):
     attachments = []
     try:
         for message_id in message_ids:
@@ -42,31 +79,21 @@ async def track(interaction: discord.Interaction, message_ids: list[int]):
         for result in results:
             try:
                 character = next(character for character in characters if result.ign == character.ign)
-                track = sheets.Track(sunday_string, character.discord_mention,
-                                     result.ign,
+                track = sheets.Track(day_string, character.discord_mention,
+                                     result.ign, guild,
                                      result.weekly_mission, result.culvert, result.flag)
                 tracks.append(track)
                 characters.remove(character)
             except StopIteration:
                 pass
 
-        sheets.append_tracks(tracks)
-
-        errors = list(map(lambda error: [sunday_string] + error, errors))
-        for character in characters:
-            if character.ign != '':
-                errors.append([sunday_string, 'Missing', character.ign, character.discord_mention])
-        sheets.append_errors(errors)
-
-        await interaction.followup.send(f'Tracking data saved\nSuccess: {len(tracks)}\nError: {len(errors)}')
-
-        week_header = update_weekly_participation(tracks)
-        await interaction.followup.send(f'{week_header} tracking complete!')
+        errors = list(map(lambda error: [day_string] + [guild] + error, errors))
+        return tracks, errors
     except Exception as e:
         await interaction.followup.send(f'Error - {e}')
 
 
-def update_weekly_participation(tracks: list[sheets.Track]):
+def __update_weekly_participation(tracks: list[sheets.Track]):
     guild_week = common.guild_week()
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     if not sheets.is_valid(guild_week, sunday_string):
@@ -93,4 +120,29 @@ def update_weekly_participation(tracks: list[sheets.Track]):
                 tracks.remove(track)
 
     sheets.update_weekly_participation(scores)
-    return f'Week {guild_week} {sunday_string}'
+    return f'Week {guild_week} - {sunday_string}'
+
+
+def __update_pasture_participation(tracks: list[sheets.Track]):
+    guild_week = common.guild_week()
+    sunday_string = common.sunday().strftime('%Y-%m-%d')
+    if not sheets_pasture.is_valid(guild_week, sunday_string):
+        sheets_pasture.insert_weekly_participation_columns(f'Week {guild_week}\n{sunday_string}')
+
+    mp_list = sheets_pasture.get_unsorted_pasture_participation()
+    participations = [[0] * 3 for _ in range(len(mp_list))]
+    for x in range(len(mp_list)):
+        member = mp_list[x]
+        participation = participations[x]
+        for track in tracks:
+            if member.discord_mention == track.discord_mention:
+                participation[INDEX_MULE_COUNT] += 1
+                participation[INDEX_MULE_CULVERT] += track.culvert
+                participation[INDEX_MULE_FLAG] += track.flag
+                tracks.remove(track)
+        if participation[INDEX_MULE_COUNT] > 0:
+            participation[INDEX_MULE_CULVERT] = int(participation[INDEX_MULE_CULVERT] / participation[INDEX_MULE_COUNT])
+            participation[INDEX_MULE_FLAG] = int(participation[INDEX_MULE_FLAG] / participation[INDEX_MULE_COUNT])
+
+    sheets_pasture.update_weekly_participation(participations)
+    return f'Week {guild_week} - {sunday_string}'

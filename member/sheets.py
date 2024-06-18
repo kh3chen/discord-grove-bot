@@ -394,19 +394,21 @@ def get_custom_ign_mapping():
 
 
 class Track:
-    LENGTH = 6
+    LENGTH = 7
 
     INDEX_DATE = 0
     INDEX_DISCORD_MENTION = 1
     INDEX_IGN = 2
-    INDEX_MISSION = 3
-    INDEX_CULVERT = 4
-    INDEX_FLAG = 5
+    INDEX_GUILD = 3
+    INDEX_MISSION = 4
+    INDEX_CULVERT = 5
+    INDEX_FLAG = 6
 
-    def __init__(self, date: str, discord_mention: str, ign: str, mission: int, culvert: int, flag: int):
+    def __init__(self, date: str, discord_mention: str, ign: str, guild: str, mission: int, culvert: int, flag: int):
         self.date = date
         self.discord_mention = discord_mention
         self.ign = ign
+        self.guild = guild
         self.mission = mission
         self.culvert = culvert
         self.flag = flag
@@ -418,7 +420,7 @@ class Track:
         return self.__str__()
 
     def to_sheets_value(self):
-        return [self.date, self.discord_mention, self.ign, self.mission, self.culvert, self.flag]
+        return [self.date, self.discord_mention, self.ign, self.guild, self.mission, self.culvert, self.flag]
 
 
 def append_tracks(tracks: list[Track]):
