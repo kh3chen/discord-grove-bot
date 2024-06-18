@@ -72,6 +72,12 @@ class MemberCog(commands.Cog):
             await interaction.followup.send('Error - Invalid message IDs.')
         await track.track(interaction, message_id_list)
 
+    @app_commands.command(name='mod-audit', description='Audit Discord server members')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def audit(self, interaction):
+        await interaction.response.defer()
+        await rank.audit_members(interaction)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         created_at_ago = self.relative_delta_text(
@@ -150,7 +156,7 @@ class MemberCog(commands.Cog):
             pass
         join_embed.set_author(name=member.name, icon_url=icon_url)
         await member_join_remove_channel.send(embed=join_embed)
-        await rank.remove(self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member)
+        await rank.track_past_member(self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member)
 
     @staticmethod
     def relative_delta_text(delta: relativedelta):

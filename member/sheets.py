@@ -78,7 +78,7 @@ def is_valid(week, datestr):
     return f'Week {week}' in header and datestr in header
 
 
-def get_new_members():
+def get_members():
     service = sheets.get_service()
     result = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                  range=RANGE_MEMBERS).execute()
@@ -88,11 +88,14 @@ def get_new_members():
         print('No data found.')
         return []
 
-    members = list(map(lambda value: Member.from_sheets_value(value), values))
-    new_members = filter(
-        lambda
-            member: member.discord_mention != '' and member.introed == Member.INTROED_FALSE and member.rank == ROLE_NAME_SAPLING,
-        members)
+    return list(map(lambda value: Member.from_sheets_value(value), values))
+
+
+def get_new_members():
+    members = get_members()
+    new_members = filter(lambda
+                             member: member.discord_mention != '' and member.introed == Member.INTROED_FALSE and member.rank == ROLE_NAME_SAPLING,
+                         members)
     return list(map(lambda member: member.discord_mention, new_members))
 
 

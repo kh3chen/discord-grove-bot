@@ -67,8 +67,8 @@ async def guest(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_GUEST}>.')
-    await remove(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
-                 'Left for another guild')
+    await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
+                            'Left for another guild')
 
 
 async def onboard_guest(guild: discord.Guild, member: discord.Member):
@@ -84,10 +84,10 @@ async def retiree(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_RETIREE}>.')
-    await remove(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
+    await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
 
 
-async def remove(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str = 'TBD'):
+async def track_past_member(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str = 'TBD'):
     removed_member = sheets.remove_member(member.id, reason)
     if removed_member is not None:
         # Send to log channel
@@ -108,3 +108,55 @@ async def remove(member_activity_channel: discord.TextChannel, member: discord.M
         removed_member_message += '\nPlease react when the above characters have been removed from the guild and the remove reason has been updated in the spreadsheet.'
 
         await member_activity_channel.send(removed_member_message)
+
+
+async def audit_members(interaction: discord.Interaction):
+    tracked_members = sheets.get_members()
+    tracked_member_mentions = list(
+        map(lambda tracked_member: tracked_member.discord_mention, tracked_members)) + config.GROVE_AUDIT_EXCEPTIONS
+    bossing_guests = []
+    retirees = []
+    illegals = []
+    for member in interaction.guild.members:
+        if member.mention in tracked_member_mentions:
+            # In our member tracking sheet
+            continue
+
+        member_role_ids = list(map(lambda role: role.id, member.roles))
+        if config.GROVE_ROLE_ID_BOT in member_role_ids:
+            # Bot role
+            continue
+
+        if config.GROVE_ROLE_ID_GUEST in member_role_ids:
+            # Bossing Guest
+            bossing_guests.append(member)
+            continue
+
+        if config.GROVE_ROLE_ID_RETIREE in member_role_ids:
+            # Retiree
+            retirees.append(member)
+            continue
+
+        illegals.append(member)
+
+    message = "# Discord member audit results"
+    message += '\n## Bossing Guests'
+    if len(bossing_guests) > 0:
+        for bossing_guest in bossing_guests:
+            message += f'\n{bossing_guest.mention}'
+    else:
+        message += "\nNone"
+    message += '\n## Retirees'
+    if len(retirees) > 0:
+        for retiree in retirees:
+            message += f'\n{retiree.mention}'
+    else:
+        message += "\nNone"
+    message += '\n## Illegal Members'
+    if len(illegals) > 0:
+        for illegal in illegals:
+            message += f'\n{illegal.mention}'
+    else:
+        message += "\nNone"
+
+    await interaction.followup.send(message)
