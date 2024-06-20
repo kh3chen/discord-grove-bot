@@ -18,6 +18,7 @@ class GroveBot(commands.Bot):
         await self.load_extension('bossing.cog')
         await self.load_extension('absence.cog')
         await self.load_extension('birthday.cog')
+        await self.load_extension('culvert.cog')
         print('Cogs loaded.')
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
