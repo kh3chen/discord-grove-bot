@@ -394,7 +394,7 @@ def get_custom_ign_mapping():
 
 
 class Track:
-    LENGTH = 7
+    LENGTH = 9
 
     INDEX_DATE = 0
     INDEX_DISCORD_MENTION = 1
@@ -403,8 +403,11 @@ class Track:
     INDEX_MISSION = 4
     INDEX_CULVERT = 5
     INDEX_FLAG = 6
+    INDEX_RAW_IGN = 7
+    INDEX_MATCHED_PERCENT = 8
 
-    def __init__(self, date: str, discord_mention: str, ign: str, guild: str, mission: int, culvert: int, flag: int):
+    def __init__(self, date: str, discord_mention: str, ign: str, guild: str, mission: int, culvert: int, flag: int,
+                 raw_ign: str, matched_percent: int):
         self.date = date
         self.discord_mention = discord_mention
         self.ign = ign
@@ -412,6 +415,8 @@ class Track:
         self.mission = mission
         self.culvert = culvert
         self.flag = flag
+        self.raw_ign = raw_ign
+        self.matched_percent = matched_percent
 
     def __str__(self):
         return str(Track.to_sheets_value(self))
@@ -420,7 +425,8 @@ class Track:
         return self.__str__()
 
     def to_sheets_value(self):
-        return [self.date, self.discord_mention, self.ign, self.guild, self.mission, self.culvert, self.flag]
+        return [self.date, self.discord_mention, self.ign, self.guild, self.mission, self.culvert, self.flag,
+                self.raw_ign, self.matched_percent]
 
 
 def append_tracks(tracks: list[Track]):

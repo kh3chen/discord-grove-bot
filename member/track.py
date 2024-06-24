@@ -24,13 +24,13 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
 
-    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Grove")
+    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, 'Grove')
 
     sheets.append_tracks(tracks)
 
     for character in characters:
         if character.ign != '':
-            errors.append([sunday_string, 'Missing', character.ign, character.discord_mention])
+            errors.append([sunday_string, 'Missing', 'Grove', character.ign, character.discord_mention])
     sheets.append_errors(errors)
 
     await interaction.followup.send(f'### Tracking data saved for Grove\nSuccess: {len(tracks)}\nError: {len(errors)}')
@@ -72,25 +72,22 @@ async def __track(interaction: discord.Interaction, message_ids: list[int], day_
         byte_images.append(await attachment.read())
     await interaction.followup.send(f'Tracking {len(byte_images)} screenshots. This might take a few minutes.')
     custom_ign_map = sheets.get_custom_ign_mapping()
-    try:
-        results, errors = await extractor.extract(interaction, list(map(lambda character: character.ign, characters)),
-                                                  custom_ign_map, byte_images)
-        tracks = []
-        for result in results:
-            try:
-                character = next(character for character in characters if result.ign == character.ign)
-                track = sheets.Track(day_string, character.discord_mention,
-                                     result.ign, guild,
-                                     result.weekly_mission, result.culvert, result.flag)
-                tracks.append(track)
-                characters.remove(character)
-            except StopIteration:
-                pass
+    results, errors = await extractor.extract(interaction, list(map(lambda character: character.ign, characters)),
+                                              custom_ign_map, byte_images)
+    tracks = []
+    for result in results:
+        try:
+            character = next(character for character in characters if result.matched_ign == character.ign)
+            track = sheets.Track(day_string, character.discord_mention, result.matched_ign, guild,
+                                 result.weekly_mission, result.culvert, result.flag, result.raw_ign(),
+                                 result.matched_percent)
+            tracks.append(track)
+            characters.remove(character)
+        except StopIteration:
+            pass
 
-        errors = list(map(lambda error: [day_string] + [guild] + error, errors))
-        return tracks, errors
-    except Exception as e:
-        await interaction.followup.send(f'Error - {e}')
+    errors = list(map(lambda error: [day_string, error[0], guild] + error[1:], errors))
+    return tracks, errors
 
 
 def __update_weekly_participation(tracks: list[sheets.Track]):

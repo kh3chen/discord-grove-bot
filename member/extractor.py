@@ -8,11 +8,16 @@ import config
 
 
 class Result:
-    def __init__(self, ign: str, weekly_mission: int, culvert: int, flag: int):
-        self.ign = ign
-        self.weekly_mission = weekly_mission
-        self.culvert = culvert
-        self.flag = flag
+    def __init__(self, matched_ign: str, matched_percent: int, data: list[str]):
+        self.matched_ign = matched_ign
+        self.matched_percent = matched_percent
+        self.weekly_mission = int(data[-3])
+        self.culvert = int(data[-2])
+        self.flag = int(data[-1])
+        self.data = data
+
+    def raw_ign(self):
+        return self.data[0]
 
 
 async def extract(interaction: discord.Interaction, list_of_igns: list[str], custom_ign_map: dict[str, str],
@@ -53,7 +58,6 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
     # Remove empty entries
     data = list(filter(None, data))
 
-    seen_igns = []
     results = []
     errors = []
 
@@ -68,30 +72,49 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
         data[x] = data[x].split()
         ign = custom_ign_fixes(data[x][0], custom_ign_map)
         match, percent = process.extractOne(ign, list_of_igns)
-        # Makes sure there are no dupes, in case multiple screenshots were taken
-        # of the same set of members and IGNs match by 70%, if not then send to errors
 
+        # IGNs match by 70%, if not then send to errors
         if percent >= 70:
-            # Appends matched IGNs in format IGN Culvert Flag
             try:
-                result = Result(match, int(data[x][-3]), int(data[x][-2]), int(data[x][-1]))
-                print(
-                    f'Result - match={match}, percent={percent}, ign={ign}, data={data[x]}')
+                result = Result(match, percent, data[x])
                 results.append(result)
-                seen_igns.append(match)
-                list_of_igns.remove(match)
             except ValueError:
                 # Couldn't convert string to int
                 print(f'ValueError - match={match}, percent={percent}, data={data[x]}')
-                errors.append(['ValueError'] + data[x])
-        # Duped IGNs
-        elif match in seen_igns and percent >= 90:
-            print(f'Duplicate - match={match}, percent={percent}, data={data[x]}')
-            errors.append(['Duplicate'] + data[x])
+                errors.append(['ValueError', data[x][-3], data[x][-2], data[x][-1], data[x][0], percent])
         else:
-            # Put IGNs that couldn't be matched into a list for debugging/manual solving
+            # IGN couldn't be matched
             print(f'Match error - match={match}, percent={percent}, data={data[x]}')
-            errors.append(['Match error'] + data[x])
+            errors.append(['Match error', data[x][-3], data[x][-2], data[x][-1], data[x][0], percent])
+
+    def sort_key(result: Result):
+        return result.matched_percent
+
+    results = sorted(results, key=sort_key, reverse=True)
+
+    for result in results:
+        if result.matched_ign not in list_of_igns:
+            # A better match was already made with this IGN
+            results.remove(result)
+            match, percent = process.extractOne(result.raw_ign(), list_of_igns)
+            if percent >= 70:
+                try:
+                    new_result = Result(match, percent, result.data)
+                    results.append(new_result)
+                except ValueError:
+                    # Couldn't convert string to int
+                    print(f'ValueError - match={match}, percent={percent}, data={result.data}')
+                    errors.append(
+                        ['ValueError', result.weekly_mission, result.culvert, result.flag, result.raw_ign(),
+                         percent])
+            else:
+                print(f'Duplicate - match={match}, percent={percent}, data={result.data}')
+                errors.append(
+                    ['Duplicate error', result.weekly_mission, result.culvert, result.flag, result.raw_ign(),
+                     percent])
+        else:
+            list_of_igns.remove(result.matched_ign)
+
     return results, errors
 
 
