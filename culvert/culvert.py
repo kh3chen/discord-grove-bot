@@ -10,15 +10,19 @@ async def culvert(interaction: discord.Interaction, ign: str):
         culvert_max = next(
             culvert_max for culvert_max in sheets.get_culvert_max_scores() if culvert_max.ign.lower() == ign.lower())
 
-        maple_character = maplestorygg.character.get_character(ign)
-        culvert_embed = discord.Embed(title=maple_character.name,
-                                      colour=int('0x53DDAC', 16))
-        culvert_embed.set_author(name='Grove Culvert Stats')
-        culvert_embed.add_field(name='Class', value=maple_character.job)
-        culvert_embed.add_field(name='Level', value=f'{maple_character.level} ({maple_character.exp_percent}%)')
-        if maple_character.legion_level > 0:
-            culvert_embed.add_field(name='Legion Level', value=maple_character.legion_level)
-        culvert_embed.set_thumbnail(url=maple_character.character_image_url)
+        culvert_embed = discord.Embed(colour=int('0x53DDAC', 16))
+        try:
+            maple_character = maplestorygg.character.get_character(ign)
+            culvert_embed.title = maple_character.name
+            culvert_embed.set_author(name='Grove Culvert Stats')
+            culvert_embed.add_field(name='Class', value=maple_character.job)
+            culvert_embed.add_field(name='Level', value=f'{maple_character.level} ({maple_character.exp_percent}%)')
+            if maple_character.legion_level > 0:
+                culvert_embed.add_field(name='Legion Level', value=maple_character.legion_level)
+            culvert_embed.set_thumbnail(url=maple_character.character_image_url)
+        except KeyError:
+            # MapleStory.gg response was not as expected
+            culvert_embed.title = culvert_max.ign
 
         culvert_embed.add_field(name='All-Time High Score', value=f'{culvert_max.score:,}', inline=False)
 
