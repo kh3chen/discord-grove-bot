@@ -75,7 +75,7 @@ class AbsenceSheets:
         self.__absences += new_sheets_absences
 
     def delete_absence(self, delete_sheets_absences: Absence):
-        delete_index = 1  # Offset by 1 due to header row
+        delete_index = 0
         for sheets_absence in self.__absences:
             if sheets_absence.user_id == delete_sheets_absences.user_id:
                 # Found the entry
@@ -88,8 +88,9 @@ class AbsenceSheets:
 
         delete_body = {"requests": [{"deleteDimension": {
             "range": {"sheetId": config.MEMBER_ACTIVITY_SHEET_ID_ABSENCES, "dimension": "ROWS",
-                      "startIndex": delete_index,
-                      "endIndex": delete_index + 1}}}]}
+                      # Offset by 1 due to header row
+                      "startIndex": delete_index + 1,
+                      "endIndex": delete_index + 2}}}]}
         try:
             sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_ACTIVITY_SPREADSHEET_ID,
                                                             body=delete_body).execute()
