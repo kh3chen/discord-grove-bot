@@ -104,7 +104,6 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
         scores = scores + [None] * (len(mp_list) - len(scores))
     for x in range(len(mp_list)):
         member = mp_list[x]
-        score = scores[x]
         for track in tracks:
             if member.discord_mention == track.discord_mention:
                 new_score = track.mission
@@ -112,7 +111,7 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
                     new_score += 10
                 if track.flag > 0:
                     new_score += 10
-                if score is None or new_score > score:
+                if scores[x] is None or new_score > scores[x]:
                     scores[x] = new_score
                 tracks.remove(track)
 
