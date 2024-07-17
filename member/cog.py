@@ -90,6 +90,12 @@ class MemberCog(commands.Cog):
         await interaction.response.defer()
         await rank.audit_members(interaction)
 
+    @app_commands.command(name='mod-kick', description='Kick a Discord server member')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def kick(self, interaction, member: discord.Member, reason: str):
+        await interaction.response.defer()
+        await rank.kick_member(interaction, member, reason)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         created_at_ago = self.relative_delta_text(

@@ -160,3 +160,9 @@ async def audit_members(interaction: discord.Interaction):
         message += "\nNone"
 
     await interaction.followup.send(message)
+
+
+async def kick_member(interaction: discord.Interaction, member: discord.Member, reason: str):
+    await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, reason)
+    await interaction.guild.kick(member, reason=reason)
+    await interaction.followup.send(f'Kicked {member.mention}\nReason: {reason}', ephemeral=True)
