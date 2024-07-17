@@ -63,8 +63,11 @@ class Bossing:
                             # At least half the party reacted with Reschedule
                             return
 
-                party_members_not_reacted = list(filter(lambda member: member.user_id not in reacted,
-                                                        self.sheets_bossing.members_dict[sheets_party.role_id]))
+                away = set(map(lambda member: str(member.id), self.client.get_guild(config.GROVE_GUILD_ID).get_role(
+                    config.GROVE_ROLE_ID_AWAY).members))
+                party_members_not_reacted = list(filter(
+                    lambda member: member.user_id not in reacted and member.user_id not in away,
+                    self.sheets_bossing.members_dict[sheets_party.role_id]))
                 if len(party_members_not_reacted) > 0:
                     reminder_message_content = f'**Reminder to check in for your upcoming boss run:** {check_in_message.jump_url}\n'
                     timestamp = sheets_party.next_scheduled_time()
@@ -92,7 +95,7 @@ class Bossing:
                 await self._update_thread(party_thread, party_message, sheets_party)
 
                 if sheets_party.check_in_message_id:
-                    # Track non-responders to the check-in
+                    # Track non-responders to the check-in that don't have the Away role
                     check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
                     reacted = set()
                     for reaction in check_in_message.reactions:
