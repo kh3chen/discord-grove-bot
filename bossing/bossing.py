@@ -51,6 +51,17 @@ class Bossing:
                 reacted = set()
                 for reaction in check_in_message.reactions:
                     reacted.update(set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
+                    if str(reaction.emoji) == '🕒':
+                        # If at least half the party reacted with Reschedule, don't send the reminder even if some members didn't react
+                        reschedule_reacted = set(
+                            map(lambda user: str(user.id), [user async for user in reaction.users()]))
+                        party_members_reschedule_reacted = list(
+                            filter(lambda member: member.user_id in reschedule_reacted,
+                                   self.sheets_bossing.members_dict[sheets_party.role_id]))
+                        if len(party_members_reschedule_reacted) >= (
+                                len(self.sheets_bossing.members_dict[sheets_party.role_id]) + 1) / 2:
+                            # At least half the party reacted with Reschedule
+                            return
 
                 party_members_not_reacted = list(filter(lambda member: member.user_id not in reacted,
                                                         self.sheets_bossing.members_dict[sheets_party.role_id]))
