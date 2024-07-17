@@ -4,6 +4,7 @@ from enum import Enum
 from googleapiclient.errors import HttpError
 
 import config
+from member.sheets_pasture import RANGE_PASTURE_PARTICIPATION, PastureParticipation
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
@@ -155,6 +156,7 @@ def update_member_rank(member_id: int, grove_role_name: str):
 def remove_member(member_id: int, reason: str = ''):
     service = sheets.get_service()
 
+    # Delete Member Participation row
     member_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                                range=RANGE_MEMBER_PARTICIPATION).execute()
     mp_values = member_participation.get('values', [])
@@ -184,11 +186,43 @@ def remove_member(member_id: int, reason: str = ''):
                                            valueInputOption="USER_ENTERED",
                                            body=body).execute()
 
-    # Delete Weekly Participation row
     mp_delete_body = {"requests": [{"deleteDimension": {
         "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_WEEKLY_PARTICIPATION, "dimension": "ROWS",
                   "startIndex": delete_mp_index,
                   "endIndex": delete_mp_index + 1}}}]}
+    try:
+        service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
+                                           body=mp_delete_body).execute()
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise error
+
+    # Delete Pasture Participation row
+    pasture_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                                range=RANGE_PASTURE_PARTICIPATION).execute()
+    pp_values = pasture_participation.get('values', [])
+
+    if not pp_values:
+        print('No data found.')
+        return
+
+    remove_pp_value = None
+    delete_pp_index = 1  # Offset by 1 due to header rows
+    for pp_value in pp_values:
+        if pp_value[PastureParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+            # Found the entry
+            remove_pp_value = pp_value
+            break
+        delete_pp_index += 1
+
+    if delete_pp_index >= len(pp_values) or remove_pp_value is None:
+        # Cannot find weekly participation value
+        return
+
+    mp_delete_body = {"requests": [{"deleteDimension": {
+        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_PASTURE_PARTICIPATION, "dimension": "ROWS",
+                  "startIndex": delete_pp_index,
+                  "endIndex": delete_pp_index + 1}}}]}
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
                                            body=mp_delete_body).execute()

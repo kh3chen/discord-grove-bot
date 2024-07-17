@@ -4,10 +4,11 @@ import config
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
-RANGE_PASTURE_PARTICIPATION = 'Pasture Participation!A3:ZZZ'
-RANGE_WEEK_HEADER = 'Pasture Participation!J1'
-RANGE_WEEK_SUBHEADER = 'Pasture Participation!J2:L2'
-RANGE_WEEK = 'Pasture Participation!J3:L'
+RANGE_PASTURE_PARTICIPATION = 'Pasture Participation!A2:ZZZ'
+RANGE_WEEK_HEADER = 'Pasture Participation!F1:G1'
+RANGE_WEEK = 'Pasture Participation!F2:G'
+WEEKLY_PARTICIPATION_COLUMN_INDEX = 5
+WEEKLY_PARTICIPATION_COLUMNS = 2
 
 
 def is_valid(week, datestr):
@@ -74,36 +75,18 @@ def insert_weekly_participation_columns(header: str):
     insert_column_body = {"requests": [{"insertDimension": {
         "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_PASTURE_PARTICIPATION,
                   "dimension": "COLUMNS",
-                  "startIndex": 9,
-                  "endIndex": 12},
+                  "startIndex": WEEKLY_PARTICIPATION_COLUMN_INDEX,
+                  "endIndex": WEEKLY_PARTICIPATION_COLUMN_INDEX + WEEKLY_PARTICIPATION_COLUMNS},
         "inheritFromBefore": False
-    }}]}
-
-    week_header_format = {"requests": [{"mergeCells": {
-        "mergeType": 'MERGE_COLUMNS',
-        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_PASTURE_PARTICIPATION,
-                  "startColumnIndex": 9,
-                  "endColumnIndex": 12,
-                  "startRowIndex": 0,
-                  "endRowIndex": 1},
     }}]}
 
     try:
         sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                         body=insert_column_body).execute()
 
-        sheets.get_service().spreadsheets().batchUpdate(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                        body=week_header_format).execute()
-
-        body = {'values': [[header]]}
+        body = {'values': [[header, 'Details']]}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                             range=RANGE_WEEK_HEADER,
-                                                            valueInputOption="USER_ENTERED",
-                                                            body=body).execute()
-
-        body = {'values': [['Mule Count', 'Culvert Average', 'Flag Race Average']]}
-        sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                            range=RANGE_WEEK_SUBHEADER,
                                                             valueInputOption="USER_ENTERED",
                                                             body=body).execute()
 
@@ -112,14 +95,51 @@ def insert_weekly_participation_columns(header: str):
         raise error
 
 
-INDEX_MULE_COUNT = 0
-INDEX_MULE_CULVERT = 1
-INDEX_MULE_FLAG = 2
+class WeeklyParticipation:
+    def __init__(self, culvert_point_score: int):
+        self.culvert_point_score = culvert_point_score
+        self.count = 0
+        self.culvert = 0
+        self.flag = 0
+
+    def __str__(self):
+        return str([self.count, self.culvert, self.flag])
+
+    def __repr__(self):
+        return self.__str__()
+
+    def add(self, culvert, flag):
+        self.count += 1
+        self.culvert += culvert
+        self.flag += flag
+
+    def __points(self):
+        if self.count == 0:
+            return 0
+        points = self.count * -2
+        points += self.__culvert_points()
+        points += self.__flag_points()
+        return points
+
+    def __culvert_points(self):
+        return int(self.culvert / self.culvert_point_score)
+
+    def __flag_points(self):
+        if self.count == 0:
+            return 0
+        return min(int(self.flag / 50), self.count)
+
+    def to_sheets_value(self):
+        if self.count == 0:
+            return ['', '']
+        return [self.__points(), (f'Count: {self.count} ({self.count * -2}\n'
+                                  f'Culvert: {self.culvert} ({self.__culvert_points()})\n'
+                                  f'Flag Race: {self.flag} ({self.__flag_points()})')]
 
 
-def update_weekly_participation(participations: list[list[int]]):
+def update_weekly_participation(wp_list: list[WeeklyParticipation]):
     try:
-        body = {'values': participations}
+        body = {'values': list(map(lambda wp: wp.to_sheets_value(), wp_list))}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                             range=RANGE_WEEK,
                                                             valueInputOption="USER_ENTERED",

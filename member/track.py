@@ -1,7 +1,7 @@
 import discord
 
 from member import sheets, sheets_pasture, common, extractor
-from member.sheets_pasture import INDEX_MULE_COUNT, INDEX_MULE_CULVERT, INDEX_MULE_FLAG
+from member.sheets_pasture import WeeklyParticipation
 
 
 class Character:
@@ -39,7 +39,7 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
     await interaction.followup.send(f'{week_header} Grove tracking complete!')
 
 
-async def track_pasture(interaction: discord.Interaction, message_ids: list[int]):
+async def track_pasture(interaction: discord.Interaction, message_ids: list[int], culvert_point_score: int):
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets_pasture.get_unsorted_pasture_participation():
@@ -54,7 +54,7 @@ async def track_pasture(interaction: discord.Interaction, message_ids: list[int]
     await interaction.followup.send(
         f'### Tracking data saved for Pasture\nSuccess: {len(tracks)}\nError: {len(errors)}')
 
-    week_header = __update_pasture_participation(tracks)
+    week_header = __update_pasture_participation(culvert_point_score, tracks)
     await interaction.followup.send(f'{week_header} Pasture tracking complete!')
 
 
@@ -84,6 +84,7 @@ async def __track(interaction: discord.Interaction, message_ids: list[int], day_
             tracks.append(track)
             characters.remove(character)
         except StopIteration:
+            # This should already be captured in errors during extraction
             pass
 
     errors = list(map(lambda error: [day_string, error[0], guild] + error[1:], errors))
@@ -119,26 +120,20 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
     return f'Week {guild_week} - {sunday_string}'
 
 
-def __update_pasture_participation(tracks: list[sheets.Track]):
+def __update_pasture_participation(culvert_point_score: int, tracks: list[sheets.Track]):
     guild_week = common.guild_week()
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     if not sheets_pasture.is_valid(guild_week, sunday_string):
-        sheets_pasture.insert_weekly_participation_columns(f'Week {guild_week}\n{sunday_string}')
+        sheets_pasture.insert_weekly_participation_columns(
+            f'Week {guild_week}\n{sunday_string}\n\nCulvert Point: {culvert_point_score}')
 
-    mp_list = sheets_pasture.get_unsorted_pasture_participation()
-    participations = [[0] * 3 for _ in range(len(mp_list))]
-    for x in range(len(mp_list)):
-        member = mp_list[x]
-        participation = participations[x]
+    wp_list = []
+    for member in sheets_pasture.get_unsorted_pasture_participation():
+        participation = WeeklyParticipation(culvert_point_score)
+        wp_list.append(participation)
         for track in tracks:
             if member.discord_mention == track.discord_mention:
-                participation[INDEX_MULE_COUNT] += 1
-                participation[INDEX_MULE_CULVERT] += track.culvert
-                participation[INDEX_MULE_FLAG] += track.flag
-                tracks.remove(track)
-        if participation[INDEX_MULE_COUNT] > 0:
-            participation[INDEX_MULE_CULVERT] = int(participation[INDEX_MULE_CULVERT] / participation[INDEX_MULE_COUNT])
-            participation[INDEX_MULE_FLAG] = int(participation[INDEX_MULE_FLAG] / participation[INDEX_MULE_COUNT])
+                participation.add(track.culvert, track.flag)
 
-    sheets_pasture.update_weekly_participation(participations)
+    sheets_pasture.update_weekly_participation(wp_list)
     return f'Week {guild_week} - {sunday_string}'
