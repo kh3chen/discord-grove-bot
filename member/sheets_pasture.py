@@ -1,3 +1,5 @@
+from functools import reduce
+
 from googleapiclient.errors import HttpError
 
 import config
@@ -98,25 +100,28 @@ def insert_weekly_participation_columns(header: str):
 class WeeklyParticipation:
     def __init__(self, culvert_point_score: int):
         self.culvert_point_score = culvert_point_score
-        self.count = 0
+        self.mule_igns = []
         self.culvert = 0
         self.flag = 0
 
     def __str__(self):
-        return str([self.count, self.culvert, self.flag])
+        return str([self.mule_igns, self.culvert, self.flag])
 
     def __repr__(self):
         return self.__str__()
 
-    def add(self, culvert, flag):
-        self.count += 1
+    def add(self, mule_ign, culvert, flag):
+        self.mule_igns.append(mule_ign)
         self.culvert += culvert
         self.flag += flag
 
+    def __count(self):
+        return len(self.mule_igns)
+
     def __points(self):
-        if self.count == 0:
+        if self.__count() == 0:
             return 0
-        points = self.count * -2
+        points = self.__count() * -2
         points += self.__culvert_points()
         points += self.__flag_points()
         return points
@@ -125,16 +130,18 @@ class WeeklyParticipation:
         return int(self.culvert / self.culvert_point_score)
 
     def __flag_points(self):
-        if self.count == 0:
+        if self.__count() == 0:
             return 0
-        return min(int(self.flag / 50), self.count)
+        return min(int(self.flag / 50), self.__count())
 
     def to_sheets_value(self):
-        if self.count == 0:
+        if self.__count() == 0:
             return ['', '']
-        return [self.__points(), (f'Count: {self.count} ({self.count * -2}\n'
+        return [self.__points(), (f'Count: {self.count} ({self.count * -2})\n'
                                   f'Culvert: {self.culvert} ({self.__culvert_points()})\n'
-                                  f'Flag Race: {self.flag} ({self.__flag_points()})')]
+                                  f'Flag Race: {self.flag} ({self.__flag_points()})\n'
+                                  f'\n'
+                                  f'{reduce(lambda acc, val: acc + (chr(10) if acc else "") + val, self.mule_igns)}')]
 
 
 def update_weekly_participation(wp_list: list[WeeklyParticipation]):
