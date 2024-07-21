@@ -174,7 +174,8 @@ class MemberCog(commands.Cog):
             pass
         join_embed.set_author(name=member.name, icon_url=icon_url)
         await member_join_remove_channel.send(embed=join_embed)
-        await rank.track_past_member(self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member)
+        await rank.track_past_member(self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
+                                     'Left Discord')
 
     @staticmethod
     def relative_delta_text(delta: relativedelta):

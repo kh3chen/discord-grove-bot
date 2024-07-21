@@ -87,7 +87,7 @@ async def retiree(interaction: discord.Interaction, member: discord.Member):
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
 
 
-async def track_past_member(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str = 'TBD'):
+async def track_past_member(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str):
     removed_member = sheets.remove_member(member.id, reason)
     if removed_member is not None:
         # Send to log channel
