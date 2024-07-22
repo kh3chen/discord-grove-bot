@@ -137,7 +137,7 @@ class WeeklyParticipation:
     def to_sheets_value(self):
         if self.__count() == 0:
             return ['', '']
-        return [self.__points(), (f'Count: {self.count} ({self.count * -2})\n'
+        return [self.__points(), (f'Count: {self.__count()} ({self.__count() * -2})\n'
                                   f'Culvert: {self.culvert} ({self.__culvert_points()})\n'
                                   f'Flag Race: {self.flag} ({self.__flag_points()})\n'
                                   f'\n'
