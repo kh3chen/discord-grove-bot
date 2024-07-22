@@ -133,7 +133,7 @@ def __update_pasture_participation(culvert_point_score: int, tracks: list[sheets
         wp_list.append(participation)
         for track in tracks:
             if member.discord_mention == track.discord_mention:
-                participation.add(track.culvert, track.flag)
+                participation.add(track.discord_mention, track.culvert, track.flag)
 
     sheets_pasture.update_weekly_participation(wp_list)
     return f'Week {guild_week} - {sunday_string}'
