@@ -35,17 +35,17 @@ class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member 
         await interaction.response.defer(ephemeral=True)
         await rank.moss(interaction, member)
 
-    @app_commands.command(name='guest', description='Set the Discord member rank to Guest')
+    @app_commands.command(name='bossing-guest', description='Set the Discord member rank to Bossing Guest')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-    async def guest(self, interaction: discord.Interaction, member: discord.Member):
+    async def bossing_guest(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
-        await rank.guest(interaction, member)
+        await rank.bossing_guest(interaction, member)
 
-    @app_commands.command(name='retiree', description='Set the Discord member rank to Retiree')
+    @app_commands.command(name='friend', description='Set the Discord member rank to Friend')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-    async def retiree(self, interaction: discord.Interaction, member: discord.Member):
+    async def friend(self, interaction: discord.Interaction, member: discord.Member):
         await interaction.response.defer(ephemeral=True)
-        await rank.retiree(interaction, member)
+        await rank.friend(interaction, member)
 
 
 class MemberCog(commands.Cog):
@@ -115,12 +115,14 @@ class MemberCog(commands.Cog):
         join_embed.set_author(name=member.name, icon_url=icon_url)
         join_message = await member_join_remove_channel.send(content=member.mention, embed=join_embed)
         await join_message.add_reaction('✉')
-        await join_message.add_reaction('👍')
+        await join_message.add_reaction('✅')
         await join_message.add_reaction('🤺')
+        await join_message.add_reaction('🤝')
         await join_message.add_reaction('❌')
         await member_join_remove_channel.send(f'\n:envelope:: Messaged'
-                                              f'\n👍: Verification Complete'
+                                              f'\n✅: Verification Complete'
                                               f'\n🤺: Bossing Guest (will give role)'
+                                              f'\n🤝: Friend (will give role)'
                                               f'\n❌: Failed Verification')
 
     @commands.Cog.listener()
@@ -135,16 +137,23 @@ class MemberCog(commands.Cog):
 
         message = await channel.fetch_message(payload.message_id)
         emoji = payload.emoji.name
-        if emoji == '👍' or emoji == '🤺' or emoji == '❌':
+        if emoji == '✅' or emoji == '🤺' or emoji == '🤝' or emoji == '❌':
             await message.remove_reaction('✉', self.bot.user)
-            await message.remove_reaction('👍', self.bot.user)
+            await message.remove_reaction('✅', self.bot.user)
             await message.remove_reaction('🤺', self.bot.user)
+            await message.remove_reaction('🤝', self.bot.user)
             await message.remove_reaction('❌', self.bot.user)
 
         if emoji == '🤺':
-            # Onboard as bossing guest
+            # Onboard as Bossing Guest
             guild = self.bot.get_guild(config.GROVE_GUILD_ID)
-            await rank.onboard_guest(
+            await rank.onboard_bossing_guest(
+                guild,
+                guild.get_member(int(message.content[message.content.find('<@') + 2:message.content.find('>')])))
+        elif emoji == '🤝':
+            # Onboard as Friend
+            guild = self.bot.get_guild(config.GROVE_GUILD_ID)
+            await rank.onboard_friend(
                 guild,
                 guild.get_member(int(message.content[message.content.find('<@') + 2:message.content.find('>')])))
 

@@ -212,7 +212,7 @@ class Bossing:
                         # Member did not have the LFG role
                         pass
 
-    async def _add(self, interaction, member, discord_party, job, sheets_party, silent=False):
+    async def _add(self, interaction, member, discord_party, job, sheets_party: SheetsParty, silent=False):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
             raise Exception(f'Error - {discord_party.mention} is retired.')
 
@@ -292,7 +292,7 @@ class Bossing:
                 elif sheets_party.status == SheetsParty.PartyStatus.fill:
                     # Do not mention role
                     await sign_up_thread.send(
-                        f'{member.mention} *{job}* has been added to {sheets_party.boss_name} Fill.')
+                        f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
 
     async def remove(self, interaction, member, discord_party, job=''):
         # Validate that this is a bossing party role

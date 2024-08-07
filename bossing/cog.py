@@ -136,7 +136,7 @@ class BossingCog(commands.Cog):
         try:
             new_roles = [role for role in after.roles if role not in before.roles]
             retiree_role = next(role for role in new_roles if
-                                role.id == config.GROVE_ROLE_ID_RETIREE)
+                                role.id == config.GROVE_ROLE_ID_FRIEND)
             # Retiree role was added
             print(f'{after.mention} is retiree, removing from bossing parties')
             await bossing.remove_member_from_bossing_parties(after, False)

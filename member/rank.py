@@ -44,8 +44,8 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                                  interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST),
-                                  interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
         await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                                interaction.guild.get_role(grove_role_id))
 
@@ -58,33 +58,37 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
     return update_member_rank_result
 
 
-async def guest(interaction: discord.Interaction, member: discord.Member):
+async def bossing_guest(interaction: discord.Interaction, member: discord.Member):
     await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
-    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
-    await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_GUEST}>.')
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
+    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
+    await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_BOSSING_GUEST}>.')
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
                             'Left for another guild')
 
 
-async def onboard_guest(guild: discord.Guild, member: discord.Member):
-    await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_GUEST))
+async def onboard_bossing_guest(guild: discord.Guild, member: discord.Member):
+    await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
 
 
-async def retiree(interaction: discord.Interaction, member: discord.Member):
+async def friend(interaction: discord.Interaction, member: discord.Member):
     await member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_GUEST))
-    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_RETIREE))
-    await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_RETIREE}>.')
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
+    await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
+    await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_FRIEND}>.')
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
+
+
+async def onboard_friend(guild: discord.Guild, member: discord.Member):
+    await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_FRIEND))
 
 
 async def track_past_member(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str):
@@ -127,12 +131,12 @@ async def audit_members(interaction: discord.Interaction):
             # Bot role
             continue
 
-        if config.GROVE_ROLE_ID_GUEST in member_role_ids:
+        if config.GROVE_ROLE_ID_BOSSING_GUEST in member_role_ids:
             # Bossing Guest
             bossing_guests.append(member)
             continue
 
-        if config.GROVE_ROLE_ID_RETIREE in member_role_ids:
+        if config.GROVE_ROLE_ID_FRIEND in member_role_ids:
             # Retiree
             retirees.append(member)
             continue
