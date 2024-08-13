@@ -49,6 +49,7 @@ class Difficulty:
 
     def __init__(self, difficulties_value):
         difficulties_value = difficulties_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(difficulties_value))
+        self.difficulty = difficulties_value[Difficulty.INDEX_DIFFICULTY]
         self.lfg_role_id = difficulties_value[Difficulty.INDEX_LFG_ROLE_ID]
         self.fill_role_id = difficulties_value[Difficulty.INDEX_FILL_ROLE_ID]
 
@@ -298,8 +299,8 @@ class BossingSheets:
                                                                   range=BossingSheets.RANGE_DIFFICULTIES).execute()
         difficulties_values = result.get('values', [])
         for difficulties_value in difficulties_values:
-            bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[
-                difficulties_value[Difficulty.INDEX_DIFFICULTY]] = Difficulty(difficulties_value)
+            difficulty = Difficulty(difficulties_value)
+            bosses[difficulties_value[Difficulty.INDEX_BOSS_NAME]].difficulties[difficulty.difficulty] = difficulty
 
         return bosses
 
@@ -324,7 +325,11 @@ class BossingSheets:
             members_dict[sheets_party.role_id] = []
 
         for sheets_member in self.__members:
-            members_dict[sheets_member.party_role_id].append(sheets_member)
+            try:
+                members_dict[sheets_member.party_role_id].append(sheets_member)
+            except KeyError:
+                # The party ID doesn't exist
+                continue
 
         return members_dict
 
