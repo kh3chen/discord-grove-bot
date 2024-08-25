@@ -1,7 +1,7 @@
 import discord
 
-from member import sheets, sheets_pasture, common, extractor
-from member.sheets_pasture import WeeklyParticipation
+from member import sheets, sheets_shrub, common, extractor
+from member.sheets_shrub import WeeklyParticipation
 
 
 class Character:
@@ -30,7 +30,7 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
 
     for character in characters:
         if character.ign != '':
-            errors.append([sunday_string, 'Missing', 'Grove', character.ign, character.discord_mention])
+            errors.append(['Missing', sunday_string, character.discord_mention, character.ign, 'Grove'])
     sheets.append_errors(errors)
 
     await interaction.followup.send(f'### Tracking data saved for Grove\nSuccess: {len(tracks)}\nError: {len(errors)}')
@@ -39,23 +39,23 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
     await interaction.followup.send(f'{week_header} Grove tracking complete!')
 
 
-async def track_pasture(interaction: discord.Interaction, message_ids: list[int], culvert_point_score: int):
+async def track_shrub(interaction: discord.Interaction, message_ids: list[int], culvert_point_score: int):
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
-    for sheets_member in sheets_pasture.get_unsorted_pasture_participation():
+    for sheets_member in sheets_shrub.get_unsorted_shrub_participation():
         for ign in sheets_member.mule_igns.split('\n'):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
 
-    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Pasture")
+    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Shrub")
     sheets.append_tracks(tracks)
     sheets.append_errors(errors)
 
     await interaction.followup.send(
-        f'### Tracking data saved for Pasture\nSuccess: {len(tracks)}\nError: {len(errors)}')
+        f'### Tracking data saved for Shrub\nSuccess: {len(tracks)}\nError: {len(errors)}')
 
-    week_header = __update_pasture_participation(culvert_point_score, tracks)
-    await interaction.followup.send(f'{week_header} Pasture tracking complete!')
+    week_header = __update_shrub_participation(culvert_point_score, tracks)
+    await interaction.followup.send(f'{week_header} Shrub tracking complete!')
 
 
 async def __track(interaction: discord.Interaction, message_ids: list[int], day_string: str,
@@ -87,7 +87,7 @@ async def __track(interaction: discord.Interaction, message_ids: list[int], day_
             # This should already be captured in errors during extraction
             pass
 
-    errors = list(map(lambda error: [day_string, error[0], guild] + error[1:], errors))
+    errors = list(map(lambda error: [error[0], day_string, '', '', guild] + error[1:], errors))
     return tracks, errors
 
 
@@ -120,20 +120,20 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
     return f'Week {guild_week} - {sunday_string}'
 
 
-def __update_pasture_participation(culvert_point_score: int, tracks: list[sheets.Track]):
+def __update_shrub_participation(culvert_point_score: int, tracks: list[sheets.Track]):
     guild_week = common.guild_week()
     sunday_string = common.sunday().strftime('%Y-%m-%d')
-    if not sheets_pasture.is_valid(guild_week, sunday_string):
-        sheets_pasture.insert_weekly_participation_columns(
+    if not sheets_shrub.is_valid(guild_week, sunday_string):
+        sheets_shrub.insert_weekly_participation_columns(
             f'Week {guild_week}\n{sunday_string}\n\nCulvert Point: {culvert_point_score}')
 
     wp_list = []
-    for member in sheets_pasture.get_unsorted_pasture_participation():
+    for member in sheets_shrub.get_unsorted_shrub_participation():
         participation = WeeklyParticipation(culvert_point_score)
         wp_list.append(participation)
         for track in tracks:
             if member.discord_mention == track.discord_mention:
                 participation.add(track.ign, track.culvert, track.flag)
 
-    sheets_pasture.update_weekly_participation(wp_list)
+    sheets_shrub.update_weekly_participation(wp_list)
     return f'Week {guild_week} - {sunday_string}'

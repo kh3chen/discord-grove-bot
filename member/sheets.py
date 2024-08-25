@@ -4,7 +4,7 @@ from enum import Enum
 from googleapiclient.errors import HttpError
 
 import config
-from member.sheets_pasture import RANGE_PASTURE_PARTICIPATION, PastureParticipation
+from member.sheets_shrub import RANGE_SHRUB_PARTICIPATION, ShrubParticipation
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
@@ -197,35 +197,35 @@ def remove_member(member_id: int, reason: str = ''):
         print(f"An error occurred: {error}")
         raise error
 
-    # Delete Pasture Participation row
-    pasture_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                                range=RANGE_PASTURE_PARTICIPATION).execute()
-    pp_values = pasture_participation.get('values', [])
+    # Delete Shrub Participation row
+    shrub_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                                range=RANGE_SHRUB_PARTICIPATION).execute()
+    sp_values = shrub_participation.get('values', [])
 
-    if not pp_values:
+    if not sp_values:
         print('No data found.')
         return
 
-    remove_pp_value = None
-    delete_pp_index = 1  # Offset by 1 due to header rows
-    for pp_value in pp_values:
-        if pp_value[PastureParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+    remove_sp_value = None
+    delete_sp_index = 1  # Offset by 1 due to header rows
+    for sp_value in sp_values:
+        if sp_value[ShrubParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
             # Found the entry
-            remove_pp_value = pp_value
+            remove_sp_value = sp_value
             break
-        delete_pp_index += 1
+        delete_sp_index += 1
 
-    if delete_pp_index >= len(pp_values) or remove_pp_value is None:
+    if delete_sp_index >= len(sp_values) or remove_sp_value is None:
         # Cannot find weekly participation value
         return
 
-    mp_delete_body = {"requests": [{"deleteDimension": {
-        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_PASTURE_PARTICIPATION, "dimension": "ROWS",
-                  "startIndex": delete_pp_index,
-                  "endIndex": delete_pp_index + 1}}}]}
+    sp_delete_body = {"requests": [{"deleteDimension": {
+        "range": {"sheetId": config.MEMBER_TRACKING_SHEET_ID_SHRUB_PARTICIPATION, "dimension": "ROWS",
+                  "startIndex": delete_sp_index,
+                  "endIndex": delete_sp_index + 1}}}]}
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
-                                           body=mp_delete_body).execute()
+                                           body=sp_delete_body).execute()
     except HttpError as error:
         print(f"An error occurred: {error}")
         raise error

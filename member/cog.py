@@ -72,17 +72,17 @@ class MemberCog(commands.Cog):
             await interaction.followup.send('Error - Invalid message IDs.')
         await track.track_grove(interaction, message_id_list)
 
-    @app_commands.command(name='mod-track-pasture', description='Track Pasture weekly Culvert and Flag Race')
+    @app_commands.command(name='mod-track-shrub', description='Track Shrub weekly Culvert and Flag Race')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     @app_commands.describe(message_ids='IDs of the messages with the attached screenshots, separated with commas.')
     @app_commands.describe(culvert_point_score='Culvert score threshold for a participation point')
-    async def track_pasture(self, interaction, message_ids: str, culvert_point_score: int):
+    async def track_shrub(self, interaction, message_ids: str, culvert_point_score: int):
         await interaction.response.defer()
         try:
             message_id_list = list(map(lambda message_id: int(message_id), message_ids.split(',')))
         except ValueError:
             await interaction.followup.send('Error - Invalid message IDs.')
-        await track.track_pasture(interaction, message_id_list, culvert_point_score)
+        await track.track_shrub(interaction, message_id_list, culvert_point_score)
 
     @app_commands.command(name='mod-audit', description='Audit Discord server members')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
