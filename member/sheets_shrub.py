@@ -12,6 +12,9 @@ RANGE_WEEK = 'Shrub Participation!F2:G'
 WEEKLY_PARTICIPATION_COLUMN_INDEX = 5
 WEEKLY_PARTICIPATION_COLUMNS = 2
 
+CULVERT_POINT_SCORE = 300
+FLAG_POINT_SCORE = 50
+
 
 def is_valid(week, datestr):
     service = sheets.get_service()
@@ -98,8 +101,7 @@ def insert_weekly_participation_columns(header: str):
 
 
 class WeeklyParticipation:
-    def __init__(self, culvert_point_score: int):
-        self.culvert_point_score = culvert_point_score
+    def __init__(self):
         self.mule_igns = []
         self.culvert = 0
         self.flag = 0
@@ -127,12 +129,10 @@ class WeeklyParticipation:
         return points
 
     def __culvert_points(self):
-        return int(self.culvert / self.culvert_point_score)
+        return int(self.culvert / CULVERT_POINT_SCORE)
 
     def __flag_points(self):
-        if self.__count() == 0:
-            return 0
-        return min(int(self.flag / 50), self.__count())
+        return int(self.flag / FLAG_POINT_SCORE)
 
     def to_sheets_value(self):
         if self.__count() == 0:

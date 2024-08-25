@@ -39,7 +39,7 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
     await interaction.followup.send(f'{week_header} Grove tracking complete!')
 
 
-async def track_shrub(interaction: discord.Interaction, message_ids: list[int], culvert_point_score: int):
+async def track_shrub(interaction: discord.Interaction, message_ids: list[int]):
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets_shrub.get_unsorted_shrub_participation():
@@ -54,7 +54,7 @@ async def track_shrub(interaction: discord.Interaction, message_ids: list[int], 
     await interaction.followup.send(
         f'### Tracking data saved for Shrub\nSuccess: {len(tracks)}\nError: {len(errors)}')
 
-    week_header = __update_shrub_participation(culvert_point_score, tracks)
+    week_header = __update_shrub_participation(tracks)
     await interaction.followup.send(f'{week_header} Shrub tracking complete!')
 
 
@@ -120,16 +120,16 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
     return f'Week {guild_week} - {sunday_string}'
 
 
-def __update_shrub_participation(culvert_point_score: int, tracks: list[sheets.Track]):
+def __update_shrub_participation(tracks: list[sheets.Track]):
     guild_week = common.guild_week()
     sunday_string = common.sunday().strftime('%Y-%m-%d')
     if not sheets_shrub.is_valid(guild_week, sunday_string):
         sheets_shrub.insert_weekly_participation_columns(
-            f'Week {guild_week}\n{sunday_string}\n\nCulvert Point: {culvert_point_score}')
+            f'Week {guild_week}\n{sunday_string}')
 
     wp_list = []
     for member in sheets_shrub.get_unsorted_shrub_participation():
-        participation = WeeklyParticipation(culvert_point_score)
+        participation = WeeklyParticipation()
         wp_list.append(participation)
         for track in tracks:
             if member.discord_mention == track.discord_mention:
