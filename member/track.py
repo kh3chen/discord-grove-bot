@@ -107,7 +107,7 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
         member = mp_list[x]
         for track in tracks:
             if member.discord_mention == track.discord_mention:
-                new_score = track.mission
+                new_score = track.mission / 2
                 if track.culvert > 0:
                     new_score += 10
                 if track.flag > 0:
