@@ -12,7 +12,7 @@ class Result:
         self.matched_ign = matched_ign
         self.matched_percent = matched_percent
         self.weekly_mission = int(data[-3])
-        if self.weekly_mission > 5:
+        if self.weekly_mission > 10:
             raise ValueError
         self.culvert = int(data[-2])
         self.flag = int(data[-1])
