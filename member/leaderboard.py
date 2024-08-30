@@ -14,9 +14,9 @@ from member import common
 
 
 async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, emoji_id: str):
-    sunday = common.sunday()
+    thursday = common.thursday()
     guild_week = common.guild_week()
-    leaderboard_week = sunday.strftime('%U')
+    leaderboard_week = thursday.strftime('%U')
 
     # Confirmation
     try:
@@ -26,7 +26,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             'Error - invalid emoji, please use an emoji from this server. Announcement has been cancelled.')
         return
 
-    confirmation_message_body = f'Are you sure you want to send the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>?\n\nWeek {guild_week}\n{sunday}\n{sunday.year} Leaderboard Week {leaderboard_week}\n{emoji_id}\n\n'
+    confirmation_message_body = f'Are you sure you want to send the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>?\n\nWeek {guild_week}\n{thursday}\n{thursday.year} Leaderboard Week {leaderboard_week}\n{emoji_id}\n\n'
 
     class Buttons(discord.ui.View):
         def __init__(self, *, timeout=180):
@@ -49,7 +49,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             await button_interaction.response.edit_message(view=None)
 
             # Validate the spreadsheet has a column for this week's announcement
-            if not sheets_members.is_valid(guild_week, sunday.strftime('%Y-%m-%d')):
+            if not sheets_members.is_valid(guild_week, thursday.strftime('%Y-%m-%d')):
                 await interaction.followup.send(
                     'Error - unable to find the member tracking data for this week\'s announcement. Announcement has been cancelled.')
                 return
@@ -139,7 +139,7 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             await announcement_message.add_reaction(emoji)
 
             # Create leaderboard thread and add link to main announcement
-            leaderboard_thread_title = f'{sunday.year} Culvert & Flag Race Leaderboard - Week {leaderboard_week}'
+            leaderboard_thread_title = f'{thursday.year} Culvert & Flag Race Leaderboard - Week {leaderboard_week}'
             leaderboard_thread = await announcement_message.create_thread(name=leaderboard_thread_title)
             announcement_body = announcement_body.replace('LEADERBOARD_THREAD_ID_HERE', f'{leaderboard_thread.id}')
             print(announcement_body)

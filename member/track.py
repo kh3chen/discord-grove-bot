@@ -17,20 +17,20 @@ class Character:
 
 
 async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
-    sunday_string = common.sunday().strftime('%Y-%m-%d')
+    thursday_string = common.thursday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets.get_unsorted_member_participation():
         for ign in sheets_member.grove_igns.split('\n'):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
 
-    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, 'Grove')
+    tracks, errors = await __track(interaction, message_ids, thursday_string, characters, 'Grove')
 
     sheets.append_tracks(tracks)
 
     for character in characters:
         if character.ign != '':
-            errors.append(['Missing', sunday_string, character.discord_mention, character.ign, 'Grove'])
+            errors.append(['Missing', thursday_string, character.discord_mention, character.ign, 'Grove'])
     sheets.append_errors(errors)
 
     await interaction.followup.send(f'### Tracking data saved for Grove\nSuccess: {len(tracks)}\nError: {len(errors)}')
@@ -40,14 +40,14 @@ async def track_grove(interaction: discord.Interaction, message_ids: list[int]):
 
 
 async def track_shrub(interaction: discord.Interaction, message_ids: list[int]):
-    sunday_string = common.sunday().strftime('%Y-%m-%d')
+    thursday_string = common.thursday().strftime('%Y-%m-%d')
     characters = []
     for sheets_member in sheets_shrub.get_unsorted_shrub_participation():
         for ign in sheets_member.mule_igns.split('\n'):
             characters.append(Character(ign, sheets_member.discord_mention))
     print(f'Characters: {characters}')
 
-    tracks, errors = await __track(interaction, message_ids, sunday_string, characters, "Shrub")
+    tracks, errors = await __track(interaction, message_ids, thursday_string, characters, "Shrub")
     sheets.append_tracks(tracks)
     sheets.append_errors(errors)
 
@@ -93,9 +93,9 @@ async def __track(interaction: discord.Interaction, message_ids: list[int], day_
 
 def __update_weekly_participation(tracks: list[sheets.Track]):
     guild_week = common.guild_week()
-    sunday_string = common.sunday().strftime('%Y-%m-%d')
-    if not sheets.is_valid(guild_week, sunday_string):
-        sheets.insert_weekly_participation_column(f'Week {guild_week}\n{sunday_string}')
+    thursday_string = common.thursday().strftime('%Y-%m-%d')
+    if not sheets.is_valid(guild_week, thursday_string):
+        sheets.insert_weekly_participation_column(f'Week {guild_week}\n{thursday_string}')
 
     mp_list = sheets.get_unsorted_member_participation()
     scores = sheets.get_weekly_participation()
@@ -117,15 +117,15 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
                 tracks.remove(track)
 
     sheets.update_weekly_participation(scores)
-    return f'Week {guild_week} - {sunday_string}'
+    return f'Week {guild_week} - {thursday_string}'
 
 
 def __update_shrub_participation(tracks: list[sheets.Track]):
     guild_week = common.guild_week()
-    sunday_string = common.sunday().strftime('%Y-%m-%d')
-    if not sheets_shrub.is_valid(guild_week, sunday_string):
+    thursday_string = common.thursday().strftime('%Y-%m-%d')
+    if not sheets_shrub.is_valid(guild_week, thursday_string):
         sheets_shrub.insert_weekly_participation_columns(
-            f'Week {guild_week}\n{sunday_string}')
+            f'Week {guild_week}\n{thursday_string}')
 
     wp_list = []
     for member in sheets_shrub.get_unsorted_shrub_participation():
@@ -136,4 +136,4 @@ def __update_shrub_participation(tracks: list[sheets.Track]):
                 participation.add(track.ign, track.culvert, track.flag)
 
     sheets_shrub.update_weekly_participation(wp_list)
-    return f'Week {guild_week} - {sunday_string}'
+    return f'Week {guild_week} - {thursday_string}'
