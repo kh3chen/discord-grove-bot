@@ -132,7 +132,8 @@ def __update_shrub_participation(tracks: list[sheets.Track]):
         participation = WeeklyParticipation()
         wp_list.append(participation)
         for track in tracks:
-            if member.discord_mention == track.discord_mention:
+            if (member.discord_mention == track.discord_mention
+                    and track.mission > 0):  # Only count if the boss mule is active
                 participation.add(track.ign, track.culvert, track.flag)
 
     sheets_shrub.update_weekly_participation(wp_list)
