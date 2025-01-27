@@ -168,7 +168,7 @@ def remove_member(member_id: int, reason: str = ''):
     remove_mp_value = None
     delete_mp_index = 1  # Offset by 1 due to header rows
     for mp_value in mp_values:
-        if mp_value[MemberParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+        if len(mp_value) > MemberParticipation.INDEX_DISCORD_MENTION and mp_value[MemberParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
             # Found the entry
             remove_mp_value = mp_value
             break
@@ -209,7 +209,7 @@ def remove_member(member_id: int, reason: str = ''):
     remove_sp_value = None
     delete_sp_index = 1  # Offset by 1 due to header rows
     for sp_value in sp_values:
-        if sp_value[ShrubParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+        if len(sp_value) > ShrubParticipation.INDEX_DISCORD_MENTION and sp_value[ShrubParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
             # Found the entry
             remove_sp_value = sp_value
             break
