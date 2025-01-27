@@ -423,7 +423,7 @@ def get_custom_ign_mapping():
 
     custom_ign_mapping = {}
     for value in values:
-        custom_ign_mapping[value[0]] = value[1]
+        custom_ign_mapping[value[1]] = value[0]
     return custom_ign_mapping
 
 
