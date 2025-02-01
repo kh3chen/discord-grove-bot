@@ -44,6 +44,7 @@ async def _version(ctx):
 
 
 @grove_bot.command(name='batch-add-role')
+@commands.has_role(config.GROVE_ROLE_ID_JUNIOR)
 async def add_role(ctx, role: discord.Role, *members: discord.Member):
     for member in members:
         await member.add_roles(role)
