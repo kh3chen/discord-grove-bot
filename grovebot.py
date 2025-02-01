@@ -1,3 +1,5 @@
+from functools import reduce
+
 import discord
 from discord.ext import commands
 
@@ -42,6 +44,9 @@ async def on_ready():
 async def _version(ctx):
     await ctx.send(version.version_name)
 
+@grove_bot.command(name='wiki')
+async def wiki(ctx, *search_terms: str):
+    await ctx.send('https://maplestorywiki.net/w/Special:Search/' + reduce(lambda acc, val: acc + ("_" if acc else "") + val, search_terms))
 
 @grove_bot.command(name='batch-add-role')
 @commands.has_role(config.GROVE_ROLE_ID_JUNIOR)
