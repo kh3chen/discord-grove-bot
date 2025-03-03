@@ -173,16 +173,16 @@ async def kick_member(interaction: discord.Interaction, member: discord.Member, 
 
 
 async def kick_member_by_ign(interaction: discord.Interaction, ign: str, reason_type: int):
-    match reason_type:
-        case 1:
-            reason = 'Left, never joined Discord'
-        case _:
-            reason = 'Kicked for no Discord'
+    if reason_type == 1:
+        reason = 'Left, never joined Discord'
+    else:
+        reason = 'Kicked for no Discord'
     try:
         member = next(member for member in sheets.get_members() if
                       member.grove_igns == ign)
         if member.discord_mention != '':
-            await interaction.followup.send(f'Error - Please use the /mod-kick command for members who have joined Discord.', ephemeral=True)
+            await interaction.followup.send(
+                f'Error - Please use the /mod-kick command for members who have joined Discord.', ephemeral=True)
             return
 
         removed_member = sheets.remove_member_by_ign(ign, reason)
@@ -193,5 +193,3 @@ async def kick_member_by_ign(interaction: discord.Interaction, ign: str, reason_
 
     except StopIteration:
         await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
-
-
