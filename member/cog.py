@@ -95,6 +95,14 @@ class MemberCog(commands.Cog):
         await interaction.response.defer()
         await rank.kick_member(interaction, member, reason)
 
+    @app_commands.command(name='mod-kick-no-discord', description='Kick a guild member who has not joined Discord')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    @app_commands.describe(ign='The character name of the guild member being kicked')
+    @app_commands.describe(reason_type='1: Left, never joined Discord | 2: Kicked for no Discord')
+    async def kick_no_discord(self, interaction, ign: str, reason_type: int):
+        await interaction.response.defer()
+        await rank.kick_member_by_ign(interaction, ign, reason_type)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         created_at_ago = self.relative_delta_text(

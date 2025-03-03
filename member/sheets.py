@@ -155,10 +155,54 @@ def update_member_rank(member_id: int, grove_role_name: str):
     return UpdateMemberRankResult.NotFound
 
 
-def remove_member(member_id: int, reason: str = ''):
+def remove_member_by_id(member_id: int, reason: str = ''):
     service = sheets.get_service()
 
-    # Delete Member Participation row
+    def match_weekly_participation(mp_value):
+        return len(mp_value) > MemberParticipation.INDEX_DISCORD_MENTION and mp_value[
+            MemberParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>'
+
+    removed_member = delete_weekly_participation_row(service, match_weekly_participation, reason)
+
+    def match_shrub_participation(sp_value):
+        return len(sp_value) > ShrubParticipation.INDEX_DISCORD_MENTION and sp_value[
+            ShrubParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>'
+
+    delete_shrub_participation_row(service, match_shrub_participation)
+
+    def match_member_list(member: Member):
+        return member.discord_mention == f'<@{member_id}>'
+
+    delete_member_list_row(service, match_member_list)
+
+    return removed_member
+
+
+def remove_member_by_ign(ign: str, reason: str = ''):
+    service = sheets.get_service()
+
+    def match_weekly_participation(mp_value):
+        return len(mp_value) > MemberParticipation.INDEX_GROVE_IGNS and mp_value[
+            MemberParticipation.INDEX_GROVE_IGNS] == ign
+
+    removed_member = delete_weekly_participation_row(service, match_weekly_participation, reason)
+
+    def match_shrub_participation(sp_value):
+        return len(sp_value) > ShrubParticipation.INDEX_GROVE_IGNS and sp_value[
+            ShrubParticipation.INDEX_GROVE_IGNS] == ign
+
+    delete_shrub_participation_row(service, match_shrub_participation)
+
+    def match_member_list(member: Member):
+        return member.grove_igns == ign
+
+    delete_member_list_row(service, match_member_list)
+
+    return removed_member
+
+
+def delete_weekly_participation_row(service, match, reason: str):
+    # Delete Weekly Participation row
     member_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                                range=RANGE_MEMBER_PARTICIPATION).execute()
     mp_values = member_participation.get('values', [])
@@ -170,7 +214,7 @@ def remove_member(member_id: int, reason: str = ''):
     remove_mp_value = None
     delete_mp_index = 1  # Offset by 1 due to header rows
     for mp_value in mp_values:
-        if len(mp_value) > MemberParticipation.INDEX_DISCORD_MENTION and mp_value[MemberParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+        if match(mp_value):
             # Found the entry
             remove_mp_value = mp_value
             break
@@ -195,13 +239,16 @@ def remove_member(member_id: int, reason: str = ''):
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
                                            body=mp_delete_body).execute()
+        return MemberParticipation.from_sheets_value(remove_mp_value)
     except HttpError as error:
         print(f"An error occurred: {error}")
         raise error
 
+
+def delete_shrub_participation_row(service, match):
     # Delete Shrub Participation row
     shrub_participation = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                                range=RANGE_SHRUB_PARTICIPATION).execute()
+                                                              range=RANGE_SHRUB_PARTICIPATION).execute()
     sp_values = shrub_participation.get('values', [])
 
     if not sp_values:
@@ -211,7 +258,7 @@ def remove_member(member_id: int, reason: str = ''):
     remove_sp_value = None
     delete_sp_index = 1  # Offset by 1 due to header rows
     for sp_value in sp_values:
-        if len(sp_value) > ShrubParticipation.INDEX_DISCORD_MENTION and sp_value[ShrubParticipation.INDEX_DISCORD_MENTION] == f'<@{member_id}>':
+        if match(sp_value):
             # Found the entry
             remove_sp_value = sp_value
             break
@@ -232,6 +279,8 @@ def remove_member(member_id: int, reason: str = ''):
         print(f"An error occurred: {error}")
         raise error
 
+
+def delete_member_list_row(service, match):
     # Delete Member List row
     member_list = service.spreadsheets().values().get(spreadsheetId=SHEET_MEMBER_TRACKING,
                                                       range=RANGE_MEMBERS).execute()
@@ -244,7 +293,7 @@ def remove_member(member_id: int, reason: str = ''):
     member_list_delete_index = 2  # Offset by 2 due to header rows
     members = list(map(lambda value: Member.from_sheets_value(value), member_values))
     for member in members:
-        if member.discord_mention == f'<@{member_id}>':
+        if match(member):
             # Found the entry
             break
         member_list_delete_index += 1
@@ -261,7 +310,6 @@ def remove_member(member_id: int, reason: str = ''):
     try:
         service.spreadsheets().batchUpdate(spreadsheetId=config.MEMBER_TRACKING_SPREADSHEET_ID,
                                            body=member_delete_body).execute()
-        return MemberParticipation.from_sheets_value(remove_mp_value)
 
     except HttpError as error:
         print(f"An error occurred: {error}")

@@ -92,7 +92,7 @@ async def onboard_friend(guild: discord.Guild, member: discord.Member):
 
 
 async def track_past_member(member_activity_channel: discord.TextChannel, member: discord.Member, reason: str):
-    removed_member = sheets.remove_member(member.id, reason)
+    removed_member = sheets.remove_member_by_id(member.id, reason)
     if removed_member is not None:
         # Send to log channel
         removed_member_message = f'## {removed_member.discord_mention} removed'
@@ -170,3 +170,28 @@ async def kick_member(interaction: discord.Interaction, member: discord.Member, 
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, reason)
     await interaction.guild.kick(member, reason=reason)
     await interaction.followup.send(f'Kicked {member.mention}\nReason: {reason}', ephemeral=True)
+
+
+async def kick_member_by_ign(interaction: discord.Interaction, ign: str, reason_type: int):
+    match reason_type:
+        case 1:
+            reason = 'Left, never joined Discord'
+        case _:
+            reason = 'Kicked for no Discord'
+    try:
+        member = next(member for member in sheets.get_members() if
+                      member.grove_igns == ign)
+        if member.discord_mention != '':
+            await interaction.followup.send(f'Error - Please use the /mod-kick command for members who have joined Discord.', ephemeral=True)
+            return
+
+        removed_member = sheets.remove_member_by_ign(ign, reason)
+        if removed_member is None:
+            await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
+        else:
+            await interaction.followup.send(f'Kicked IGN: {ign}\nReason: {reason}', ephemeral=True)
+
+    except StopIteration:
+        await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
+
+
