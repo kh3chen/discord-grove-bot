@@ -8,7 +8,9 @@ from member.sheets_shrub import RANGE_SHRUB_PARTICIPATION, ShrubParticipation
 from utils import sheets
 
 SHEET_MEMBER_TRACKING = config.MEMBER_TRACKING_SPREADSHEET_ID  # The ID of the member tracking sheet
-RANGE_MEMBERS = 'Member List!D3:G'
+RANGE_MEMBERS = 'Member List!A3:G'
+RANGE_MEMBERS_COL_INTROED = 'F'
+RANGE_MEMBERS_COL_RANK = 'G'
 RANGE_MEMBER_PARTICIPATION = 'Weekly Participation!A2:ZZZ'
 RANGE_WEEK_HEADER = 'Weekly Participation!N1'
 RANGE_WEEK = 'Weekly Participation!N2:N'
@@ -29,19 +31,21 @@ CONTRIBUTION_THRESHOLD_TREE = 150
 
 
 class Member:
-    LENGTH = 4
+    LENGTH = 7
 
-    INDEX_DISCORD_MENTION = 0
-    INDEX_VERIFIED_MAIN = 1
-    INDEX_INTROED = 2
-    INDEX_RANK = 3
+    INDEX_GROVE_IGNS = 0
+    INDEX_DISCORD_MENTION = 3
+    INDEX_VERIFIED_MAIN = 4
+    INDEX_INTROED = 5
+    INDEX_RANK = 6
 
     INTROED_TRUE = 'TRUE'
     INTROED_FALSE = 'FALSE'
 
     VERIFIED_MAIN_YES = 'Y'
 
-    def __init__(self, discord_mention: str, verified_main: str, introed: str, rank: str):
+    def __init__(self, grove_igns: str, discord_mention: str, verified_main: str, introed: str, rank: str):
+        self.grove_igns = grove_igns
         self.discord_mention = discord_mention
         self.introed = introed
         self.verified_main = verified_main
@@ -50,19 +54,17 @@ class Member:
     @staticmethod
     def from_sheets_value(members_value: list[str]):
         members_value = members_value[:Member.LENGTH] + [''] * (Member.LENGTH - len(members_value))
-        return Member(members_value[Member.INDEX_DISCORD_MENTION],
+        return Member(members_value[Member.INDEX_GROVE_IGNS],
+                      members_value[Member.INDEX_DISCORD_MENTION],
                       members_value[Member.INDEX_VERIFIED_MAIN],
                       members_value[Member.INDEX_INTROED],
                       members_value[Member.INDEX_RANK])
 
     def __str__(self):
-        return str(self.to_sheets_value())
+        return str([self.discord_mention, self.verified_main, self.introed, self.rank])
 
     def __repr__(self):
         return self.__str__()
-
-    def to_sheets_value(self):
-        return [self.discord_mention, self.verified_main, self.introed, self.rank]
 
 
 def is_valid(week, datestr):
@@ -110,14 +112,14 @@ def update_introed_new_members():
         return []
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
-    for member in members:
+    data = []
+    for x in range(0, len(members)):
+        member = members[x]
         if member.discord_mention != '' and member.introed == Member.INTROED_FALSE:
             member.introed = Member.INTROED_TRUE
-
-    body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
-    sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                        range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
-                                                        body=body).execute()
+            data.append({'range': f'{RANGE_MEMBERS_COL_INTROED}{x + 3}', 'values': [[True]]})
+    body = {'valueInputOption': 'USER_ENTERED', 'data': data}
+    sheets.get_service().spreadsheets().values().batchUpdate(spreadsheetId=SHEET_MEMBER_TRACKING, body=body).execute()
 
 
 class UpdateMemberRankResult(Enum):
@@ -137,20 +139,20 @@ def update_member_rank(member_id: int, grove_role_name: str):
         return UpdateMemberRankResult.NotFound
 
     members = list(map(lambda value: Member.from_sheets_value(value), values))
-    try:
-        member = next(member for member in members if
-                      member.discord_mention == f'<@{member_id}>')
-        if member.verified_main != Member.VERIFIED_MAIN_YES:
-            return UpdateMemberRankResult.NotVerified
-        member.rank = grove_role_name
+    for x in range(0, len(members)):
+        member = members[x]
+        if member.discord_mention == f'<@{member_id}>':
+            if member.verified_main != Member.VERIFIED_MAIN_YES:
+                return UpdateMemberRankResult.NotVerified
+            member.rank = grove_role_name
+            body = {'values': [[grove_role_name]]}
+            sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
+                                                                range=f'{RANGE_MEMBERS_COL_RANK}{x + 3}',
+                                                                valueInputOption="USER_ENTERED",
+                                                                body=body).execute()
+            return UpdateMemberRankResult.Success
 
-        body = {'values': list(map(lambda member: member.to_sheets_value(), members))}
-        sheets.get_service().spreadsheets().values().update(spreadsheetId=SHEET_MEMBER_TRACKING,
-                                                            range=RANGE_MEMBERS, valueInputOption="USER_ENTERED",
-                                                            body=body).execute()
-        return UpdateMemberRankResult.Success
-    except StopIteration:
-        return UpdateMemberRankResult.NotFound
+    return UpdateMemberRankResult.NotFound
 
 
 def remove_member(member_id: int, reason: str = ''):
