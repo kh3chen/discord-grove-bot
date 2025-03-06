@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from functools import reduce
 
@@ -7,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-from member import leaderboard, rank, track
+from member import leaderboard, rank, track, verification
 
 
 class ModRankGroup(app_commands.Group, name='mod-rank', description='Mod member rank commands'):
@@ -103,16 +104,33 @@ class MemberCog(commands.Cog):
         await interaction.response.defer()
         await rank.kick_member_by_ign(interaction, ign, reason_type)
 
+    @app_commands.command(name='mod-verification', description='Create a verification thread')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def verification(self, interaction, member: discord.Member):
+        guild = self.bot.get_guild(config.GROVE_GUILD_ID)
+        verification_thread = await verification.create_verification_thread(guild, member, True)
+        await interaction.response.send_message(f'Verification thread: {verification_thread.mention}')
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        await asyncio.sleep(3)  # Takes a moment to join voice channel if joined server through a voice channel invite
+
+        # Send to modlog-join-leave channel
         created_at_ago = self.relative_delta_text(
             relativedelta.relativedelta(datetime.utcnow().replace(tzinfo=timezone.utc), member.created_at))
-
-        # Send to log channel
-        member_join_remove_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE)
+        description = (f'{member.mention}'
+                       f'\ncreated {created_at_ago} ago')
+        if member.voice is not None:
+            # If they are in a voice channel, assume they joined using a voice channel temporary membership link
+            # Members who join with a temporary membership link will be removed automatically
+            verification_thread = None
+            description += f'\nJoined voice channel: {member.voice.channel.mention}'
+        else:
+            guild = self.bot.get_guild(config.GROVE_GUILD_ID)
+            verification_thread = await verification.create_verification_thread(guild, member)
+            description += f'\nVerification thread: {verification_thread.mention}'
         join_embed = discord.Embed(title='Member joined',
-                                   description=f'{member.mention}'
-                                               f'\ncreated {created_at_ago} ago',
+                                   description=description,
                                    colour=int('0x53DDAC', 16))
         try:
             icon_url = member.avatar.url
@@ -120,17 +138,20 @@ class MemberCog(commands.Cog):
             icon_url = None
             pass
         join_embed.set_author(name=member.name, icon_url=icon_url)
+        member_join_remove_channel = self.bot.get_channel(config.GROVE_CHANNEL_ID_MEMBER_JOIN_LEAVE)
         join_message = await member_join_remove_channel.send(content=member.mention, embed=join_embed)
-        await join_message.add_reaction('✉')
-        await join_message.add_reaction('✅')
-        await join_message.add_reaction('🤺')
-        await join_message.add_reaction('🤝')
-        await join_message.add_reaction('❌')
-        await member_join_remove_channel.send(f'\n:envelope:: Messaged'
-                                              f'\n✅: Verification Complete'
-                                              f'\n🤺: Bossing Guest (will give role)'
-                                              f'\n🤝: Friend (will give role)'
-                                              f'\n❌: Failed Verification')
+
+        if verification_thread is not None:
+            await join_message.add_reaction('✉')
+            await join_message.add_reaction('✅')
+            await join_message.add_reaction('🤺')
+            await join_message.add_reaction('🤝')
+            await join_message.add_reaction('❌')
+            await member_join_remove_channel.send(f'\n:envelope:: Messaged'
+                                                  f'\n✅: Verification Complete'
+                                                  f'\n🤺: Bossing Guest (will give role)'
+                                                  f'\n🤝: Friend (will give role)'
+                                                  f'\n❌: Failed Verification')
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):

@@ -45,7 +45,8 @@ async def __set_grove_role(interaction: discord.Interaction, member: discord.Mem
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
                                   interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST),
-                                  interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND),
+                                  interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
         await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE),
                                interaction.guild.get_role(grove_role_id))
 
@@ -64,7 +65,8 @@ async def bossing_guest(interaction: discord.Interaction, member: discord.Member
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_BOSSING_GUEST}>.')
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member,
@@ -72,6 +74,7 @@ async def bossing_guest(interaction: discord.Interaction, member: discord.Member
 
 
 async def onboard_bossing_guest(guild: discord.Guild, member: discord.Member):
+    await member.remove_roles(guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
     await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
 
 
@@ -81,13 +84,15 @@ async def friend(interaction: discord.Interaction, member: discord.Member):
                               interaction.guild.get_role(config.GROVE_ROLE_ID_TREE),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_SAPLING),
                               interaction.guild.get_role(config.GROVE_ROLE_ID_MOSS),
-                              interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST))
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_BOSSING_GUEST),
+                              interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
     await member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_FRIEND))
     await interaction.followup.send(f'{member.mention} is now a <@&{config.GROVE_ROLE_ID_FRIEND}>.')
     await track_past_member(interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MEMBER_ACTIVITY), member, 'Retiree')
 
 
 async def onboard_friend(guild: discord.Guild, member: discord.Member):
+    await member.remove_roles(guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
     await member.add_roles(guild.get_role(config.GROVE_ROLE_ID_FRIEND))
 
 
