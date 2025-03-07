@@ -19,7 +19,6 @@ def get_character(ign: str):
     response = requests.get(maplestorygg_endpoint + ign)
     try:
         json = response.json()
-        print(f'{ign}: {json}')
         if 'CharacterData' in json:
             return MapleCharacter(name=json['CharacterData']['Name'],
                                   job=json['CharacterData']['Class'],
@@ -35,7 +34,6 @@ def get_legion(ign: str):
     response = requests.get(maplestorygg_endpoint + ign)
     try:
         json = response.json()
-        print(f'{ign}: {json}')
         if 'CharacterData' in json and json['CharacterData']['LegionLevel'] > 0:
             return json['CharacterData']['LegionLevel']
     except:
