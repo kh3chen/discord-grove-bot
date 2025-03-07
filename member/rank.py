@@ -1,8 +1,12 @@
+import asyncio
+import functools
+import os
 from functools import reduce
 
 import discord
 
 import config
+import maplestoryapi.character
 from member import sheets
 from member.sheets import ROLE_NAME_SPIRIT, ROLE_NAME_TREE, ROLE_NAME_SAPLING, ROLE_NAME_MOSS, UpdateMemberRankResult
 
@@ -119,12 +123,31 @@ async def track_past_member(member_activity_channel: discord.TextChannel, member
         await member_activity_channel.send(removed_member_message)
 
 
+async def check_legion(potential_submains, member):
+    if member.grove_igns == '':
+        return
+    legion_level = await asyncio.get_event_loop().run_in_executor(None,
+                                                                  functools.partial(maplestoryapi.character.get_legion,
+                                                                                    member.grove_igns.split('\n')[0]))
+    if legion_level == 0:
+        potential_submains.append(member)
+
+
+async def get_submains(members):
+    potential_submains = []
+    await asyncio.gather(*[check_legion(potential_submains, member) for member in members])
+    return potential_submains
+
+
 async def audit_members(interaction: discord.Interaction):
     tracked_members = sheets.get_members()
+    potential_submains = await get_submains(tracked_members)
+
     tracked_member_mentions = list(
         map(lambda tracked_member: tracked_member.discord_mention, tracked_members)) + config.GROVE_AUDIT_EXCEPTIONS
     bossing_guests = []
     retirees = []
+    unverified = []
     illegals = []
     for member in interaction.guild.members:
         if member.mention in tracked_member_mentions:
@@ -146,9 +169,21 @@ async def audit_members(interaction: discord.Interaction):
             retirees.append(member)
             continue
 
+        if config.GROVE_ROLE_ID_UNVERIFIED in member_role_ids:
+            # Unverified
+            unverified.append(member)
+            continue
+
         illegals.append(member)
 
     message = "# Discord member audit results"
+    message += '\n## Potential Submains'
+    if len(potential_submains) > 0:
+        for potential_submain in potential_submains:
+            message += f'\n{potential_submain.grove_igns.split(os.linesep)[0]}\t{potential_submain.discord_mention}'
+    else:
+        message += "\nNone"
+    print(message)
     message += '\n## Bossing Guests'
     if len(bossing_guests) > 0:
         for bossing_guest in bossing_guests:
@@ -159,6 +194,12 @@ async def audit_members(interaction: discord.Interaction):
     if len(retirees) > 0:
         for retiree in retirees:
             message += f'\n{retiree.mention}'
+    else:
+        message += "\nNone"
+    message += '\n## Unverified'
+    if len(unverified) > 0:
+        for unverified in unverified:
+            message += f'\n{unverified.mention}'
     else:
         message += "\nNone"
     message += '\n## Illegal Members'

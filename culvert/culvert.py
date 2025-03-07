@@ -1,6 +1,6 @@
 import discord
 
-import maplestorygg.character
+import maplestoryapi.character
 from culvert import sheets
 
 
@@ -12,7 +12,7 @@ async def culvert(interaction: discord.Interaction, ign: str):
 
         culvert_embed = discord.Embed(colour=int('0x53DDAC', 16))
         try:
-            maple_character = maplestorygg.character.get_character(ign)
+            maple_character = maplestoryapi.character.get_character(ign)
             culvert_embed.title = maple_character.name
             culvert_embed.set_author(name='Grove Culvert Stats')
             culvert_embed.add_field(name='Class', value=maple_character.job)
