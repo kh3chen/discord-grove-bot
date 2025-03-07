@@ -111,6 +111,12 @@ class MemberCog(commands.Cog):
         verification_thread = await verification.create_verification_thread(guild, member, True)
         await interaction.response.send_message(f'Verification thread: {verification_thread.mention}')
 
+    @app_commands.command(name='mod-reverification', description='Create a re-verification thread for new main')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def verification(self, interaction, member: discord.Member, new_main_ign: str = None):
+        await interaction.response.defer()
+        await verification.create_reverification_thread(interaction, member, new_main_ign)
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         await asyncio.sleep(3)  # Takes a moment to join voice channel if joined server through a voice channel invite
