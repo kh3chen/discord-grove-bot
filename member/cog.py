@@ -113,9 +113,15 @@ class MemberCog(commands.Cog):
 
     @app_commands.command(name='mod-reverification', description='Create a re-verification thread for new main')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-    async def verification(self, interaction, member: discord.Member, new_main_ign: str = None):
+    async def reverification(self, interaction, member: discord.Member, new_main_ign: str = None):
         await interaction.response.defer()
         await verification.create_reverification_thread(interaction, member, new_main_ign)
+
+    @app_commands.command(name='mod-reverify-success', description='Complete re-verification of new main')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def reverify_success(self, interaction, member: discord.Member, new_main_ign: str = None):
+        await interaction.response.defer()
+        await verification.reverify_success(interaction, member, new_main_ign)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

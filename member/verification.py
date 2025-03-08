@@ -30,7 +30,7 @@ async def create_reverification_thread(interaction: discord.Interaction, member:
 
     if new_main_ign is not None:
         template = (
-            f'\nHi {member.mention}, we recently noticed that your character **{new_main_ign}** is your most active '
+            f'\nHi {member.mention}, we recently noticed that your character, **{new_main_ign}**, is your most active '
             f'character and is not in Grove or any of our mule guilds. Since having a main in Grove is our only '
             f'requirement, your access to guild skills on Grove has been revoked, and any bossing mules have been '
             f'removed from our mule guilds.'
@@ -49,5 +49,24 @@ async def create_reverification_thread(interaction: discord.Interaction, member:
         f'Re-verification thread: {verification_thread.mention}'
         f'\n'
         f'\nMessage template:'
-        f'\n```{template}```')
+        f'\n```{template}```'
+        f'\n'
+        f'\nUse the `/mod-reverify-success` command to complete successful re-verification.')
     await interaction.followup.send(message)
+
+
+async def reverify_success(interaction: discord.Interaction, member: discord.member, new_main_ign: str):
+    if interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED) in member.roles:
+        if (interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT) in member.roles or
+                interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT) in member.roles or
+                interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT) in member.roles):
+            member.remove_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED))
+            member.add_roles(interaction.guild.get_role(config.GROVE_ROLE_ID_GROVE))
+            await interaction.followup.send(
+                f'{member.mention} has completed re-verification. New main: **{new_main_ign}**')
+        else:
+            await interaction.followup.send(
+                f'Error - {member.mention} is not eligible for re-verification. Please complete initial verification.')
+    else:
+        await interaction.followup.send(
+            f'Error - {member.mention} is already verified.')
