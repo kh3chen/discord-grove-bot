@@ -55,7 +55,7 @@ async def create_reverification_thread(interaction: discord.Interaction, member:
     await interaction.followup.send(message)
 
 
-async def reverify_success(interaction: discord.Interaction, member: discord.member, new_main_ign: str):
+async def reverification_complete(interaction: discord.Interaction, member: discord.member, new_main_ign: str):
     if interaction.guild.get_role(config.GROVE_ROLE_ID_UNVERIFIED) in member.roles:
         if (interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT) in member.roles or
                 interaction.guild.get_role(config.GROVE_ROLE_ID_SPIRIT) in member.roles or
