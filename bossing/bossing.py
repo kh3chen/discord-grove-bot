@@ -24,6 +24,18 @@ class Bossing:
         self.lock = asyncio.Lock()
         self.sheets_bossing = BossingSheets()
 
+        async def is_run_cancelled(sheets_party: SheetsParty, reactions: list[discord.Reaction]) -> bool:
+            reacted_cancel = set()
+            for reaction in reactions:
+                if str(reaction.emoji) == '🕒' or str(reaction.emoji) == '❌':
+                    reacted_cancel.update(
+                        set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
+
+            reacted_cancel_party_members = set(filter(lambda member: member.user_id in reacted_cancel,
+                                                      self.sheets_bossing.members_dict[sheets_party.role_id]))
+            return len(reacted_cancel_party_members) >= (
+                    len(self.sheets_bossing.members_dict[sheets_party.role_id]) + 1) / 2
+
         async def on_check_in(sheets_party: SheetsParty):
             # Send check-in message in party thread
             if sheets_party.party_thread_id:
@@ -35,33 +47,27 @@ class Bossing:
                                     f'\n✅ Accept'
                                     f'\n❌ Decline'
                                     f'\n🕒 Reschedule'
+                                    f'\n\nReact with 🔔 to receive a reminder 15 minutes before the the scheduled boss run.'
                                     f'\n\nRepeated lack of communication with your party may result in removal from Grove bossing parties. Read the bossing etiquette here: <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>')
                 message = await party_thread.send(message_content)
                 await message.add_reaction('✅')
                 await message.add_reaction('❌')
                 await message.add_reaction('🕒')
+                await message.add_reaction('🔔')
                 sheets_party.check_in_message_id = message.id
                 self.sheets_bossing.update_parties(self.sheets_bossing.parties)
 
-        async def on_reminder(sheets_party: SheetsParty):
+        async def on_check_in_reminder(sheets_party: SheetsParty):
             # Send reminder in party thread to people who didn't react
             if sheets_party.party_thread_id and sheets_party.check_in_message_id:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
+                if await is_run_cancelled(sheets_party, check_in_message.reactions):
+                    return
+
                 reacted = set()
                 for reaction in check_in_message.reactions:
                     reacted.update(set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
-                    if str(reaction.emoji) == '🕒':
-                        # If at least half the party reacted with Reschedule, don't send the reminder even if some members didn't react
-                        reschedule_reacted = set(
-                            map(lambda user: str(user.id), [user async for user in reaction.users()]))
-                        party_members_reschedule_reacted = list(
-                            filter(lambda member: member.user_id in reschedule_reacted,
-                                   self.sheets_bossing.members_dict[sheets_party.role_id]))
-                        if len(party_members_reschedule_reacted) >= (
-                                len(self.sheets_bossing.members_dict[sheets_party.role_id]) + 1) / 2:
-                            # At least half the party reacted with Reschedule
-                            return
 
                 away = set(map(lambda member: str(member.id), self.client.get_guild(config.GROVE_GUILD_ID).get_role(
                     config.GROVE_ROLE_ID_AWAY).members))
@@ -77,6 +83,37 @@ class Bossing:
                         reminder_message_content += f'<@{sheets_member.user_id}> *{sheets_member.job}*\n'
                     reminder_message_content += f'\nRepeated lack of communication with your party may result in removal from Grove bossing parties. Read the bossing etiquette here: <#{config.GROVE_CHANNEL_ID_BOSSING_PARTIES}>'
                     await party_thread.send(reminder_message_content)
+
+        async def on_requested_reminder(sheets_party: SheetsParty):
+            # Send reminder in party thread to people who didn't react
+            if sheets_party.party_thread_id and sheets_party.check_in_message_id:
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
+                if await is_run_cancelled(sheets_party, check_in_message.reactions):
+                    return
+
+                for reaction in check_in_message.reactions:
+                    if str(reaction.emoji) == '🔔':
+                        timestamp = sheets_party.next_scheduled_time()
+                        if timestamp:
+                            reminder_message_content = f'🔔 You have an upcoming **{sheets_party.name()}** {check_in_message.jump_url} boss run <t:{timestamp}:R>.'
+                            reacted_reminder_users = map(lambda user: user, [user async for user in reaction.users()])
+                            for user in reacted_reminder_users:
+                                if user.id != config.GROVE_BOT_USER_ID:
+                                    await user.send(reminder_message_content)
+
+        async def on_run_start(sheets_party: SheetsParty):
+            if sheets_party.party_thread_id:
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                if sheets_party.check_in_message_id:
+                    # Check if run has been cancelled
+                    check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
+                    if await is_run_cancelled(sheets_party, check_in_message.reactions):
+                        return
+            if sheets_party.party_thread_id:
+                # Send run start message in party thread
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                await party_thread.send(f'{sheets_party.mention()} run has begun!')
 
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:
@@ -114,7 +151,11 @@ class Bossing:
                     print(no_shows)
                     self.sheets_bossing.append_no_shows(no_shows)
 
-        self.boss_time_service = BossTimeService(on_check_in, on_reminder, on_update)
+        self.boss_time_service = BossTimeService(on_check_in,
+                                                 on_check_in_reminder,
+                                                 on_requested_reminder,
+                                                 on_run_start,
+                                                 on_update)
 
     def _restart_service(self):
         self.boss_time_service.restart_service(self.sheets_bossing.parties)

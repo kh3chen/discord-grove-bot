@@ -7,6 +7,7 @@
 TESSERACT_OCR_PATH = ''
 
 BOT_TOKEN = ''
+GROVE_BOT_USER_ID = ''
 
 # Member Tracking spreadsheet IDs
 MEMBER_TRACKING_SPREADSHEET_ID = ''

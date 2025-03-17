@@ -160,8 +160,18 @@ class Party:
     def __repr__(self):
         return self.__str__()
 
-    def get_mention(self):
+    def mention(self):
         return f'<@&{self.role_id}>'
+
+    def name(self):
+        if self.status == Party.PartyStatus.lfg or self.status == Party.PartyStatus.fill:
+            return f'{self.difficulty}{self.boss_name} {self.party_number}'
+
+        name = f'{self.difficulty}{self.boss_name} Party {self.party_number}'
+        if self.status == Party.PartyStatus.retired:
+            name = name + ' (Retired)'
+        return name
+
 
     def to_sheets_value(self):
         return [str(self.role_id),
