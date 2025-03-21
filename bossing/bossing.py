@@ -85,7 +85,7 @@ class Bossing:
                     await party_thread.send(reminder_message_content)
 
         async def on_requested_reminder(sheets_party: SheetsParty):
-            # Send reminder in party thread to people who didn't react
+            # Send reminder in party thread to people who requested it
             if sheets_party.party_thread_id and sheets_party.check_in_message_id:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
@@ -94,13 +94,13 @@ class Bossing:
 
                 for reaction in check_in_message.reactions:
                     if str(reaction.emoji) == '🔔':
+                        reacted_reminder_user_ids = list(filter(lambda user_id: user_id != config.GROVE_BOT_USER_ID, map(lambda user: str(user.id), [user async for user in reaction.users()])))
                         timestamp = sheets_party.next_scheduled_time()
-                        if timestamp:
-                            reminder_message_content = f'🔔 You have an upcoming **{sheets_party.name()}** {check_in_message.jump_url} boss run <t:{timestamp}:R>.'
-                            reacted_reminder_users = map(lambda user: user, [user async for user in reaction.users()])
-                            for user in reacted_reminder_users:
-                                if user.id != config.GROVE_BOT_USER_ID:
-                                    await user.send(reminder_message_content)
+                        if len(reacted_reminder_user_ids) > 0 and timestamp:
+                            reminder_message_content = f'🔔 You have an upcoming **{sheets_party.name()}** boss run <t:{timestamp}:R>.\n'
+                            for user_id in reacted_reminder_user_ids:
+                                reminder_message_content += f'\n{user_id}'
+                            await party_thread.send(reminder_message_content)
 
         async def on_run_start(sheets_party: SheetsParty):
             if sheets_party.party_thread_id:
