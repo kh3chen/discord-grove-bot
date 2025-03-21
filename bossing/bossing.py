@@ -94,12 +94,12 @@ class Bossing:
 
                 for reaction in check_in_message.reactions:
                     if str(reaction.emoji) == '🔔':
-                        reacted_reminder_user_ids = list(filter(lambda user_id: user_id != config.GROVE_BOT_USER_ID, map(lambda user: str(user.id), [user async for user in reaction.users()])))
+                        reacted_reminder_users = list(filter(lambda user: user.id != config.GROVE_BOT_USER_ID, map(lambda user: user, [user async for user in reaction.users()])))
                         timestamp = sheets_party.next_scheduled_time()
-                        if len(reacted_reminder_user_ids) > 0 and timestamp:
+                        if len(reacted_reminder_users) > 0 and timestamp:
                             reminder_message_content = f'🔔 You have an upcoming **{sheets_party.name()}** boss run <t:{timestamp}:R>.\n'
-                            for user_id in reacted_reminder_user_ids:
-                                reminder_message_content += f'\n{user_id}'
+                            for user in reacted_reminder_users:
+                                reminder_message_content += f'\n{user.mention}'
                             await party_thread.send(reminder_message_content)
 
         async def on_run_start(sheets_party: SheetsParty):
