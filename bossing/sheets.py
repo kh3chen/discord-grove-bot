@@ -56,7 +56,7 @@ class Difficulty:
         self.fill_role_id = difficulties_value[Difficulty.INDEX_FILL_ROLE_ID]
 
     def __str__(self):
-        return str([str(self.lfg_role_id), str(self.fill_role_id)])
+        return str([str(self.max_member_count), str(self.lfg_role_id), str(self.fill_role_id)])
 
     def __repr__(self):
         return self.__str__()
@@ -105,6 +105,7 @@ class Party:
                  party_number,
                  status,
                  member_count,
+                 max_member_count,
                  weekday,
                  hour,
                  minute,
@@ -119,6 +120,7 @@ class Party:
         self.party_number = str(party_number)
         self.status = Party.PartyStatus[status or Party.PartyStatus.new.value]
         self.member_count = str(member_count)
+        self.max_member_count = str(max_member_count)
         self.weekday = str(weekday)
         self.hour = str(hour)
         self.minute = str(minute)
@@ -137,6 +139,7 @@ class Party:
                      party_value[Party.INDEX_PARTY_NUMBER],
                      party_value[Party.INDEX_STATUS],
                      party_value[Party.INDEX_MEMBER_COUNT],
+                     party_value[Party.INDEX_MAX_MEMBER_COUNT],
                      party_value[Party.INDEX_WEEKDAY],
                      party_value[Party.INDEX_HOUR],
                      party_value[Party.INDEX_MINUTE],
@@ -147,7 +150,7 @@ class Party:
                      party_value[Party.INDEX_CHECK_IN_MESSAGE_ID])
 
     @staticmethod
-    def new_party(role_id: int, boss_name: str, difficulty: str, party_number: int):
+    def new_party(role_id: int, boss_name: str, difficulty: str, party_number: int, max_member_count: str):
         new_sheets_party = Party.from_sheets_value([])
         new_sheets_party.role_id = str(role_id)
         new_sheets_party.boss_name = boss_name
@@ -155,6 +158,7 @@ class Party:
         new_sheets_party.party_number = str(party_number)
         new_sheets_party.status = Party.PartyStatus.new
         new_sheets_party.member_count = "0"
+        new_sheets_party.max_member_count = max_member_count
         return new_sheets_party
 
     def __str__(self):
@@ -182,6 +186,7 @@ class Party:
                 str(self.party_number),
                 self.status.value,
                 str(self.member_count),
+                str(self.max_member_count),
                 str(self.weekday),
                 str(self.hour),
                 str(self.minute),
@@ -399,7 +404,7 @@ class BossingSheets:
 
         body = {'values': list(map(party_to_sheets_values, new_sheets_parties))}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                                                            range=self.RANGE_PARTIES, valueInputOption="RAW",
+                                                            range=self.RANGE_PARTIES, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
         self.__parties = new_sheets_parties
 
@@ -412,7 +417,7 @@ class BossingSheets:
 
         body = {'values': list(map(member_to_sheets_values, new_sheets_members))}
         sheets.get_service().spreadsheets().values().append(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                                                            range=self.RANGE_MEMBERS, valueInputOption="RAW",
+                                                            range=self.RANGE_MEMBERS, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
 
         self.__members += new_sheets_members
@@ -464,5 +469,5 @@ class BossingSheets:
 
         body = {'values': list(map(no_show_to_sheets_values, no_shows))}
         sheets.get_service().spreadsheets().values().append(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
-                                                            range=self.RANGE_NO_SHOWS, valueInputOption="RAW",
+                                                            range=self.RANGE_NO_SHOWS, valueInputOption="USER_ENTERED",
                                                             body=body).execute()

@@ -260,7 +260,8 @@ class Bossing:
             raise Exception(f'Error - {discord_party.mention} is retired.')
 
         # Check if the party is already full
-        if sheets_party.status != SheetsParty.PartyStatus.fill and sheets_party.member_count == '6':
+        if sheets_party.status != SheetsParty.PartyStatus.lfg and sheets_party.status != SheetsParty.PartyStatus.fill and int(
+                sheets_party.member_count) == int(sheets_party.max_member_count):
             raise Exception(f'Error - {discord_party.mention} is full.')
 
         # Check if the user is already in the party
@@ -489,6 +490,8 @@ class Bossing:
                              ephemeral=True)
             return
 
+        max_member_count = self.sheets_bossing.bosses_dict[boss_name].difficulties[difficulty].max_member_count
+
         async with self.lock:
             new_party_boss_index = self.sheets_bossing.get_boss_names().index(boss_name)
             sheets_parties: list[SheetsParty] = self.sheets_bossing.parties
@@ -507,7 +510,8 @@ class Bossing:
                             mentionable=True)
                         await new_boss_party.edit(
                             position=interaction.guild.get_role(int(sheets_party.role_id)).position)
-                        new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
+                        new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number,
+                                                                 max_member_count)
                         sheets_parties.insert(sheets_parties_index, new_sheets_party)
                         break
                     else:
@@ -522,7 +526,8 @@ class Bossing:
                         mentionable=True)
                     await new_boss_party.edit(
                         position=interaction.guild.get_role(int(sheets_party.role_id)).position)
-                    new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
+                    new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number,
+                                                             max_member_count)
                     sheets_parties.insert(sheets_parties_index, new_sheets_party)
                     break
 
@@ -536,7 +541,8 @@ class Bossing:
                         boss_name].get_role_colour(), mentionable=True)
                 await new_boss_party.edit(
                     position=interaction.guild.get_role(int(sheets_parties[-1].role_id)).position - 1)
-                new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number)
+                new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number,
+                                                         max_member_count)
                 sheets_parties.append(new_sheets_party)
 
             # Update spreadsheet
@@ -935,6 +941,12 @@ class Bossing:
                 await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
                 return
 
+            if sheets_party.difficulty == difficulty:
+                await self._send(interaction,
+                                 f'Error - <@&{sheets_party.role_id}> difficulty is already `{difficulty}`.',
+                                 ephemeral=True)
+                return
+
             if len(self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties) > 1:
                 if difficulty not in self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties.keys():
                     await self._send(interaction,
@@ -948,8 +960,17 @@ class Bossing:
                                  ephemeral=True)
                 return
 
+            new_max_member_count = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
+                difficulty].max_member_count
+            if int(sheets_party.member_count) > int(new_max_member_count):
+                await self._send(interaction,
+                                 f'Error - Party member count exceeds `{difficulty}{sheets_party.boss_name}` max member count of {new_max_member_count}.',
+                                 ephemeral=True)
+                return
+
             # Update party sheet
             sheets_party.difficulty = difficulty
+            sheets_party.max_member_count = new_max_member_count
             # Update role name
             discord_party = await discord_party.edit(
                 name=f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
@@ -1127,7 +1148,7 @@ class Bossing:
         for sheets_member in party_sheets_members:
             message_content += f'<@{sheets_member.user_id}> *{sheets_member.job}*\n'
         if sheets_party.status == SheetsParty.PartyStatus.open or sheets_party.status == SheetsParty.PartyStatus.new:
-            for n in range(0, 6 - int(sheets_party.member_count)):
+            for n in range(0, int(sheets_party.max_member_count) - int(sheets_party.member_count)):
                 message_content += 'Open\n'
         elif sheets_party.status == SheetsParty.PartyStatus.lfg and len(party_sheets_members) == 0:
             message_content += '*No members looking for group at this time*'
@@ -1153,7 +1174,7 @@ class Bossing:
         else:
             if sheets_party.status == SheetsParty.PartyStatus.new:
                 title += 'New'
-            elif sheets_party.status == SheetsParty.PartyStatus.exclusive or sheets_party.status == SheetsParty.PartyStatus.open and sheets_party.member_count == '6':
+            elif sheets_party.status == SheetsParty.PartyStatus.exclusive or sheets_party.status == SheetsParty.PartyStatus.open and sheets_party.member_count == sheets_party.max_member_count:
                 title += 'Full'
             else:
                 title += 'Open'
