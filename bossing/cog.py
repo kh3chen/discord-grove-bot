@@ -85,7 +85,7 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         @app_commands.command(name='retire', description='Retire a party, removing all of its party members')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def retire(self, interaction: discord.Interaction, boss_party_role: discord.Role):
-            await interaction.response.defer()
+            await interaction.response.defer(ephemeral=True)
             await bossing.retire(interaction, boss_party_role)
 
         @app_commands.command(name='difficulty',
