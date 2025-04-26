@@ -548,8 +548,8 @@ class Bossing:
             sheets_parties = self.sheets_bossing.parties
             for sheets_party in sheets_parties:
                 if sheets_party.role_id == str(new_boss_party.id):
-                    sheets_party.party_thread_id = party_thread_with_message.thread.id
-                    sheets_party.party_message_id = party_thread_with_message.message.id
+                    sheets_party.party_thread_id = str(party_thread_with_message.thread.id)
+                    sheets_party.party_message_id = str(party_thread_with_message.message.id)
                     break
             self.sheets_bossing.update_parties(sheets_parties)
 
