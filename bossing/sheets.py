@@ -40,12 +40,13 @@ class Boss:
 
 
 class Difficulty:
-    LENGTH = 4
+    LENGTH = 5
 
     INDEX_BOSS_NAME = 0
     INDEX_DIFFICULTY = 1
-    INDEX_LFG_ROLE_ID = 2
-    INDEX_FILL_ROLE_ID = 3
+    INDEX_MAX_MEMBER_COUNT = 2
+    INDEX_LFG_ROLE_ID = 3
+    INDEX_FILL_ROLE_ID = 4
 
     def __init__(self, difficulties_value):
         difficulties_value = difficulties_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(difficulties_value))
@@ -295,7 +296,7 @@ class BossingSheets:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:E'
-    RANGE_DIFFICULTIES = 'Difficulties!A2:D'
+    RANGE_DIFFICULTIES = 'Difficulties!A2:E'
     RANGE_PARTIES = 'Parties!A2:N'
     RANGE_MEMBERS = 'Members!A2:E'
     RANGE_NO_SHOWS = 'No Shows!A2:E'
