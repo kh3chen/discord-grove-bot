@@ -172,7 +172,6 @@ class Party:
             name = name + ' (Retired)'
         return name
 
-
     def to_sheets_value(self):
         return [str(self.role_id),
                 str(self.boss_name),
@@ -196,6 +195,11 @@ class Party:
         weekday = Party.Weekday[self.weekday].value
         hour = int(self.hour)
         minute = int(self.minute)
+
+        return Party.next_party_scheduled_time(weekday, hour, minute)
+
+    @staticmethod
+    def next_party_scheduled_time(weekday: int, hour: int, minute: int):
         now = datetime.now(timezone.utc)
         if now.isoweekday() == weekday:
             if now.hour > hour or now.hour == hour and now.minute > minute:

@@ -94,7 +94,9 @@ class Bossing:
 
                 for reaction in check_in_message.reactions:
                     if str(reaction.emoji) == '🔔':
-                        reacted_reminder_users = list(filter(lambda user: user.id != config.GROVE_BOT_USER_ID, map(lambda user: user, [user async for user in reaction.users()])))
+                        reacted_reminder_users = list(filter(lambda user: user.id != config.GROVE_BOT_USER_ID,
+                                                             map(lambda user: user,
+                                                                 [user async for user in reaction.users()])))
                         timestamp = sheets_party.next_scheduled_time()
                         if len(reacted_reminder_users) > 0 and timestamp:
                             reminder_message_content = f'🔔 You have an upcoming **{sheets_party.name()}** boss run <t:{timestamp}:R>.\n'
@@ -120,7 +122,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(message, sheets_party)
+                await self.update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread
@@ -304,7 +306,7 @@ class Bossing:
             # Update bossing list message
             bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-            await self.__update_boss_party_list_message(message, sheets_party)
+            await self.update_boss_party_list_message(message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
@@ -435,7 +437,7 @@ class Bossing:
             # Update bossing list message
             bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-            await self.__update_boss_party_list_message(message, sheets_party)
+            await self.update_boss_party_list_message(message, sheets_party)
 
         if not silent:
             if sheets_party.party_thread_id:
@@ -593,6 +595,15 @@ class Bossing:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
     async def __settime(self, interaction, sheets_party: SheetsParty, weekday_str, hour, minute):
+        if sheets_party.status == SheetsParty.PartyStatus.retired:
+            await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
+            return
+
+        if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+            await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.',
+                             ephemeral=True)
+            return
+
         try:
             weekday = SheetsParty.Weekday[weekday_str.lower()]
         except KeyError:
@@ -609,45 +620,66 @@ class Bossing:
             await self._send(interaction, 'Error - Invalid minute. Minute must be from 0-59.', ephemeral=True)
             return
 
-        async with self.lock:
-            sheets_parties = self.sheets_bossing.parties
+        # Confirmation
+        timestamp = SheetsParty.next_party_scheduled_time(weekday.value, hour, minute)
+        confirmation_message = f'Please confirm the following new time: <t:{timestamp}:F>'
 
-            if sheets_party.status == SheetsParty.PartyStatus.retired:
-                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
-                return
+        class Buttons(discord.ui.View):
+            def __init__(self, *, timeout=180):
+                super().__init__(timeout=timeout)
+                self.message = None
+                self.interacted = False
 
-            if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
-                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.', ephemeral=True)
-                return
+            async def on_timeout(self) -> None:
+                if not self.interacted:
+                    await self.message.edit(view=None)
+                    await interaction.followup.send('Error - Your command has timed out.', ephemeral=True)
 
-            sheets_party.weekday = weekday.name
-            sheets_party.hour = str(hour)
-            sheets_party.minute = str(minute)
-            sheets_party.check_in_message_id = ''
-            self.sheets_bossing.update_parties(sheets_parties)
-            self._restart_service()
-            timestamp = sheets_party.next_scheduled_time()
+            @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+            async def green_button(_self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                _self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                async with self.lock:
+                    sheets_parties = self.sheets_bossing.parties
 
-            message_content = f'Set <@&{sheets_party.role_id}> time to {weekday.name} at +{hour}:{minute:02d}.\n'
-            message_content += f'Next run: <t:{timestamp}:F>'
-            await self._send(interaction, message_content, ephemeral=True)
+                    sheets_party.weekday = weekday.name
+                    sheets_party.hour = str(hour)
+                    sheets_party.minute = str(minute)
+                    sheets_party.check_in_message_id = ''
+                    self.sheets_bossing.update_parties(sheets_parties)
+                    self._restart_service()
+                    timestamp = sheets_party.next_scheduled_time()
 
-            if sheets_party.boss_list_message_id:
-                # Update bossing list message
-                bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
-                message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(message, sheets_party)
+                    message_content = f'Set <@&{sheets_party.role_id}> time to {weekday.name} at +{hour}:{minute:02d}.\n'
+                    message_content += f'Next run: <t:{timestamp}:F>'
+                    await self._send(interaction, message_content, ephemeral=True)
 
-            if sheets_party.party_thread_id:
-                # Update thread title, message, and send update in party thread
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                if sheets_party.party_message_id:
-                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
-                else:
-                    party_message = None
-                await self._update_thread(party_thread, party_message, sheets_party)
-                await party_thread.send(
-                    f'<@&{sheets_party.role_id}> time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
+                    if sheets_party.boss_list_message_id:
+                        # Update bossing list message
+                        bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
+                        message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
+                        await self.update_boss_party_list_message(message, sheets_party)
+
+                    if sheets_party.party_thread_id:
+                        # Update thread title, message, and send update in party thread
+                        party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                        if sheets_party.party_message_id:
+                            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                        else:
+                            party_message = None
+                        await self._update_thread(party_thread, party_message, sheets_party)
+                        await party_thread.send(
+                            f'<@&{sheets_party.role_id}> time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
+
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+            async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                await interaction.followup.send(f'<@&{sheets_party.role_id}> set time has been cancelled.',
+                                                ephemeral=True)
+
+        buttons_view = Buttons()
+        buttons_view.message = await interaction.followup.send(confirmation_message, view=buttons_view, ephemeral=True)
 
     async def mod_cleartime(self, interaction, discord_party):
         sheets_parties = self.sheets_bossing.parties
@@ -705,7 +737,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(message, sheets_party)
+                await self.update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -872,7 +904,7 @@ class Bossing:
                 # Update bossing list message
                 bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
                 message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
-                await self.__update_boss_party_list_message(message, sheets_party)
+                await self.update_boss_party_list_message(message, sheets_party)
 
             if sheets_party.party_thread_id:
                 # Update thread title, message, and send update in party thread
@@ -1028,7 +1060,7 @@ class Bossing:
                 f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
             sheets_party.boss_list_message_id = str(message.id)
 
-            await self.__update_boss_party_list_message(message, sheets_party)
+            await self.update_boss_party_list_message(message, sheets_party)
 
         etiquette_message = ('_ _'
                              '\n# Bossing etiquette'
@@ -1078,7 +1110,7 @@ class Bossing:
 
         self.sheets_bossing.update_parties(new_sheets_parties)
 
-    async def __update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty):
+    async def update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty):
         party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
         message_content = self.__get_boss_party_list_message(sheets_party, party_sheets_members)
         await message.edit(content=message_content)
