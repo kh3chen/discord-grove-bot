@@ -51,6 +51,7 @@ class Difficulty:
     def __init__(self, difficulties_value):
         difficulties_value = difficulties_value[:Boss.LENGTH] + [''] * (Boss.LENGTH - len(difficulties_value))
         self.difficulty = difficulties_value[Difficulty.INDEX_DIFFICULTY]
+        self.max_member_count = difficulties_value[Difficulty.INDEX_MAX_MEMBER_COUNT]
         self.lfg_role_id = difficulties_value[Difficulty.INDEX_LFG_ROLE_ID]
         self.fill_role_id = difficulties_value[Difficulty.INDEX_FILL_ROLE_ID]
 
@@ -62,7 +63,7 @@ class Difficulty:
 
 
 class Party:
-    LENGTH = 14
+    LENGTH = 15
 
     INDEX_ROLE_ID = 0
     INDEX_BOSS_NAME = 1
@@ -70,14 +71,15 @@ class Party:
     INDEX_PARTY_NUMBER = 3
     INDEX_STATUS = 4
     INDEX_MEMBER_COUNT = 5
-    INDEX_WEEKDAY = 6
-    INDEX_HOUR = 7
-    INDEX_MINUTE = 8
-    INDEX_PARTY_THREAD_ID = 9
-    INDEX_PARTY_MESSAGE_ID = 10
-    INDEX_BOSS_LIST_MESSAGE_ID = 11
-    INDEX_BOSS_LIST_DECORATOR_ID = 12
-    INDEX_CHECK_IN_MESSAGE_ID = 13
+    INDEX_MAX_MEMBER_COUNT = 6
+    INDEX_WEEKDAY = 7
+    INDEX_HOUR = 8
+    INDEX_MINUTE = 9
+    INDEX_PARTY_THREAD_ID = 10
+    INDEX_PARTY_MESSAGE_ID = 11
+    INDEX_BOSS_LIST_MESSAGE_ID = 12
+    INDEX_BOSS_LIST_DECORATOR_ID = 13
+    INDEX_CHECK_IN_MESSAGE_ID = 14
 
     class PartyStatus(Enum):
         new = "new"
@@ -297,7 +299,7 @@ class BossingSheets:
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:E'
     RANGE_DIFFICULTIES = 'Difficulties!A2:E'
-    RANGE_PARTIES = 'Parties!A2:N'
+    RANGE_PARTIES = 'Parties!A2:O'
     RANGE_MEMBERS = 'Members!A2:E'
     RANGE_NO_SHOWS = 'No Shows!A2:E'
 
