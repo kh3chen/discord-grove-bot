@@ -61,7 +61,7 @@ class BirthdayService:
 
         while len(events) > 0:
             # Sleep until next event
-            print(f'Next 5 events: {events[0:5]}')
+            print(f'Next 5 birthday events: {events[0:5]}')
             now = datetime.now()
             sleep_duration = events[0].timestamp - int(now.timestamp())
             if sleep_duration > 0:

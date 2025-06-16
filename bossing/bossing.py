@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from functools import reduce
 
 import discord
@@ -144,7 +145,7 @@ class Bossing:
                     party_members_not_reacted = filter(
                         lambda member: member.user_id not in reacted and member.user_id not in away,
                         self.sheets_bossing.members_dict[sheets_party.role_id])
-                    no_shows = list(map(lambda member: SheetsNoShow(int(sheets_party.next_scheduled_time()) - 604800,
+                    no_shows = list(map(lambda member: SheetsNoShow(sheets_party.next_scheduled_time() - 604800,
                                                                     member.user_id,
                                                                     sheets_party.role_id,
                                                                     sheets_party.boss_name,
@@ -568,7 +569,7 @@ class Bossing:
             # Remake bossing party list
             await self.__remake_boss_party_list(interaction)
 
-    async def mod_settime(self, interaction, discord_party, weekday_str, hour, minute):
+    async def mod_set_recurring_time(self, interaction, discord_party, weekday_str, hour, minute):
         sheets_parties = self.sheets_bossing.parties
         try:
             sheets_party = next(
@@ -579,9 +580,10 @@ class Bossing:
                              ephemeral=True)
             return
 
-        await self.__settime(interaction, sheets_party, weekday_str, hour, minute)
+        await self._send(interaction, f'<#{sheets_party.party_thread_id}>', ephemeral=True)
+        await self.__set_recurring_time(interaction, sheets_party, weekday_str, hour, minute)
 
-    async def user_settime(self, interaction: discord.Interaction, weekday_str, hour, minute):
+    async def user_set_recurring_time(self, interaction: discord.Interaction, weekday_str, hour, minute):
         # Get boss party role associated with the thread this command was sent from
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -596,11 +598,11 @@ class Bossing:
             next(
                 sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
                 sheets_member.user_id == str(interaction.user.id))
-            await self.__settime(interaction, sheets_party, weekday_str, hour, minute)
+            await self.__set_recurring_time(interaction, sheets_party, weekday_str, hour, minute)
         except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
-    async def __settime(self, interaction, sheets_party: SheetsParty, weekday_str, hour, minute):
+    async def __set_recurring_time(self, interaction, sheets_party: SheetsParty, weekday_str, hour, minute):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
             await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
             return
@@ -627,8 +629,8 @@ class Bossing:
             return
 
         # Confirmation
-        timestamp = SheetsParty.next_party_scheduled_time(weekday.value, hour, minute)
-        confirmation_message = f'Please confirm the following new time: <t:{timestamp}:F>'
+        timestamp = SheetsParty.next_party_recurring_time(weekday.value, hour, minute)
+        confirmation_message = f'Please confirm the following new recurring time: <t:{timestamp}:F>'
 
         class Buttons(discord.ui.View):
             def __init__(self, *, timeout=180):
@@ -656,10 +658,6 @@ class Bossing:
                     self._restart_service()
                     timestamp = sheets_party.next_scheduled_time()
 
-                    message_content = f'Set <@&{sheets_party.role_id}> time to {weekday.name} at +{hour}:{minute:02d}.\n'
-                    message_content += f'Next run: <t:{timestamp}:F>'
-                    await self._send(interaction, message_content, ephemeral=True)
-
                     if sheets_party.boss_list_message_id:
                         # Update bossing list message
                         bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
@@ -681,13 +679,13 @@ class Bossing:
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
                 self.interacted = True
                 await button_interaction.response.edit_message(view=None)
-                await interaction.followup.send(f'<@&{sheets_party.role_id}> set time has been cancelled.',
+                await interaction.followup.send(f'<@&{sheets_party.role_id}> set recurring time has been cancelled.',
                                                 ephemeral=True)
 
         buttons_view = Buttons()
         buttons_view.message = await interaction.followup.send(confirmation_message, view=buttons_view, ephemeral=True)
 
-    async def mod_cleartime(self, interaction, discord_party):
+    async def mod_clear_recurring_time(self, interaction, discord_party):
         sheets_parties = self.sheets_bossing.parties
         try:
             sheets_party = next(
@@ -698,9 +696,10 @@ class Bossing:
                              ephemeral=True)
             return
 
-        await self.__cleartime(interaction, sheets_party)
+        await self._send(interaction, f'<#{sheets_party.party_thread_id}>', ephemeral=True)
+        await self.__clear_recurring_time(interaction, sheets_party)
 
-    async def user_cleartime(self, interaction: discord.Interaction):
+    async def user_clear_recurring_time(self, interaction: discord.Interaction):
         # Get boss party role associated with the thread this command was sent from
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -714,11 +713,11 @@ class Bossing:
         try:
             next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
                  sheets_member.user_id == str(interaction.user.id))
-            await self.__cleartime(interaction, sheets_party)
+            await self.__clear_recurring_time(interaction, sheets_party)
         except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
-    async def __cleartime(self, interaction, sheets_party: SheetsParty):
+    async def __clear_recurring_time(self, interaction, sheets_party: SheetsParty):
         async with self.lock:
             sheets_parties = self.sheets_bossing.parties
 
@@ -737,7 +736,178 @@ class Bossing:
             self.sheets_bossing.update_parties(sheets_parties)
             self._restart_service()
 
-            await self._send(interaction, f'Cleared <@&{sheets_party.role_id}> time.', ephemeral=True)
+            if sheets_party.boss_list_message_id:
+                # Update bossing list message
+                bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
+                message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
+                await self.update_boss_party_list_message(message, sheets_party)
+
+            if sheets_party.party_thread_id:
+                # Update thread title, message, and send update in party thread
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                if sheets_party.party_message_id:
+                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                else:
+                    party_message = None
+                await self._update_thread(party_thread, party_message, sheets_party)
+                message_content = f'<@&{sheets_party.role_id}> recurring time has been cleared.'
+                timestamp = sheets_party.next_scheduled_time()
+                if timestamp:
+                    message_content += f'Next run: <t:{timestamp}:F>'
+                await party_thread.send(message_content)
+
+    async def mod_set_one_time(self, interaction, discord_party, timestamp: int):
+        sheets_parties = self.sheets_bossing.parties
+        try:
+            sheets_party = next(
+                sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
+        except StopIteration:
+            await self._send(interaction,
+                             f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                             ephemeral=True)
+            return
+
+        await self._send(interaction, f'<#{sheets_party.party_thread_id}>', ephemeral=True)
+        await self.__set_one_time(interaction, sheets_party, timestamp)
+
+    async def user_set_one_time(self, interaction: discord.Interaction, timestamp):
+        # Get boss party role associated with the thread this command was sent from
+        try:
+            sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                sheets_party.party_thread_id == str(interaction.channel_id))
+        except StopIteration:
+            await self._send(interaction,
+                             f'Error - This command can only be used in a boss party thread.',
+                             ephemeral=True)
+            return
+
+        try:
+            next(
+                sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                sheets_member.user_id == str(interaction.user.id))
+            await self.__set_one_time(interaction, sheets_party, timestamp)
+        except StopIteration:
+            await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
+
+    async def __set_one_time(self, interaction, sheets_party: SheetsParty, one_time_timestamp: int):
+        if sheets_party.status == SheetsParty.PartyStatus.retired:
+            await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
+            return
+
+        if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+            await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.',
+                             ephemeral=True)
+            return
+
+        now = int(datetime.timestamp(datetime.now()))
+        if one_time_timestamp < now:
+            await self._send(interaction, f'Error - <t:{one_time_timestamp}:F> is in the past.'
+                                          f'\nhttps://www.unixtimestamp.com/', ephemeral=True)
+            return
+
+        # Confirmation
+        confirmation_message = f'Please confirm the following one-time scheduled run: <t:{one_time_timestamp}:F>'
+        confirmation_message += f'\nhttps://www.unixtimestamp.com/'
+
+        class Buttons(discord.ui.View):
+            def __init__(self, *, timeout=180):
+                super().__init__(timeout=timeout)
+                self.message = None
+                self.interacted = False
+
+            async def on_timeout(self) -> None:
+                if not self.interacted:
+                    await self.message.edit(view=None)
+                    await interaction.followup.send('Error - Your command has timed out.', ephemeral=True)
+
+            @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
+            async def green_button(_self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                _self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                async with self.lock:
+                    sheets_parties = self.sheets_bossing.parties
+
+                    sheets_party.one_time = str(one_time_timestamp)
+                    sheets_party.check_in_message_id = ''
+                    self.sheets_bossing.update_parties(sheets_parties)
+                    self._restart_service()
+                    timestamp = sheets_party.next_scheduled_time()
+
+                    if sheets_party.boss_list_message_id:
+                        # Update bossing list message
+                        bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
+                        message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
+                        await self.update_boss_party_list_message(message, sheets_party)
+
+                    if sheets_party.party_thread_id:
+                        # Update thread title, message, and send update in party thread
+                        party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                        if sheets_party.party_message_id:
+                            party_message = await party_thread.fetch_message(sheets_party.party_message_id)
+                        else:
+                            party_message = None
+                        await self._update_thread(party_thread, party_message, sheets_party)
+                        await party_thread.send(
+                            f'<@&{sheets_party.role_id}> a one-time scheduled run has been set for <t:{one_time_timestamp}:F>.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
+
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+            async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                self.interacted = True
+                await button_interaction.response.edit_message(view=None)
+                await interaction.followup.send(f'<@&{sheets_party.role_id}> set one-time has been cancelled.',
+                                                ephemeral=True)
+
+        buttons_view = Buttons()
+        buttons_view.message = await interaction.followup.send(confirmation_message, view=buttons_view, ephemeral=True)
+
+    async def mod_clear_one_time(self, interaction, discord_party):
+        sheets_parties = self.sheets_bossing.parties
+        try:
+            sheets_party = next(
+                sheets_party for sheets_party in sheets_parties if sheets_party.role_id == str(discord_party.id))
+        except StopIteration:
+            await self._send(interaction,
+                             f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                             ephemeral=True)
+            return
+
+        await self._send(interaction, f'<#{sheets_party.party_thread_id}>', ephemeral=True)
+        await self.__clear_one_time(interaction, sheets_party)
+
+    async def user_clear_one_time(self, interaction: discord.Interaction):
+        # Get boss party role associated with the thread this command was sent from
+        try:
+            sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                sheets_party.party_thread_id == str(interaction.channel_id))
+        except StopIteration:
+            await self._send(interaction,
+                             f'Error - This command can only be used in a boss party thread.',
+                             ephemeral=True)
+            return
+
+        try:
+            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                 sheets_member.user_id == str(interaction.user.id))
+            await self.__clear_one_time(interaction, sheets_party)
+        except StopIteration:
+            await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
+
+    async def __clear_one_time(self, interaction, sheets_party: SheetsParty):
+        async with self.lock:
+            sheets_parties = self.sheets_bossing.parties
+
+            if sheets_party.status == SheetsParty.PartyStatus.retired:
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.')
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.')
+                return
+
+            sheets_party.one_time = ''
+            sheets_party.check_in_message_id = ''
+            self.sheets_bossing.update_parties(sheets_parties)
+            self._restart_service()
 
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -753,7 +923,11 @@ class Bossing:
                 else:
                     party_message = None
                 await self._update_thread(party_thread, party_message, sheets_party)
-                await party_thread.send(f'<@&{sheets_party.role_id}> time has been cleared.')
+                message_content = f'<@&{sheets_party.role_id}> one-time scheduled run has been cleared.'
+                timestamp = sheets_party.next_scheduled_time()
+                if timestamp:
+                    message_content += f'Next run: <t:{timestamp}:F>'
+                await party_thread.send(message_content)
 
     async def retire(self, interaction, discord_party):
         # Validate that this is a bossing party role

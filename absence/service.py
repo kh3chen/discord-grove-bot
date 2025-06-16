@@ -20,9 +20,8 @@ class AbsenceService:
         self.absence_task = asyncio.create_task(self.service_loop(sheets_absences))
 
     async def service_loop(self, sheets_absences: list[SheetsAbsence]):
-        print(sheets_absences)
         sorted_sheets_absences = sorted(sheets_absences, key=lambda a: a.timestamp)
-        print(sorted_sheets_absences)
+        print(f'Absence events: {sorted_sheets_absences}')
         for sheets_absence in sorted_sheets_absences:
             # Sleep until next event
             now = int(datetime.timestamp(datetime.now()))

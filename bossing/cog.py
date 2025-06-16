@@ -47,23 +47,6 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
 
     class ModBossingPartyGroup(app_commands.Group, name='party', description='Mod bossing party commands'):
 
-        @app_commands.command(name='settime', description='Set the bossing party time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
-        @app_commands.describe(hour='hour relative to reset: [0-23]')
-        @app_commands.describe(minute='minute of the hour: [0-59]')
-        async def settime(self, interaction: discord.Interaction, boss_party_role: discord.Role, weekday: str,
-                          hour: int,
-                          minute: int = 0):
-            await interaction.response.defer(ephemeral=True)
-            await bossing.mod_settime(interaction, boss_party_role, weekday, hour, minute)
-
-        @app_commands.command(name='cleartime', description='Clear the bossing party time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def cleartime(self, interaction: discord.Interaction, boss_party_role: discord.Role):
-            await interaction.response.defer(ephemeral=True)
-            await bossing.mod_cleartime(interaction, boss_party_role)
-
         @app_commands.command(name='new', description='Create a new bossing party')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def new(self, interaction: discord.Interaction, boss_name: str, difficulty: str = ""):
@@ -95,22 +78,71 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
             await interaction.response.defer(ephemeral=True)
             await bossing.difficulty(interaction, boss_party_role, difficulty)
 
+        @app_commands.command(name='settime-recurring', description='Set the recurring bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
+        @app_commands.describe(hour='hour relative to reset: [0-23]')
+        @app_commands.describe(minute='minute of the hour: [0-59]')
+        async def set_recurring(self, interaction: discord.Interaction, boss_party_role: discord.Role, weekday: str,
+                                hour: int,
+                                minute: int = 0):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.mod_set_recurring_time(interaction, boss_party_role, weekday, hour, minute)
 
-class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
+        @app_commands.command(name='cleartime-recurring', description='Clear the recurring bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def clear_recurring(self, interaction: discord.Interaction, boss_party_role: discord.Role):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.mod_clear_recurring_time(interaction, boss_party_role)
 
-    @app_commands.command(name='settime', description='Set the bossing party time')
-    @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
-    @app_commands.describe(hour='hour relative to reset: [0-23]')
-    @app_commands.describe(minute='minute of the hour: [0-59]')
-    async def settime(self, interaction: discord.Interaction, weekday: str, hour: int,
-                      minute: int = 0):
-        await interaction.response.defer(ephemeral=True)
-        await bossing.user_settime(interaction, weekday, hour, minute)
+        @app_commands.command(name='settime-one', description='Set the one-time bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        @app_commands.describe(timestamp='Unix time in seconds')
+        async def set_one_time(self, interaction: discord.Interaction, boss_party_role: discord.Role, timestamp: int):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.mod_set_one_time(interaction, boss_party_role, timestamp)
 
-    @app_commands.command(name='cleartime', description='Clear the bossing party time')
-    async def cleartime(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        await bossing.user_cleartime(interaction)
+        @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def clear_one_time(self, interaction: discord.Interaction, boss_party_role: discord.Role):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.mod_clear_one_time(interaction, boss_party_role)
+
+
+class UserBossingGroup(app_commands.Group, name='bossing', description='Bossing commands'):
+
+    def __init__(self):
+        super().__init__()
+        self.add_command(UserBossingGroup.UserBossingPartyGroup())
+
+    class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
+
+        @app_commands.command(name='settime-recurring', description='Set the recurring bossing party time')
+        @app_commands.describe(weekday='day of week: [ mon | tue | wed | thu | fri | sat | sun ]')
+        @app_commands.describe(hour='hour relative to reset: [0-23]')
+        @app_commands.describe(minute='minute of the hour: [0-59]')
+        async def set_recurring(self, interaction: discord.Interaction, weekday: str, hour: int,
+                                minute: int = 0):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.user_set_recurring_time(interaction, weekday, hour, minute)
+
+        @app_commands.command(name='cleartime-recurring', description='Clear the recurring bossing party time')
+        async def clear_recurring(self, interaction: discord.Interaction):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.user_clear_recurring_time(interaction)
+
+        @app_commands.command(name='settime-one', description='Set the one-time bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        @app_commands.describe(timestamp='Unix time in seconds')
+        async def set_one_time(self, interaction: discord.Interaction, timestamp: int):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.user_set_one_time(interaction, timestamp)
+
+        @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def clear_one_time(self, interaction: discord.Interaction):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.user_clear_one_time(interaction)
 
 
 class BossingCog(commands.Cog):
@@ -118,8 +150,7 @@ class BossingCog(commands.Cog):
         self.bot = bot
 
     mod_bossing = ModBossingGroup()
-    bossing = app_commands.Group(name='bossing', description='Bossing commands')
-    bossing.add_command(UserBossingPartyGroup())
+    user_bossing = UserBossingGroup()
 
     @commands.Cog.listener()
     async def on_ready(self):

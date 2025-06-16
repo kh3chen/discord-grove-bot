@@ -6,7 +6,9 @@ from enum import Enum
 from googleapiclient.errors import HttpError
 
 import config
+from member.common import thursday
 from utils import sheets
+from utils.constants import SEVEN_DAYS_IN_SECONDS
 
 
 class Boss:
@@ -63,7 +65,7 @@ class Difficulty:
 
 
 class Party:
-    LENGTH = 15
+    LENGTH = 16
 
     INDEX_ROLE_ID = 0
     INDEX_BOSS_NAME = 1
@@ -75,11 +77,12 @@ class Party:
     INDEX_WEEKDAY = 7
     INDEX_HOUR = 8
     INDEX_MINUTE = 9
-    INDEX_PARTY_THREAD_ID = 10
-    INDEX_PARTY_MESSAGE_ID = 11
-    INDEX_BOSS_LIST_MESSAGE_ID = 12
-    INDEX_BOSS_LIST_DECORATOR_ID = 13
-    INDEX_CHECK_IN_MESSAGE_ID = 14
+    INDEX_ONE_TIME = 10
+    INDEX_PARTY_THREAD_ID = 11
+    INDEX_PARTY_MESSAGE_ID = 12
+    INDEX_BOSS_LIST_MESSAGE_ID = 13
+    INDEX_BOSS_LIST_DECORATOR_ID = 14
+    INDEX_CHECK_IN_MESSAGE_ID = 15
 
     class PartyStatus(Enum):
         new = "new"
@@ -109,6 +112,7 @@ class Party:
                  weekday,
                  hour,
                  minute,
+                 one_time,
                  party_thread_id,
                  party_message_id,
                  boss_list_message_id,
@@ -124,6 +128,7 @@ class Party:
         self.weekday = str(weekday)
         self.hour = str(hour)
         self.minute = str(minute)
+        self.one_time = str(one_time)
         self.party_thread_id = str(party_thread_id)
         self.party_message_id = str(party_message_id)
         self.boss_list_message_id = str(boss_list_message_id)
@@ -143,6 +148,7 @@ class Party:
                      party_value[Party.INDEX_WEEKDAY],
                      party_value[Party.INDEX_HOUR],
                      party_value[Party.INDEX_MINUTE],
+                     party_value[Party.INDEX_ONE_TIME],
                      party_value[Party.INDEX_PARTY_THREAD_ID],
                      party_value[Party.INDEX_PARTY_MESSAGE_ID],
                      party_value[Party.INDEX_BOSS_LIST_MESSAGE_ID],
@@ -190,36 +196,59 @@ class Party:
                 str(self.weekday),
                 str(self.hour),
                 str(self.minute),
+                str(self.one_time),
                 str(self.party_thread_id),
                 str(self.party_message_id),
                 str(self.boss_list_message_id),
                 str(self.boss_list_decorator_id),
                 str(self.check_in_message_id)]
 
-    def next_scheduled_time(self):
-        if not self.weekday or not self.hour or not self.minute:
-            return ''
+    def next_scheduled_time(self) -> int:
+        next_recurring_time = 0
+        one_time = int(self.one_time or 0)
 
-        weekday = Party.Weekday[self.weekday].value
-        hour = int(self.hour)
-        minute = int(self.minute)
+        if self.weekday and self.hour and self.minute:
+            weekday = Party.Weekday[self.weekday].value
+            hour = int(self.hour)
+            minute = int(self.minute)
+            next_recurring_time = Party.next_party_recurring_time(weekday, hour, minute)
 
-        return Party.next_party_scheduled_time(weekday, hour, minute)
+        now = int(datetime.timestamp(datetime.now()))
+
+        if not one_time:
+            # One-time not set
+            return next_recurring_time
+
+        if not next_recurring_time:
+            if now < one_time:
+                return one_time
+            else:
+                return 0
+
+        if 0 <= one_time - int(
+                datetime.timestamp(thursday(datetime.utcfromtimestamp(next_recurring_time)))) < SEVEN_DAYS_IN_SECONDS:
+            # One-time is this week
+            if now < one_time:
+                return one_time
+            else:
+                return next_recurring_time + SEVEN_DAYS_IN_SECONDS
+        else:
+            return next_recurring_time
 
     @staticmethod
-    def next_party_scheduled_time(weekday: int, hour: int, minute: int):
+    def next_party_recurring_time(weekday: int, hour: int, minute: int) -> int:
         now = datetime.now(timezone.utc)
         if now.isoweekday() == weekday:
             if now.hour > hour or now.hour == hour and now.minute > minute:
                 next_time = (now + timedelta(days=7)).replace(hour=hour, minute=minute, second=0)
-                return str(int(datetime.timestamp(next_time)))
+                return int(datetime.timestamp(next_time))
             else:
                 next_time = now.replace(hour=hour, minute=minute, second=0)
-                return str(int(datetime.timestamp(next_time)))
+                return int(datetime.timestamp(next_time))
         else:
             next_time = (now + timedelta(days=(weekday - now.isoweekday()) % 7)).replace(hour=hour, minute=minute,
                                                                                          second=0)
-            return str(int(datetime.timestamp(next_time)))
+            return int(datetime.timestamp(next_time))
 
 
 class Member:
@@ -304,7 +333,7 @@ class BossingSheets:
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
     RANGE_BOSSES = 'Bosses!A2:E'
     RANGE_DIFFICULTIES = 'Difficulties!A2:E'
-    RANGE_PARTIES = 'Parties!A2:O'
+    RANGE_PARTIES = 'Parties!A2:P'
     RANGE_MEMBERS = 'Members!A2:E'
     RANGE_NO_SHOWS = 'No Shows!A2:E'
 
