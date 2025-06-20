@@ -1,12 +1,11 @@
 import datetime
 
-GUILD_CREATED_ON = datetime.date(2021, 12, 19)
+GUILD_CREATED_ON = datetime.datetime.utcfromtimestamp(1639872000)  # 2021-12-19 0:00 UTC
 
 THURSDAY_WEEKDAY = 3
 
 
-def thursday(date=datetime.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0,
-                                                    tzinfo=datetime.timezone.utc)):
+def thursday(date=datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)):
     return date - datetime.timedelta(days=(date.weekday() - THURSDAY_WEEKDAY) % 7)
 
 
