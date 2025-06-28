@@ -929,6 +929,42 @@ class Bossing:
                     message_content += f'Next run: <t:{timestamp}:F>'
                 await party_thread.send(message_content)
 
+    async def user_get_time(self, interaction: discord.Interaction):
+        # Get boss party role associated with the thread this command was sent from
+        try:
+            sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                sheets_party.party_thread_id == str(interaction.channel_id))
+        except StopIteration:
+            await self._send(interaction,
+                             f'Error - This command can only be used in a boss party thread.',
+                             ephemeral=True)
+            return
+
+        try:
+            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                 sheets_member.user_id == str(interaction.user.id))
+            await self.__get_time(interaction, sheets_party)
+        except StopIteration:
+            await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
+
+    async def __get_time(self, interaction, sheets_party: SheetsParty):
+        async with self.lock:
+            sheets_parties = self.sheets_bossing.parties
+
+            if sheets_party.status == SheetsParty.PartyStatus.retired:
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.')
+                return
+
+            if sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+                await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is not a party.')
+                return
+
+            timestamp = sheets_party.next_scheduled_time()
+
+            message_content = (f'<@&{sheets_party.role_id}>'
+                               f'\n**next run**: <t:{timestamp}:F> <t:{timestamp}:R>')
+            await self._send(interaction, message_content)
+
     async def retire(self, interaction, discord_party):
         # Validate that this is a bossing party role
         try:

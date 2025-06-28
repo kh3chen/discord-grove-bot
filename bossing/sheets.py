@@ -215,25 +215,47 @@ class Party:
 
         now = int(datetime.timestamp(datetime.now()))
 
-        if not one_time:
-            # One-time not set
+        # if not one_time:
+        #     # One-time not set
+        #     return next_recurring_time
+        #
+        # if not next_recurring_time:
+        #     if now < one_time:
+        #         return one_time
+        #     else:
+        #         return 0
+        #
+        # if 0 <= one_time - int(
+        #         datetime.timestamp(thursday(datetime.utcfromtimestamp(next_recurring_time)))) < SEVEN_DAYS_IN_SECONDS:
+        #     # One-time is this week
+        #     if now < one_time:
+        #         return one_time
+        #     else:
+        #         return next_recurring_time + SEVEN_DAYS_IN_SECONDS
+        # else:
+        #     return next_recurring_time
+
+        if not next_recurring_time and (not one_time or now < one_time):
+            # No next time
+            return 0
+        elif not next_recurring_time and one_time >= now:
+            return one_time
+        elif next_recurring_time and not one_time:
             return next_recurring_time
-
-        if not next_recurring_time:
-            if now < one_time:
-                return one_time
-            else:
-                return 0
-
-        if 0 <= one_time - int(
-                datetime.timestamp(thursday(datetime.utcfromtimestamp(next_recurring_time)))) < SEVEN_DAYS_IN_SECONDS:
-            # One-time is this week
-            if now < one_time:
-                return one_time
-            else:
-                return next_recurring_time + SEVEN_DAYS_IN_SECONDS
         else:
-            return next_recurring_time
+            next_recurring_time_thursday = thursday(datetime.utcfromtimestamp(next_recurring_time))
+            one_time_thursday = thursday(datetime.utcfromtimestamp(one_time))
+
+            if now < one_time < next_recurring_time:
+                return one_time
+            elif next_recurring_time_thursday != one_time_thursday:
+                return next_recurring_time
+            else:
+                # Same week
+                if one_time >= now:
+                    return one_time
+                else:
+                    return next_recurring_time + SEVEN_DAYS_IN_SECONDS
 
     @staticmethod
     def next_party_recurring_time(weekday: int, hour: int, minute: int) -> int:
