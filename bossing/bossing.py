@@ -926,10 +926,10 @@ class Bossing:
                 message_content = f'<@&{sheets_party.role_id}> one-time scheduled run has been cleared.'
                 timestamp = sheets_party.next_scheduled_time()
                 if timestamp:
-                    message_content += f'Next run: <t:{timestamp}:F>'
+                    message_content += f'\n**Next run:** <t:{timestamp}:F>'
                 await party_thread.send(message_content)
 
-    async def user_get_time(self, interaction: discord.Interaction):
+    async def user_next_time(self, interaction: discord.Interaction):
         # Get boss party role associated with the thread this command was sent from
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -943,11 +943,11 @@ class Bossing:
         try:
             next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
                  sheets_member.user_id == str(interaction.user.id))
-            await self.__get_time(interaction, sheets_party)
+            await self.__next_time(interaction, sheets_party)
         except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
-    async def __get_time(self, interaction, sheets_party: SheetsParty):
+    async def __next_time(self, interaction, sheets_party: SheetsParty):
         async with self.lock:
             sheets_parties = self.sheets_bossing.parties
 

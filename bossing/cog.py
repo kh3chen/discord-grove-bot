@@ -102,12 +102,6 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
             await interaction.response.defer(ephemeral=True)
             await bossing.mod_set_one_time(interaction, boss_party_role, timestamp)
 
-        @app_commands.command(name='nexttime', description='Get the next party run time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def set_one_time(self, interaction: discord.Interaction):
-            await interaction.response.defer(ephemeral=True)
-            await bossing.user_get_time(interaction)
-
         @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def clear_one_time(self, interaction: discord.Interaction, boss_party_role: discord.Role):
@@ -149,6 +143,12 @@ class UserBossingGroup(app_commands.Group, name='bossing', description='Bossing 
         async def clear_one_time(self, interaction: discord.Interaction):
             await interaction.response.defer(ephemeral=True)
             await bossing.user_clear_one_time(interaction)
+
+        @app_commands.command(name='nexttime', description='Get the next party run time')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def next_time(self, interaction: discord.Interaction):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.user_next_time(interaction)
 
 
 class BossingCog(commands.Cog):
