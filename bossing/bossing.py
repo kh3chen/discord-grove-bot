@@ -962,7 +962,7 @@ class Bossing:
             timestamp = sheets_party.next_scheduled_time()
 
             message_content = (f'<@&{sheets_party.role_id}>'
-                               f'\n**next run**: <t:{timestamp}:F> <t:{timestamp}:R>')
+                               f'\n**Next run**: <t:{timestamp}:F> <t:{timestamp}:R>')
             await self._send(interaction, message_content)
 
     async def retire(self, interaction, discord_party):

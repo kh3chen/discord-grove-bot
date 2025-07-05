@@ -235,7 +235,7 @@ class Party:
         # else:
         #     return next_recurring_time
 
-        if not next_recurring_time and (not one_time or now < one_time):
+        if not next_recurring_time and (not one_time or one_time < now):
             # No next time
             return 0
         elif not next_recurring_time and one_time >= now:
