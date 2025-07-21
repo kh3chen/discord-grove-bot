@@ -132,20 +132,17 @@ class UserBossingGroup(app_commands.Group, name='bossing', description='Bossing 
             await bossing.user_clear_recurring_time(interaction)
 
         @app_commands.command(name='settime-one', description='Set the one-time bossing party time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         @app_commands.describe(timestamp='Unix time in seconds')
         async def set_one_time(self, interaction: discord.Interaction, timestamp: int):
             await interaction.response.defer(ephemeral=True)
             await bossing.user_set_one_time(interaction, timestamp)
 
         @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def clear_one_time(self, interaction: discord.Interaction):
             await interaction.response.defer(ephemeral=True)
             await bossing.user_clear_one_time(interaction)
 
         @app_commands.command(name='nexttime', description='Get the next party run time')
-        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def next_time(self, interaction: discord.Interaction):
             await interaction.response.defer(ephemeral=True)
             await bossing.user_next_time(interaction)
