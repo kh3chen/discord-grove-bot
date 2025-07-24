@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 
 import discord
@@ -756,7 +756,7 @@ class Bossing:
                     message_content += f'Next run: <t:{timestamp}:F>'
                 await party_thread.send(message_content)
 
-    async def mod_set_one_time(self, interaction, discord_party, timestamp: int):
+    async def mod_set_one_time(self, interaction, discord_party, date_str: str, hour: int, minute: int):
         sheets_parties = self.sheets_bossing.parties
         try:
             sheets_party = next(
@@ -768,9 +768,9 @@ class Bossing:
             return
 
         await self._send(interaction, f'<#{sheets_party.party_thread_id}>', ephemeral=True)
-        await self.__set_one_time(interaction, sheets_party, timestamp)
+        await self.__set_one_time(interaction, sheets_party, date_str, hour, minute)
 
-    async def user_set_one_time(self, interaction: discord.Interaction, timestamp):
+    async def user_set_one_time(self, interaction: discord.Interaction, date_str: str, hour: int, minute: int):
         # Get boss party role associated with the thread this command was sent from
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -785,11 +785,11 @@ class Bossing:
             next(
                 sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
                 sheets_member.user_id == str(interaction.user.id))
-            await self.__set_one_time(interaction, sheets_party, timestamp)
+            await self.__set_one_time(interaction, sheets_party, date_str, hour, minute)
         except StopIteration:
             await interaction.followup.send(f'Error - You are not in <@&{sheets_party.role_id}>.')
 
-    async def __set_one_time(self, interaction, sheets_party: SheetsParty, one_time_timestamp: int):
+    async def __set_one_time(self, interaction, sheets_party: SheetsParty, date_str: str, hour: int, minute: int):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
             await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.', ephemeral=True)
             return
@@ -799,15 +799,26 @@ class Bossing:
                              ephemeral=True)
             return
 
-        now = int(datetime.timestamp(datetime.now()))
-        if one_time_timestamp < now:
-            await self._send(interaction, f'Error - <t:{one_time_timestamp}:F> is in the past.'
-                                          f'\nhttps://www.unixtimestamp.com/', ephemeral=True)
+        now = datetime.now()
+
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        except ValueError:
+            await interaction.followup.send(
+                f'Error - date parameter must be in the format YYYY-MM-DD, e.g. today as {now.strftime("%Y-%m-%d")}.',
+                ephemeral=True)
+            return
+        date = date + timedelta(hours=hour, minutes=minute)
+        one_time_timestamp = int(date.timestamp())
+
+        now_timestamp = int(datetime.now().timestamp())
+
+        if one_time_timestamp < now_timestamp:
+            await self._send(interaction, f'Error - <t:{one_time_timestamp}:F> is in the past.', ephemeral=True)
             return
 
         # Confirmation
         confirmation_message = f'Please confirm the following one-time scheduled run: <t:{one_time_timestamp}:F>'
-        confirmation_message += f'\nhttps://www.unixtimestamp.com/'
 
         class Buttons(discord.ui.View):
             def __init__(self, *, timeout=180):

@@ -91,7 +91,7 @@ class Absence:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
-                f'Error - start_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.',
+                f'Error - start_date parameter must be in the format YYYY-MM-DD, e.g. today as {now.strftime("%Y-%m-%d")}.',
                 ephemeral=True)
             return
         start_date = start_date + timedelta(hours=start_reset_offset)
@@ -107,7 +107,7 @@ class Absence:
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
         except ValueError:
             await interaction.followup.send(
-                f'Error - end_date parameter must be in the format YYYY-MM-DD, e.g. September 21, 2023 as 2023-09-21.')
+                f'Error - end_date parameter must be in the format YYYY-MM-DD, e.g. today as {now.strftime("%Y-%m-%d")}.')
             return
         end_date = end_date + timedelta(hours=end_reset_offset)
 

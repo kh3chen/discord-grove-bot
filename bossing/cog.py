@@ -97,10 +97,13 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
 
         @app_commands.command(name='settime-one', description='Set the one-time bossing party time')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        @app_commands.describe(timestamp='Unix time in seconds')
-        async def set_one_time(self, interaction: discord.Interaction, boss_party_role: discord.Role, timestamp: int):
+        @app_commands.describe(date='The date of the run in UTC. Format: YYYY-MM-DD')
+        @app_commands.describe(hour='hour relative to reset: [0-23]')
+        @app_commands.describe(minute='minute of the hour: [0-59]')
+        async def set_one_time(self, interaction: discord.Interaction, boss_party_role: discord.Role, date: str,
+                               hour: int, minute: int):
             await interaction.response.defer(ephemeral=True)
-            await bossing.mod_set_one_time(interaction, boss_party_role, timestamp)
+            await bossing.mod_set_one_time(interaction, boss_party_role, date, hour, minute)
 
         @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
@@ -132,10 +135,12 @@ class UserBossingGroup(app_commands.Group, name='bossing', description='Bossing 
             await bossing.user_clear_recurring_time(interaction)
 
         @app_commands.command(name='settime-one', description='Set the one-time bossing party time')
-        @app_commands.describe(timestamp='Unix time in seconds')
-        async def set_one_time(self, interaction: discord.Interaction, timestamp: int):
+        @app_commands.describe(date='The date of the run in UTC. Format: YYYY-MM-DD')
+        @app_commands.describe(hour='hour relative to reset: [0-23]')
+        @app_commands.describe(minute='minute of the hour: [0-59]')
+        async def set_one_time_2(self, interaction: discord.Interaction, date: str, hour: int, minute: int):
             await interaction.response.defer(ephemeral=True)
-            await bossing.user_set_one_time(interaction, timestamp)
+            await bossing.user_set_one_time(interaction, date, hour, minute)
 
         @app_commands.command(name='cleartime-one', description='Clear the one-time bossing party time')
         async def clear_one_time(self, interaction: discord.Interaction):
