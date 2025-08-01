@@ -1,3 +1,4 @@
+import datetime
 from functools import reduce
 
 import discord
@@ -5,6 +6,7 @@ from discord.ext import commands
 
 import config
 import grove_config
+from member import common
 from utils import version
 
 grove_config.set_configs()
@@ -44,9 +46,13 @@ async def on_ready():
 async def _version(ctx):
     await ctx.send(version.version_name)
 
+
 @grove_bot.command(name='wiki')
 async def wiki(ctx, *search_terms: str):
-    await ctx.send('https://maplestorywiki.net/w/Special:Search/' + reduce(lambda acc, val: acc + ("_" if acc else "") + val, search_terms))
+    await ctx.send(
+        'https://maplestorywiki.net/w/Special:Search/' + reduce(lambda acc, val: acc + ("_" if acc else "") + val,
+                                                                search_terms))
+
 
 @grove_bot.command(name='batch-add-role')
 @commands.has_role(config.GROVE_ROLE_ID_JUNIOR)
@@ -59,6 +65,14 @@ async def add_role(ctx, role: discord.Role, *members: discord.Member):
 @add_role.error
 async def add_role_error(ctx, error):
     await ctx.send('Error - Command format must be `>add-role [role] [members]`.')
+
+
+@grove_bot.command(name='thursday')
+@commands.has_role(config.GROVE_ROLE_ID_JUNIOR)
+async def thursday(ctx):
+    message = (f'Thursday: {common.thursday()}'
+               f'\nNow: {datetime.datetime.utcnow()}')
+    await ctx.send(message)
 
 
 grove_bot.run(config.BOT_TOKEN)
