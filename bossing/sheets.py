@@ -85,7 +85,6 @@ class Party:
     INDEX_CHECK_IN_MESSAGE_ID = 15
 
     class PartyStatus(Enum):
-        new = "new"
         open = "open"
         exclusive = "exclusive"
         lfg = "lfg"
@@ -122,7 +121,7 @@ class Party:
         self.boss_name = str(boss_name)
         self.difficulty = str(difficulty)
         self.party_number = str(party_number)
-        self.status = Party.PartyStatus[status or Party.PartyStatus.new.value]
+        self.status = Party.PartyStatus[status or Party.PartyStatus.open.value]
         self.member_count = str(member_count)
         self.max_member_count = str(max_member_count)
         self.weekday = str(weekday)
@@ -162,7 +161,7 @@ class Party:
         new_sheets_party.boss_name = boss_name
         new_sheets_party.difficulty = difficulty
         new_sheets_party.party_number = str(party_number)
-        new_sheets_party.status = Party.PartyStatus.new
+        new_sheets_party.status = Party.PartyStatus.open
         new_sheets_party.member_count = "0"
         new_sheets_party.max_member_count = max_member_count
         return new_sheets_party

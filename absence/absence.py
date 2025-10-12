@@ -34,8 +34,7 @@ class Absence:
                 # Send to bossing party threads
                 member_parties = []
                 for sheet_party in self.sheets_bossing.parties:
-                    if (sheet_party.status == Party.PartyStatus.new
-                            or sheet_party.status == Party.PartyStatus.open
+                    if (sheet_party.status == Party.PartyStatus.open
                             or sheet_party.status == Party.PartyStatus.exclusive):
                         for party_member in self.sheets_bossing.members_dict[sheet_party.role_id]:
                             if party_member.user_id == str(member.id):
@@ -124,8 +123,7 @@ class Absence:
 
         member_parties = []
         for sheet_party in self.sheets_bossing.parties:
-            if (sheet_party.status == Party.PartyStatus.new
-                    or sheet_party.status == Party.PartyStatus.open
+            if (sheet_party.status == Party.PartyStatus.open
                     or sheet_party.status == Party.PartyStatus.exclusive):
                 for member in self.sheets_bossing.members_dict[sheet_party.role_id]:
                     if member.user_id == str(interaction.user.id):

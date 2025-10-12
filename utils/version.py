@@ -1,5 +1,5 @@
 major = 2
-minor = 18
-patch = 1
+minor = 19
+patch = 0
 
 version_name = f'Version {major}.{minor}.{patch}'
