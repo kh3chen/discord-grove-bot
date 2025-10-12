@@ -204,9 +204,8 @@ class Bossing:
                 sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
 
-                if (sheets_party.status == SheetsParty.PartyStatus.new or
-                        sheets_party.status == SheetsParty.PartyStatus.lfg):
-                    # Added party status is New or LFG. Add to fill
+                if sheets_party.status == SheetsParty.PartyStatus.lfg:
+                    # Added party status is LFG. Add to fill
                     discord_fill_party = interaction.guild.get_role(int(fill_party_id))
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -236,9 +235,8 @@ class Bossing:
                         # Member did not have the fill role
                         pass
 
-            # Remove from LFG party if added to a new, open, or exclusive party
-            if (sheets_party.status == SheetsParty.PartyStatus.new or
-                    sheets_party.status == SheetsParty.PartyStatus.open or
+            # Remove from LFG party if added to an open or exclusive party
+            if (sheets_party.status == SheetsParty.PartyStatus.open or
                     sheets_party.status == SheetsParty.PartyStatus.exclusive):
                 lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                     sheets_party.difficulty].lfg_role_id
@@ -362,9 +360,8 @@ class Bossing:
             fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
                 sheets_party.difficulty].fill_role_id
             if fill_party_id:  # Fill party exists
-                if (sheets_party.status == SheetsParty.PartyStatus.new or
-                        sheets_party.status == SheetsParty.PartyStatus.lfg):
-                    # Removed party status is New or LFG. Remove from fill
+                if sheets_party.status == SheetsParty.PartyStatus.lfg:
+                    # Removed party status is LFG. Remove from fill
                     discord_fill_party = interaction.guild.get_role(int(fill_party_id))
                     try:
                         sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -989,11 +986,6 @@ class Bossing:
             await self._send(interaction, f'Error - {discord_party.mention} is already retired.', ephemeral=True)
             return
 
-        if sheets_party.status == SheetsParty.PartyStatus.new:
-            await self._send(interaction, f'Error - {discord_party.mention} is new, you cannot retire a new party.',
-                             ephemeral=True)
-            return
-
         if (sheets_party.status == SheetsParty.PartyStatus.lfg or
                 sheets_party.status == SheetsParty.PartyStatus.fill):
             await self._send(interaction, f'Error - {discord_party.mention} is not a bossing party.', ephemeral=True)
@@ -1092,35 +1084,6 @@ class Bossing:
             if status != SheetsParty.PartyStatus.exclusive and status != SheetsParty.PartyStatus.open:
                 await self._send(interaction, f'Error - {discord_party.mention} cannot be {status.value}.',
                                  ephemeral=True)
-
-            if sheets_party.status == SheetsParty.PartyStatus.new:
-                # Remove fill roles of members if changing status from new
-                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
-                    sheets_party.difficulty].fill_role_id
-                if fill_party_id:  # Fill party exists
-                    discord_fill_party = interaction.guild.get_role(int(fill_party_id))
-                    try:
-                        sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                 sheets_party.role_id == fill_party_id)
-
-                        for discord_member in discord_party.members:
-                            try:
-                                sheets_member = next(
-                                    sheets_member for sheets_member in self.sheets_bossing.members_dict[fill_party_id]
-                                    if sheets_member.user_id == str(discord_member.id))
-                                try:
-                                    await self._remove(interaction, discord_member, discord_fill_party,
-                                                       sheets_member.job,
-                                                       sheets_fill_party, silent=True)
-                                except Exception as e:
-                                    await self._send(interaction, str(e), ephemeral=True)
-                            except StopIteration:
-                                # Member not in fill, silently handle exception
-                                pass
-                    except StopIteration:
-                        await self._send(interaction,
-                                         f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                         ephemeral=True)
 
             sheets_party.status = status
             self.sheets_bossing.update_parties(sheets_parties)
@@ -1368,7 +1331,7 @@ class Bossing:
             message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n'
         for sheets_member in party_sheets_members:
             message_content += f'<@{sheets_member.user_id}> *{sheets_member.job}*\n'
-        if sheets_party.status == SheetsParty.PartyStatus.open or sheets_party.status == SheetsParty.PartyStatus.new:
+        if sheets_party.status == SheetsParty.PartyStatus.open:
             for n in range(0, int(sheets_party.max_member_count) - int(sheets_party.member_count)):
                 message_content += 'Open\n'
         elif sheets_party.status == SheetsParty.PartyStatus.lfg and len(party_sheets_members) == 0:
@@ -1393,9 +1356,7 @@ class Bossing:
             await party_thread.edit(name=title, locked=True)
             await party_thread.edit(archived=True)
         else:
-            if sheets_party.status == SheetsParty.PartyStatus.new:
-                title += 'New'
-            elif sheets_party.status == SheetsParty.PartyStatus.exclusive or sheets_party.status == SheetsParty.PartyStatus.open and sheets_party.member_count == sheets_party.max_member_count:
+            if sheets_party.status == SheetsParty.PartyStatus.exclusive or sheets_party.status == SheetsParty.PartyStatus.open and sheets_party.member_count == sheets_party.max_member_count:
                 title += 'Full'
             else:
                 title += 'Open'
