@@ -114,7 +114,6 @@ def __update_weekly_participation(tracks: list[sheets.Track]):
                     new_score += 10
                 if scores[x] is None or new_score > scores[x]:
                     scores[x] = new_score
-                tracks.remove(track)
 
     sheets.update_weekly_participation(scores)
     return f'Week {guild_week} - {thursday_string}'
