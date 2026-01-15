@@ -11,10 +11,14 @@ class Result:
     def __init__(self, matched_ign: str, matched_percent: int, data: list[str]):
         self.matched_ign = matched_ign
         self.matched_percent = matched_percent
-        self.weekly_mission = int(data[-3])
+        if int(data[-3]) > 10:
+            self.weekly_mission = int(data[-4])
+            self.culvert = int(data[-3]) * 1000 + int(data[-2])
+        else:
+            self.weekly_mission = int(data[-3])
+            self.culvert = int(data[-2])
         if self.weekly_mission > 10:
             raise ValueError
-        self.culvert = int(data[-2])
         self.flag = int(data[-1])
         self.data = data
 
@@ -84,12 +88,10 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
                 results.append(result)
             except ValueError:
                 # Couldn't convert string to int
-                print(f'ValueError - match={match}, percent={percent}, data={data[x]}')
-                errors.append(['ValueError', data[x][-3], data[x][-2], data[x][-1], data[x][0], percent])
+                errors.append(['ValueError', data[x][-3], data[x][-2], data[x][-1], ign, percent])
         else:
             # IGN couldn't be matched
-            print(f'Match error - match={match}, percent={percent}, data={data[x]}')
-            errors.append(['Match error', data[x][-3], data[x][-2], data[x][-1], data[x][0], percent])
+            errors.append(['Match error', data[x][-3], data[x][-2], data[x][-1], ign, percent])
 
     def sort_key(result: Result):
         return result.matched_percent
@@ -107,12 +109,10 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
                     results.append(new_result)
                 except ValueError:
                     # Couldn't convert string to int
-                    print(f'ValueError - match={match}, percent={percent}, data={result.data}')
                     errors.append(
                         ['ValueError', result.weekly_mission, result.culvert, result.flag, result.raw_ign(),
                          percent])
             else:
-                print(f'Duplicate - match={match}, percent={percent}, data={result.data}')
                 errors.append(
                     ['Duplicate error', result.weekly_mission, result.culvert, result.flag, result.raw_ign(),
                      percent])
