@@ -18,7 +18,7 @@ class Bossing:
             'Dawn Warrior', 'Blaze Wizard', 'Wind Archer', 'Night Walker', 'Thunder Breaker', 'Aran', 'Evan',
             'Mercedes', 'Phantom', 'Shade', 'Luminous', 'Demon Slayer', 'Demon Avenger', 'Battle Mage', 'Wild Hunter',
             'Mechanic', 'Xenon', 'Blaster', 'Hayato', 'Kanna', 'Mihile', 'Kaiser', 'Kain', 'Cadena', 'Angelic Buster',
-            'Zero', 'Lynn', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Lara', 'Hoyoung', 'Mo Xuan', 'Sia']
+            'Zero', 'Lynn', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Ren', 'Lara', 'Hoyoung', 'Mo Xuan', 'Sia']
 
     def __init__(self, client):
         self.client = client
