@@ -35,6 +35,9 @@ class BossTimeService:
         def __repr__(self):
             return self.__str__()
 
+        def log_string(self):
+            return f'<t:{self.timestamp}:F> - {self.sheets_party.name()} ({self.update_type.name})'
+
     def __init__(self,
                  on_check_in: Callable[[SheetsParty], Coroutine],
                  on_check_in_reminder: Callable[[SheetsParty], Coroutine],
@@ -47,6 +50,7 @@ class BossTimeService:
         self.on_run_start = on_run_start
         self.on_update = on_update
         self.updater_task: asyncio.Task = None
+        self.events: list[BossTimeService.Event] = []
 
     def restart_service(self, sheets_party: list[SheetsParty]):
         if self.updater_task:
@@ -56,23 +60,23 @@ class BossTimeService:
 
     async def service_loop(self, sheets_parties: list[SheetsParty]):
         # Create events list
-        events: list[BossTimeService.Event] = []
+        self.events = []
         now = int(datetime.timestamp(datetime.now()))
         print('boss service loop start')
         for sheets_party in sheets_parties:
-            await self.add_party_events(events, now, sheets_party)
+            await self.add_party_events(self.events, now, sheets_party)
 
         while True:
             # Sleep until next event
-            print(f'Next 5 bossing events: {events[0:5]}')
+            print(f'Next 5 bossing events: {self.events[0:5]}')
             now = int(datetime.timestamp(datetime.now()))
-            sleep_duration = events[0].timestamp - now
+            sleep_duration = self.events[0].timestamp - now
             if sleep_duration > 0:
                 print(f'Bossing service sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
 
             # Fire event
-            event = events.pop(0)
+            event = self.events.pop(0)
             if event.update_type == BossTimeService.Event.Type.check_in:
                 await self.on_check_in(event.sheets_party)
             elif event.update_type == BossTimeService.Event.Type.check_in_reminder:
@@ -84,7 +88,7 @@ class BossTimeService:
             elif event.update_type == BossTimeService.Event.Type.update:
                 await self.on_update(event.sheets_party)
                 # Add party events for next scheduled run
-                await self.add_party_events(events, int(datetime.timestamp(datetime.now())), event.sheets_party)
+                await self.add_party_events(self.events, int(datetime.timestamp(datetime.now())), event.sheets_party)
 
     async def add_party_events(self, events, now, sheets_party):
         next_scheduled_time = sheets_party.next_scheduled_time()
@@ -146,6 +150,9 @@ class BossTimeService:
                                 BossTimeService.Event(update_time,
                                                       BossTimeService.Event.Type.update,
                                                       sheets_party))
+
+    def get_event_logs(self, event_count: int):
+        return [event.log_string() for event in self.events[0:event_count]]
 
     @staticmethod
     def __insert_event(events: list[Event], new_event: Event):

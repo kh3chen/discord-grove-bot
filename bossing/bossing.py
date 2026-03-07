@@ -166,6 +166,18 @@ class Bossing:
     def on_ready(self):
         self._restart_service()
 
+    async def send_debug_event_logs(self, interaction, event_count):
+        if event_count <= 0:
+            await self._send(interaction,
+                             f'Error - Invalid event count, must be greater than 0.',
+                             ephemeral=True)
+            return
+
+        event_logs = self.boss_time_service.get_event_logs(event_count)
+        for pos in range(0, len(event_logs), 20):
+            # Chunks of 20
+            await self._send(interaction, '\n'.join(event_logs[pos:pos + 20]), ephemeral=True)
+
     async def sync(self, interaction):
         async with self.lock:
             self.sheets_bossing.sync_data()

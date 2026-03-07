@@ -15,6 +15,12 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
         self.add_command(ModBossingGroup.ModBossingMemberGroup())
         self.add_command(ModBossingGroup.ModBossingPartyGroup())
 
+    @app_commands.command(name='debug-logs', description='Print bossing time service events log')
+    @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+    async def debug_event_logs(self, interaction: discord.Interaction, event_count: int = 20):
+        await interaction.response.defer(ephemeral=True)
+        await bossing.send_debug_event_logs(interaction, event_count)
+
     @app_commands.command(name='listremake', description='Remake the bossing party list')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     async def listremake(self, interaction: discord.Interaction):
