@@ -1238,11 +1238,10 @@ class Bossing:
         parties_and_members: list[tuple[SheetsParty, SheetsMember]] = []
         for party_member in party_members:
             try:
-                upcoming_party = next(
-                    party for party in self.sheets_bossing.parties if party.role_id == party_member.party_role_id)
+                upcoming_party = self.sheets_bossing.parties_dict[party_member.party_role_id].party
                 if upcoming_party.next_scheduled_time() > 0:
                     parties_and_members.append((upcoming_party, party_member))
-            except StopIteration:
+            except KeyError:
                 pass
 
         def order_by_next_scheduled_time(party_with_member):
