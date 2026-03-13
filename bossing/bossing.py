@@ -56,7 +56,7 @@ class Bossing:
                 await message.add_reaction('🕒')
                 await message.add_reaction('🔔')
                 sheets_party.check_in_message_id = message.id
-                self.sheets_bossing.update_parties(self.sheets_bossing.parties)
+                self.sheets_bossing.update_parties()
 
         async def on_check_in_reminder(sheets_party: SheetsParty):
             # Send reminder in party thread to people who didn't react
@@ -556,7 +556,7 @@ class Bossing:
                 sheets_parties.append(new_sheets_party)
 
             # Update spreadsheet
-            self.sheets_bossing.update_parties(sheets_parties, [new_sheets_party])
+            self.sheets_bossing.update_parties(new_sheets_party)
 
             # Create thread
             boss_forum = self.client.get_channel(int(self.sheets_bossing.bosses_dict[boss_name].forum_channel_id))
@@ -569,7 +569,7 @@ class Bossing:
                     sheets_party.party_thread_id = str(party_thread_with_message.thread.id)
                     sheets_party.party_message_id = str(party_thread_with_message.message.id)
                     break
-            self.sheets_bossing.update_parties(sheets_parties)
+            self.sheets_bossing.update_parties()
 
             await self._send(interaction,
                              f'Created {new_boss_party.name} {party_thread_with_message.thread.mention}',
@@ -663,7 +663,7 @@ class Bossing:
                     sheets_party.hour = str(hour)
                     sheets_party.minute = str(minute)
                     sheets_party.check_in_message_id = ''
-                    self.sheets_bossing.update_parties(sheets_parties)
+                    self.sheets_bossing.update_parties()
                     self._restart_service()
                     timestamp = sheets_party.next_scheduled_time()
 
@@ -742,7 +742,7 @@ class Bossing:
             sheets_party.hour = ''
             sheets_party.minute = ''
             sheets_party.check_in_message_id = ''
-            self.sheets_bossing.update_parties(sheets_parties)
+            self.sheets_bossing.update_parties()
             self._restart_service()
 
             if sheets_party.boss_list_message_id:
@@ -849,7 +849,7 @@ class Bossing:
 
                     sheets_party.one_time = str(one_time_timestamp)
                     sheets_party.check_in_message_id = ''
-                    self.sheets_bossing.update_parties(sheets_parties)
+                    self.sheets_bossing.update_parties()
                     self._restart_service()
                     timestamp = sheets_party.next_scheduled_time()
 
@@ -926,7 +926,7 @@ class Bossing:
 
             sheets_party.one_time = ''
             sheets_party.check_in_message_id = ''
-            self.sheets_bossing.update_parties(sheets_parties)
+            self.sheets_bossing.update_parties()
             self._restart_service()
 
             if sheets_party.boss_list_message_id:
@@ -1098,7 +1098,7 @@ class Bossing:
                                  ephemeral=True)
 
             sheets_party.status = status
-            self.sheets_bossing.update_parties(sheets_parties)
+            self.sheets_bossing.update_parties()
             await self._send(interaction, f'{discord_party.name} is now {sheets_party.status.value}.', ephemeral=True,
                              log=True)
 
@@ -1171,7 +1171,7 @@ class Bossing:
             discord_party = await discord_party.edit(
                 name=f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number}')
 
-            self.sheets_bossing.update_parties(sheets_parties)
+            self.sheets_bossing.update_parties()
             await self._send(interaction, f'{discord_party.name} is now {sheets_party.difficulty} difficulty.',
                              ephemeral=True,
                              log=True)
@@ -1262,7 +1262,7 @@ class Bossing:
         except IndexError:
             return
 
-        self.sheets_bossing.update_parties(new_sheets_parties)
+        self.sheets_bossing.update_parties()
 
         await self._send(interaction, 'Existing bossing party list deleted.', ephemeral=True)
 
@@ -1300,7 +1300,7 @@ class Bossing:
                              '\n3. If you are unable to make the bossing run at all for a week, let your party know as soon as possible, and find a fill for your spot.')
         await bossing_parties_channel.send(etiquette_message)
 
-        self.sheets_bossing.update_parties(new_sheets_parties)
+        self.sheets_bossing.update_parties()
 
         await self._send(interaction, 'New bossing party list complete.', ephemeral=True)
 
@@ -1338,7 +1338,7 @@ class Bossing:
                     sheets_party.boss_list_decorator_id = ''
                 break
 
-        self.sheets_bossing.update_parties(new_sheets_parties)
+        self.sheets_bossing.update_parties()
 
     async def update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty):
         party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]

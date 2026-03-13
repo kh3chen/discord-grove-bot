@@ -424,18 +424,11 @@ class BossingSheets:
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
 
-    def update_parties(self, new_sheets_parties: list[Party], added_parties=None):
-        if added_parties is None:
-            added_parties = []
-
-        def party_to_sheets_values(sheets_party: Party):
-            return sheets_party.to_sheets_value()
-
-        body = {'values': list(map(party_to_sheets_values, new_sheets_parties))}
+    def update_parties(self, *added_parties: Party):
+        body = {'values': [sheets_party.to_sheets_value() for sheets_party in self.__parties]}
         sheets.get_service().spreadsheets().values().update(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
                                                             range=self.RANGE_PARTIES, valueInputOption="USER_ENTERED",
                                                             body=body).execute()
-        self.__parties = new_sheets_parties
 
         for added_party in added_parties:
             self.__members_dict[added_party.role_id] = []
