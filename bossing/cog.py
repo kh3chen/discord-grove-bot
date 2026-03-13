@@ -124,6 +124,11 @@ class UserBossingGroup(app_commands.Group, name='bossing', description='Bossing 
         super().__init__()
         self.add_command(UserBossingGroup.UserBossingPartyGroup())
 
+    @app_commands.command(name='upcoming', description='View your upcoming bossing parties')
+    async def upcoming(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        await bossing.upcoming_bossing_parties(interaction)
+
     class UserBossingPartyGroup(app_commands.Group, name='party', description='Bossing party commands'):
 
         @app_commands.command(name='settime-recurring', description='Set the recurring bossing party time')

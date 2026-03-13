@@ -213,27 +213,6 @@ class Party:
             next_recurring_time = Party.next_party_recurring_time(weekday, hour, minute)
 
         now = int(datetime.timestamp(datetime.now()))
-
-        # if not one_time:
-        #     # One-time not set
-        #     return next_recurring_time
-        #
-        # if not next_recurring_time:
-        #     if now < one_time:
-        #         return one_time
-        #     else:
-        #         return 0
-        #
-        # if 0 <= one_time - int(
-        #         datetime.timestamp(thursday(datetime.utcfromtimestamp(next_recurring_time)))) < SEVEN_DAYS_IN_SECONDS:
-        #     # One-time is this week
-        #     if now < one_time:
-        #         return one_time
-        #     else:
-        #         return next_recurring_time + SEVEN_DAYS_IN_SECONDS
-        # else:
-        #     return next_recurring_time
-
         if not next_recurring_time and (not one_time or one_time < now):
             # No next time
             return 0
@@ -414,10 +393,10 @@ class BossingSheets:
         return cls._instance
 
     def __init__(self):
-        self.__bosses_dict = None
-        self.__parties = None
-        self.__members = None
-        self.__members_dict = None
+        self.__bosses_dict: dict[str, Boss] = {}
+        self.__parties: list[Party] = []
+        self.__members: list[Member] = []
+        self.__members_dict: dict[str, list[Member]] = {}
         self.sync_data()
 
     def sync_data(self):
@@ -460,6 +439,26 @@ class BossingSheets:
 
         for added_party in added_parties:
             self.__members_dict[added_party.role_id] = []
+
+    def get_upcoming_bossing_parties_by_user_id(self, user_id: str):
+        party_members = [member for member in self.__members if member.user_id == user_id]
+        party_role_ids = [party_member.party_role_id for party_member in party_members]
+        parties_and_members: list[tuple[Party, Member]] = []
+        for party_member in party_members:
+            try:
+                upcoming_party = next(party for party in self.__parties if party.role_id == party_member.party_role_id)
+                if upcoming_party.next_scheduled_time() > 0:
+                    parties_and_members.append((upcoming_party, party_member))
+            except StopIteration:
+                pass
+
+        def order_by_next_scheduled_time(party_with_member):
+            party, member = party_with_member
+            return party.next_scheduled_time()
+
+        sorted_parties_and_members = sorted(parties_and_members, key=order_by_next_scheduled_time)
+
+        return sorted_parties_and_members
 
     def append_members(self, new_sheets_members: list[Member]):
         def member_to_sheets_values(sheets_member: Member):

@@ -1233,6 +1233,19 @@ class Bossing:
                 except Exception as e:
                     await self._send(None, str(e))
 
+    async def upcoming_bossing_parties(self, interaction: discord.Interaction):
+        upcoming_parties = self.sheets_bossing.get_upcoming_bossing_parties_by_user_id(str(interaction.user.id))
+        message_content = f'## Your upcoming bossing parties'
+        for sheets_party, sheets_member in upcoming_parties:
+            message_content += f'\n<@&{sheets_party.role_id}>'
+            if sheets_party.party_thread_id:
+                message_content += f' <#{sheets_party.party_thread_id}>'
+            message_content += '\n'
+            timestamp = sheets_party.next_scheduled_time()
+            message_content += f'**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>\n'
+            message_content += f'<@{sheets_member.user_id}> *{sheets_member.job}*\n'
+        await self._send(interaction, message_content, ephemeral=True)
+
     async def __remake_boss_party_list(self, interaction):
         # Delete existing messages
         bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
