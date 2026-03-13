@@ -1267,7 +1267,7 @@ class Bossing:
         new_sheets_parties = self.sheets_bossing.parties
 
         await self._send(interaction, 'Deleting the existing bossing party list...', ephemeral=True)
-        await bossing_parties_channel.purge(limit=len(new_sheets_parties) * 2)
+        await bossing_parties_channel.purge(limit=len(new_sheets_parties) * 2 + 1)
 
         try:
             for sheets_party in new_sheets_parties:
@@ -1293,8 +1293,8 @@ class Bossing:
                 current_sheets_boss = self.sheets_bossing.bosses_dict[sheets_party.boss_name]
                 section_title_content = (f'_ _'
                                          f'\n# {current_sheets_boss.human_readable_name} <#{current_sheets_boss.sign_up_thread_id}>')
-                message = await bossing_parties_channel.send(section_title_content)
-                sheets_party.boss_list_decorator_id = str(message.id)
+                await bossing_parties_channel.send(section_title_content)
+                # Section title is not set as decorator because it should not be deleted if the party is retired.
             else:
                 message = await bossing_parties_channel.send('_ _')
                 sheets_party.boss_list_decorator_id = str(message.id)
