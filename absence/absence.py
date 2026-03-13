@@ -36,7 +36,7 @@ class Absence:
                 for sheet_party in self.sheets_bossing.parties:
                     if (sheet_party.status == Party.PartyStatus.open
                             or sheet_party.status == Party.PartyStatus.exclusive):
-                        for party_member in self.sheets_bossing.members_dict[sheet_party.role_id]:
+                        for party_member in self.sheets_bossing.parties_dict[sheet_party.role_id].members:
                             if party_member.user_id == str(member.id):
                                 member_parties.append(sheet_party)
                                 break
@@ -125,7 +125,7 @@ class Absence:
         for sheet_party in self.sheets_bossing.parties:
             if (sheet_party.status == Party.PartyStatus.open
                     or sheet_party.status == Party.PartyStatus.exclusive):
-                for member in self.sheets_bossing.members_dict[sheet_party.role_id]:
+                for member in self.sheets_bossing.parties_dict[sheet_party.role_id].members:
                     if member.user_id == str(interaction.user.id):
                         member_parties.append(sheet_party)
                         break

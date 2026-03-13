@@ -33,17 +33,17 @@ class Bossing:
                         set(map(lambda user: str(user.id), [user async for user in reaction.users()])))
 
             reacted_cancel_party_members = set(filter(lambda member: member.user_id in reacted_cancel,
-                                                      self.sheets_bossing.members_dict[sheets_party.role_id]))
+                                                      self.sheets_bossing.parties_dict[sheets_party.role_id].members))
             return len(reacted_cancel_party_members) >= (
-                    len(self.sheets_bossing.members_dict[sheets_party.role_id]) + 1) / 2
+                    len(self.sheets_bossing.parties_dict[sheets_party.role_id].members) + 1) / 2
 
         async def on_check_in(sheets_party: SheetsParty):
             # Send check-in message in party thread
             if sheets_party.party_thread_id:
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message_content = self.__get_boss_party_list_message(sheets_party,
-                                                                     self.sheets_bossing.members_dict[
-                                                                         sheets_party.role_id])
+                                                                     self.sheets_bossing.parties_dict[
+                                                                         sheets_party.role_id].members)
                 message_content += (f'\n**Check in for your upcoming boss run:**'
                                     f'\n✅ Accept'
                                     f'\n❌ Decline'
@@ -74,7 +74,7 @@ class Bossing:
                     config.GROVE_ROLE_ID_AWAY).members))
                 party_members_not_reacted = list(filter(
                     lambda member: member.user_id not in reacted and member.user_id not in away,
-                    self.sheets_bossing.members_dict[sheets_party.role_id]))
+                    self.sheets_bossing.parties_dict[sheets_party.role_id].members))
                 if len(party_members_not_reacted) > 0:
                     reminder_message_content = f'**Reminder to check in for your upcoming boss run:** {check_in_message.jump_url}\n'
                     timestamp = sheets_party.next_scheduled_time()
@@ -144,7 +144,7 @@ class Bossing:
                         config.GROVE_ROLE_ID_AWAY).members))
                     party_members_not_reacted = filter(
                         lambda member: member.user_id not in reacted and member.user_id not in away,
-                        self.sheets_bossing.members_dict[sheets_party.role_id])
+                        self.sheets_bossing.parties_dict[sheets_party.role_id].members)
                     no_shows = list(map(lambda member: SheetsNoShow(sheets_party.next_scheduled_time() - 604800,
                                                                     member.user_id,
                                                                     sheets_party.role_id,
@@ -286,7 +286,7 @@ class Bossing:
             # Can have multiple characters in fill
             try:
                 found_sheets_member = next(
-                    sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                    sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                     sheets_member.user_id == str(member.id) and sheets_member.job == job)
             except StopIteration:
                 found_sheets_member = None
@@ -325,8 +325,8 @@ class Bossing:
                 # Update thread title, message, and send update in party thread
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
-                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
-                    sheets_party.role_id])
+                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
+                    sheets_party.role_id].members)
                 await party_thread.send(message_content)
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
@@ -341,8 +341,8 @@ class Bossing:
                     # Mention role
                     message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
                     message_content += self.__get_boss_party_list_message(sheets_party,
-                                                                          self.sheets_bossing.members_dict[
-                                                                              sheets_party.role_id])
+                                                                          self.sheets_bossing.parties_dict[
+                                                                              sheets_party.role_id].members)
                     await sign_up_thread.send(message_content)
                 elif sheets_party.status == SheetsParty.PartyStatus.fill:
                     # Do not mention role
@@ -406,7 +406,7 @@ class Bossing:
             # Either party status is lfg or fill, or job has been specified.
             has_role_count = 0
             found_character = False
-            for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id]:
+            for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members:
                 if sheets_member.user_id == str(member.id):
                     has_role_count += 1
                     if sheets_member.job == job:
@@ -455,8 +455,8 @@ class Bossing:
                 # Update thread title, message, and send update in party thread
                 party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
                 message_content = f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.\n\n'
-                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.members_dict[
-                    sheets_party.role_id])
+                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
+                    sheets_party.role_id].members)
                 await party_thread.send(message_content)
                 if sheets_party.party_message_id:
                     party_message = await party_thread.fetch_message(sheets_party.party_message_id)
@@ -605,7 +605,7 @@ class Bossing:
 
         try:
             next(
-                sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                 sheets_member.user_id == str(interaction.user.id))
             await self.__set_recurring_time(interaction, sheets_party, weekday_str, hour, minute)
         except StopIteration:
@@ -720,7 +720,7 @@ class Bossing:
             return
 
         try:
-            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+            next(sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                  sheets_member.user_id == str(interaction.user.id))
             await self.__clear_recurring_time(interaction, sheets_party)
         except StopIteration:
@@ -792,7 +792,7 @@ class Bossing:
 
         try:
             next(
-                sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+                sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                 sheets_member.user_id == str(interaction.user.id))
             await self.__set_one_time(interaction, sheets_party, date_str, hour, minute)
         except StopIteration:
@@ -906,7 +906,7 @@ class Bossing:
             return
 
         try:
-            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+            next(sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                  sheets_member.user_id == str(interaction.user.id))
             await self.__clear_one_time(interaction, sheets_party)
         except StopIteration:
@@ -961,7 +961,7 @@ class Bossing:
             return
 
         try:
-            next(sheets_member for sheets_member in self.sheets_bossing.members_dict[sheets_party.role_id] if
+            next(sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
                  sheets_member.user_id == str(interaction.user.id))
             await self.__next_time(interaction, sheets_party)
         except StopIteration:
@@ -1238,7 +1238,8 @@ class Bossing:
         parties_and_members: list[tuple[SheetsParty, SheetsMember]] = []
         for party_member in party_members:
             try:
-                upcoming_party = next(party for party in self.sheets_bossing.parties if party.role_id == party_member.party_role_id)
+                upcoming_party = next(
+                    party for party in self.sheets_bossing.parties if party.role_id == party_member.party_role_id)
                 if upcoming_party.next_scheduled_time() > 0:
                     parties_and_members.append((upcoming_party, party_member))
             except StopIteration:
@@ -1341,7 +1342,7 @@ class Bossing:
         new_sheets_parties = self.sheets_bossing.parties
         for sheets_party in new_sheets_parties:
             if sheets_party.role_id == str(discord_party.id):  # Found the existing party we want to update
-                sheets_party.member_count = str(len(self.sheets_bossing.members_dict[sheets_party.role_id]))
+                sheets_party.member_count = str(len(self.sheets_bossing.parties_dict[sheets_party.role_id].members))
                 if discord_party.name.find('Retired') != -1:
                     # Update to retired
                     sheets_party.status = SheetsParty.PartyStatus.retired
@@ -1355,7 +1356,7 @@ class Bossing:
         self.sheets_bossing.update_parties()
 
     async def update_boss_party_list_message(self, message: discord.Message, sheets_party: SheetsParty):
-        party_sheets_members = self.sheets_bossing.members_dict[sheets_party.role_id]
+        party_sheets_members = self.sheets_bossing.parties_dict[sheets_party.role_id].members
         message_content = self.__get_boss_party_list_message(sheets_party, party_sheets_members)
         await message.edit(content=message_content)
 

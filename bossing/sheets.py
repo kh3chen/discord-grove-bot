@@ -284,6 +284,14 @@ class Member:
         return [str(self.boss_name), str(self.party_number), str(self.party_role_id), str(self.user_id), str(self.job)]
 
 
+class PartyWithMembers:
+    def __init__(self, party: Party, members=None):
+        if members is None:
+            members = []
+        self.party = party
+        self.members = members
+
+
 class NoShow:
     LENGTH = 5
 
@@ -369,20 +377,21 @@ class BossingSheets:
         members_values = result.get('values', [])
         return list(map(lambda members_value: Member.from_sheets_value(members_value), members_values))
 
-    def __get_members_dict(self):
+    @staticmethod
+    def __get_parties_dict(parties: list[Party], members: list[Member]):
         # Key of the following dictionaries is the bossing party role ID
-        members_dict = {}
-        for sheets_party in self.__parties:
-            members_dict[sheets_party.role_id] = []
+        parties_dict = {}
+        for sheets_party in parties:
+            parties_dict[sheets_party.role_id] = PartyWithMembers(sheets_party)
 
-        for sheets_member in self.__members:
+        for sheets_member in members:
             try:
-                members_dict[sheets_member.party_role_id].append(sheets_member)
+                parties_dict[sheets_member.party_role_id].members.append(sheets_member)
             except KeyError:
                 # The party ID doesn't exist
                 continue
 
-        return members_dict
+        return parties_dict
 
     _instance = None
 
@@ -396,14 +405,14 @@ class BossingSheets:
         self.__bosses_dict: dict[str, Boss] = {}
         self.__parties: list[Party] = []
         self.__members: list[Member] = []
-        self.__members_dict: dict[str, list[Member]] = {}
+        self.__parties_dict: dict[str, PartyWithMembers] = {}
         self.sync_data()
 
     def sync_data(self):
         self.__bosses_dict = self.__get_bosses_dict()
         self.__parties = self.__get_parties()
         self.__members = self.__get_members()
-        self.__members_dict = self.__get_members_dict()
+        self.__parties_dict = self.__get_parties_dict(self.__parties, self.__members)
 
     @property
     def bosses_dict(self):
@@ -418,8 +427,8 @@ class BossingSheets:
         return self.__members
 
     @property
-    def members_dict(self):
-        return self.__members_dict
+    def parties_dict(self):
+        return self.__parties_dict
 
     def get_boss_names(self):
         return list(self.__bosses_dict.keys())
@@ -431,7 +440,7 @@ class BossingSheets:
                                                             body=body).execute()
 
         for added_party in added_parties:
-            self.__members_dict[added_party.role_id] = []
+            self.__parties_dict[added_party.role_id] = PartyWithMembers(added_party)
 
     def append_members(self, new_sheets_members: list[Member]):
         def member_to_sheets_values(sheets_member: Member):
@@ -444,7 +453,7 @@ class BossingSheets:
 
         self.__members += new_sheets_members
         for new_sheets_member in new_sheets_members:
-            self.__members_dict[new_sheets_member.party_role_id].append(new_sheets_member)
+            self.__parties_dict[new_sheets_member.party_role_id].members.append(new_sheets_member)
 
     def delete_member(self, delete_sheets_member: Member):
         delete_index = 0
@@ -473,11 +482,15 @@ class BossingSheets:
             # Remove deleted member from members list
             self.__members = self.__members[0:delete_index] + self.__members[delete_index + 1:]
 
-            # Remove deleted member from members dict
-            for sheets_member in self.__members_dict[deleted_sheets_member.party_role_id]:
-                if sheets_member.user_id == deleted_sheets_member.user_id and sheets_member.job == deleted_sheets_member.job:
-                    self.__members_dict[deleted_sheets_member.party_role_id].remove(sheets_member)
-                    break
+            # Remove deleted member from parties dict
+            try:
+                sheets_member = next(
+                    sheets_member for sheets_member in self.__parties_dict[deleted_sheets_member.party_role_id].members
+                    if sheets_member.user_id == deleted_sheets_member.user_id
+                    and sheets_member.job == deleted_sheets_member.job)
+                self.__parties_dict[deleted_sheets_member.party_role_id].members.remove(sheets_member)
+            except StopIteration:
+                pass
 
             return deleted_sheets_member
 
