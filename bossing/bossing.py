@@ -1234,7 +1234,21 @@ class Bossing:
                     await self._send(None, str(e))
 
     async def upcoming_bossing_parties(self, interaction: discord.Interaction):
-        upcoming_parties = self.sheets_bossing.get_upcoming_bossing_parties_by_user_id(str(interaction.user.id))
+        party_members = [member for member in self.sheets_bossing.members if member.user_id == str(interaction.user.id)]
+        parties_and_members: list[tuple[SheetsParty, SheetsMember]] = []
+        for party_member in party_members:
+            try:
+                upcoming_party = next(party for party in self.sheets_bossing.parties if party.role_id == party_member.party_role_id)
+                if upcoming_party.next_scheduled_time() > 0:
+                    parties_and_members.append((upcoming_party, party_member))
+            except StopIteration:
+                pass
+
+        def order_by_next_scheduled_time(party_with_member):
+            party, member = party_with_member
+            return party.next_scheduled_time()
+
+        upcoming_parties = sorted(parties_and_members, key=order_by_next_scheduled_time)
         message_content = f'## Your upcoming bossing parties'
         for sheets_party, sheets_member in upcoming_parties:
             message_content += f'\n<@&{sheets_party.role_id}>'

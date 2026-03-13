@@ -433,26 +433,6 @@ class BossingSheets:
         for added_party in added_parties:
             self.__members_dict[added_party.role_id] = []
 
-    def get_upcoming_bossing_parties_by_user_id(self, user_id: str):
-        party_members = [member for member in self.__members if member.user_id == user_id]
-        party_role_ids = [party_member.party_role_id for party_member in party_members]
-        parties_and_members: list[tuple[Party, Member]] = []
-        for party_member in party_members:
-            try:
-                upcoming_party = next(party for party in self.__parties if party.role_id == party_member.party_role_id)
-                if upcoming_party.next_scheduled_time() > 0:
-                    parties_and_members.append((upcoming_party, party_member))
-            except StopIteration:
-                pass
-
-        def order_by_next_scheduled_time(party_with_member):
-            party, member = party_with_member
-            return party.next_scheduled_time()
-
-        sorted_parties_and_members = sorted(parties_and_members, key=order_by_next_scheduled_time)
-
-        return sorted_parties_and_members
-
     def append_members(self, new_sheets_members: list[Member]):
         def member_to_sheets_values(sheets_member: Member):
             return sheets_member.to_sheets_value()
