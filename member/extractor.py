@@ -75,6 +75,8 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
         data[x] = data[x].replace('1]', '0')
         data[x] = data[x].replace('1}', '0')
         data[x] = data[x].split()
+        if len(data[x]) < 4:
+            continue
         data[x][-1] = data[x][-1].replace('O', '0').replace('g', '9')
         data[x][-2] = data[x][-2].replace('O', '0').replace('g', '9')
         data[x][-3] = data[x][-3].replace('O', '0').replace('g', '9')
