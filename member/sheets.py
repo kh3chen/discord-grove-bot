@@ -360,6 +360,14 @@ class MemberParticipation:
             self.ten_week_average = float(0)
 
     @property
+    def main_ign(self):
+        return self.grove_igns.split('\n')[0]
+
+    @property
+    def submain_ign(self):
+        return ','.join(self.grove_igns.split('\n')[1:])
+
+    @property
     def discord_id(self):
         return int(self.discord_mention.strip('<@>'))
 

@@ -102,16 +102,46 @@ async def send_leaderboard(bot: commands.Bot, interaction: discord.Interaction, 
             await interaction.followup.send('Updating Celestials for the week...')
 
             celestial_role = bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL)
-            for member in celestial_role.members:
-                await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
+            old_celestials = celestial_role.members
 
             # This week's Celestials
             mp_list = sheets_members.get_sorted_member_participation()
             new_celestials = _get_celestials(mp_list)
+            shrub_promotions = []
+            moss_demotions = []
 
             for mp in new_celestials:
                 member = bot.get_guild(config.GROVE_GUILD_ID).get_member(mp.discord_id)
-                await member.add_roles(celestial_role)
+                if member in old_celestials:
+                    # Already Celestial
+                    old_celestials.remove(member)
+                else:
+                    await member.add_roles(celestial_role)
+                    if mp.submain_ign:
+                        shrub_promotions.append(mp.submain_ign)
+
+            # Remove old Celestials that did not maintain rank
+            for member in old_celestials:
+                await member.remove_roles(bot.get_guild(config.GROVE_GUILD_ID).get_role(config.GROVE_ROLE_ID_CELESTIAL))
+                try:
+                    mp = next(mp for mp in mp_list if mp.discord_id == member.id)
+                    if mp.submain_ign:
+                        moss_demotions.append(mp.submain_ign)
+                except StopIteration:
+                    pass
+
+            # Send Celestial submain Shrub/Moss updates to log channel
+            if shrub_promotions or moss_demotions:
+                celestial_submain_message = f'# Week {guild_week} submain updates\n'
+                if shrub_promotions:
+                    celestial_submain_message += '## Shrub Promotions\n'
+                    for shrub_promotion in shrub_promotions:
+                        celestial_submain_message += f'- {shrub_promotion}\n'
+                if moss_demotions:
+                    celestial_submain_message += '## Moss Demotions\n'
+                    for moss_demotion in moss_demotions:
+                        celestial_submain_message += f'- {moss_demotion}\n'
+                await member_activity_channel.send(celestial_submain_message)
 
             # Create and format announcement message
             await interaction.followup.send(f'Sending the announcement in <#{ANNOUNCEMENT_CHANNEL_ID}>...')
