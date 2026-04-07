@@ -6,6 +6,8 @@ from typing import Callable, Coroutine
 from bossing.sheets import Party as SheetsParty
 from utils.constants import SEVEN_DAYS_IN_SECONDS
 
+MAX_RETRIES = 5
+
 
 def log(message):
     with open("bossing-service.log", "a") as f:
@@ -64,27 +66,28 @@ class BossTimeService:
         self.updater_task = asyncio.create_task(self.service_loop(sheets_party))
 
     async def service_loop(self, sheets_parties: list[SheetsParty]):
-        try:
-            # Create events list
-            self.events = []
+        # Create events list
+        self.events = []
+        now = int(datetime.timestamp(datetime.now()))
+        print('boss service loop start')
+        for sheets_party in sheets_parties:
+            await self.add_party_events(self.events, now, sheets_party)
+
+        retry_count = 0
+        while True:
+            # Sleep until next event
+            print(f'Next 5 bossing events: {self.events[0:5]}')
             now = int(datetime.timestamp(datetime.now()))
-            print('boss service loop start')
-            for sheets_party in sheets_parties:
-                await self.add_party_events(self.events, now, sheets_party)
+            sleep_duration = self.events[0].timestamp - now
+            if sleep_duration > 0:
+                print(f'Bossing service sleeping for {sleep_duration} seconds.')
+                log(f'Bossing service sleeping for {sleep_duration} seconds.')
+                await asyncio.sleep(sleep_duration)
 
-            while True:
-                # Sleep until next event
-                print(f'Next 5 bossing events: {self.events[0:5]}')
-                now = int(datetime.timestamp(datetime.now()))
-                sleep_duration = self.events[0].timestamp - now
-                if sleep_duration > 0:
-                    print(f'Bossing service sleeping for {sleep_duration} seconds.')
-                    log(f'Bossing service sleeping for {sleep_duration} seconds.')
-                    await asyncio.sleep(sleep_duration)
-
-                # Fire event
-                event = self.events.pop(0)
-                log(event)
+            # Fire event
+            event = self.events.pop(0)
+            log(event)
+            try:
                 if event.update_type == BossTimeService.Event.Type.check_in:
                     await self.on_check_in(event.sheets_party)
                 elif event.update_type == BossTimeService.Event.Type.check_in_reminder:
@@ -98,10 +101,18 @@ class BossTimeService:
                     # Add party events for next scheduled run
                     await self.add_party_events(self.events, int(datetime.timestamp(datetime.now())),
                                                 event.sheets_party)
-        except Exception as e:
-            print(e)
-            log(e)
-            log(self.events)
+            except Exception as e:
+                print(e)
+                log(e)
+                log(self.events)
+                if retry_count < MAX_RETRIES:
+                    self.events.insert(0, event)
+                    retry_count += 1
+                    error_retry_sleep_duration = retry_count * retry_count
+                    log(f'Error retry #{retry_count} - Sleeping for {error_retry_sleep_duration}s')
+                    await asyncio.sleep(retry_count * retry_count)
+                else:
+                    retry_count = 0
 
     async def add_party_events(self, events, now, sheets_party):
         next_scheduled_time = sheets_party.next_scheduled_time()
