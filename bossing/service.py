@@ -102,8 +102,8 @@ class BossTimeService:
                     await self.add_party_events(self.events, int(datetime.timestamp(datetime.now())),
                                                 event.sheets_party)
             except Exception as e:
-                print(e)
-                log(e)
+                print(f'{type(e).__name__}: {e}')
+                log(f'{type(e).__name__}: {e}')
                 log(self.events)
                 if retry_count < MAX_RETRIES:
                     self.events.insert(0, event)
