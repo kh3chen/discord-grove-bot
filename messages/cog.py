@@ -46,8 +46,8 @@ class ModMessagesCog(commands.Cog):
                 _self.interacted = True
                 await button_interaction.response.edit_message(view=None)
                 maple_gains_channel = interaction.guild.get_channel(config.GROVE_CHANNEL_ID_MAPLE_GAINS)
-                forward_message = await message.forward(maple_gains_channel)
                 await maple_gains_channel.send(message.author.mention)
+                forward_message = await message.forward(maple_gains_channel)
                 await message.reply(f'This message has been moved: {forward_message.jump_url}')
                 await message.delete()
 
