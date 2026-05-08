@@ -320,34 +320,34 @@ class Bossing:
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.update_boss_party_list_message(message, sheets_party)
 
-        if not silent:
-            if sheets_party.party_thread_id:
-                # Update thread title, message, and send update in party thread
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+        if sheets_party.party_thread_id:
+            # Update thread title, message, and send update in party thread
+            party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+            if not silent:
                 message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
                 message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
                     sheets_party.role_id].members)
                 await party_thread.send(message_content)
-                if sheets_party.party_message_id:
-                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
-                else:
-                    party_message = None
-                await self._update_thread(party_thread, party_message, sheets_party)
+            if sheets_party.party_message_id:
+                party_message = await party_thread.fetch_message(sheets_party.party_message_id)
             else:
-                # Send LFG and Fill updates in Sign Up thread
-                sign_up_thread = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
-                if sheets_party.status == SheetsParty.PartyStatus.lfg:
-                    # Mention role
-                    message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
-                    message_content += self.__get_boss_party_list_message(sheets_party,
-                                                                          self.sheets_bossing.parties_dict[
-                                                                              sheets_party.role_id].members)
-                    await sign_up_thread.send(message_content)
-                elif sheets_party.status == SheetsParty.PartyStatus.fill:
-                    # Do not mention role
-                    await sign_up_thread.send(
-                        f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
+                party_message = None
+            await self._update_thread(party_thread, party_message, sheets_party)
+        else:
+            # Send LFG and Fill updates in Sign Up thread
+            sign_up_thread = self.client.get_channel(
+                int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
+            if sheets_party.status == SheetsParty.PartyStatus.lfg:
+                # Mention role
+                message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
+                message_content += self.__get_boss_party_list_message(sheets_party,
+                                                                      self.sheets_bossing.parties_dict[
+                                                                          sheets_party.role_id].members)
+                await sign_up_thread.send(message_content)
+            elif sheets_party.status == SheetsParty.PartyStatus.fill and not silent:
+                # Do not mention role
+                await sign_up_thread.send(
+                    f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
 
     async def remove(self, interaction, member, discord_party, job=''):
         # Validate that this is a bossing party role
@@ -473,7 +473,7 @@ class Bossing:
 
         return removed_sheets_member
 
-    async def new(self, interaction, boss_name, difficulty):
+    async def new(self, interaction, boss_name, difficulty, members: list[tuple[discord.Member, str]]):
         if boss_name not in self.sheets_bossing.get_boss_names():
             await self._send(interaction,
                              f'Error - `{boss_name}` is not a valid bossing name. Valid bossing names are as follows:\n'
@@ -501,6 +501,19 @@ class Bossing:
             return
 
         max_member_count = self.sheets_bossing.bosses_dict[boss_name].difficulties[difficulty].max_member_count
+
+        if len(members) > int(max_member_count):
+            await self._send(interaction,
+                             f'Error - Party member count exceeds `{difficulty}{boss_name}` max member count of {max_member_count}.',
+                             ephemeral=True)
+            return
+
+        for member, job in members:
+            if job not in self.JOBS:
+                await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
+                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                 ephemeral=True)
+                return
 
         async with self.lock:
             new_party_boss_index = self.sheets_bossing.get_boss_names().index(boss_name)
@@ -574,6 +587,16 @@ class Bossing:
             await self._send(interaction,
                              f'Created {new_boss_party.name} {party_thread_with_message.thread.mention}',
                              ephemeral=True, log=True)
+
+            # Add members
+            for member, job in members:
+                await self._add(interaction, member, new_boss_party, job, sheets_party, True)
+
+            # Send message if members are added
+            if len(members) > 0:
+                message_content = self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
+                    sheets_party.role_id].members)
+                await party_thread_with_message.thread.send(message_content)
 
             # Remake bossing party list
             await self.__remake_boss_party_list(interaction)
@@ -728,8 +751,6 @@ class Bossing:
 
     async def __clear_recurring_time(self, interaction, sheets_party: SheetsParty):
         async with self.lock:
-            sheets_parties = self.sheets_bossing.parties
-
             if sheets_party.status == SheetsParty.PartyStatus.retired:
                 await self._send(interaction, f'Error - <@&{sheets_party.role_id}> is retired.')
                 return
