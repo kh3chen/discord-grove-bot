@@ -44,6 +44,13 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
             await interaction.response.defer(ephemeral=True)
             await bossing.add(interaction, user, boss_party_role, job)
 
+        @app_commands.command(name='update', description='Update a bossing party member\'s job')
+        @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
+        async def update(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role,
+                         new_job: str, old_job: str = ''):
+            await interaction.response.defer(ephemeral=True)
+            await bossing.update(interaction, user, boss_party_role, new_job, old_job)
+
         @app_commands.command(name='remove', description='Remove a bossing party role from a member')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
         async def remove(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role,

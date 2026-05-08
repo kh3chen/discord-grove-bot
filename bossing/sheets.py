@@ -455,6 +455,31 @@ class BossingSheets:
         for new_sheets_member in new_sheets_members:
             self.__parties_dict[new_sheets_member.party_role_id].members.append(new_sheets_member)
 
+    def update_member(self, updated_sheets_member: Member):
+        update_index = 2
+        for sheets_member in self.__members:
+            if sheets_member.user_id == updated_sheets_member.user_id and sheets_member.party_role_id == updated_sheets_member.party_role_id and (
+                    not updated_sheets_member.job or sheets_member.job == updated_sheets_member.job):
+                # Found the entry
+                break
+            update_index += 1
+
+        if update_index >= len(self.__members):
+            # Cannot find delete_member in sheets_members_list
+            return
+
+        try:
+            body = {'values': [updated_sheets_member.to_sheets_value()]}
+            sheets.get_service().spreadsheets().values().update(spreadsheetId=self.SPREADSHEET_BOSS_PARTIES,
+                                                                range=f'Members!A{update_index}:E{update_index}',
+                                                                valueInputOption="USER_ENTERED",
+                                                                body=body).execute()
+            return updated_sheets_member
+
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            raise error
+
     def delete_member(self, delete_sheets_member: Member):
         delete_index = 0
         for sheets_member in self.__members:

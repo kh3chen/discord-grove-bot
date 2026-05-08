@@ -354,6 +354,102 @@ class Bossing:
                 await sign_up_thread.send(
                     f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
 
+    async def update(self, interaction, member, discord_party, new_job, old_job):
+        # Validate job
+        if new_job not in self.JOBS:
+            await self._send(interaction, f'Error - `{new_job}` is not a valid job. Valid jobs are as follows:\n'
+                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                             ephemeral=True)
+            return
+
+        if old_job is not '' and old_job not in self.JOBS:
+            await self._send(interaction, f'Error - `{old_job}` is not a valid job. Valid jobs are as follows:\n'
+                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                             ephemeral=True)
+            return
+
+        async with self.lock:
+            # Validate the party
+            party_with_members = self.sheets_bossing.parties_dict[str(discord_party.id)]
+
+            if party_with_members is None:
+                await self._send(interaction,
+                                 f'Error - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                 ephemeral=True)
+                return
+            sheets_party = party_with_members.party
+            sheets_party_members = party_with_members.members
+
+            if (sheets_party.status != SheetsParty.PartyStatus.lfg and
+                    sheets_party.status != SheetsParty.PartyStatus.fill):
+                # Bossing party cannot have multiple characters
+                try:
+                    sheets_member = next(
+                        sheets_member for sheets_member in sheets_party_members if
+                        sheets_member.user_id == str(member.id))
+                    if old_job != '' and sheets_member.job != old_job:
+                        await self._send(interaction,
+                                         f'Error - {member.mention} *{old_job}* is not in {discord_party.mention}.',
+                                         ephemeral=True)
+                        return
+                except StopIteration:
+                    await self._send(interaction,
+                                     f'Error - {member.mention} is not in {discord_party.mention}.',
+                                     ephemeral=True)
+                    return
+            else:
+                # LFG and Fill can have multiple characters
+                found_characters = [sheets_member for sheets_member in sheets_party_members if
+                                    sheets_member.user_id == str(member.id)]
+                if len(found_characters) == 0:
+                    await self._send(interaction,
+                                     f'Error - {member.mention} is not in {discord_party.mention}.',
+                                     ephemeral=True)
+                    return
+                elif len(found_characters) == 1:
+                    sheets_member = found_characters[0]
+                elif len(found_characters) > 1:
+                    if old_job == '':
+                        await self._send(interaction,
+                                         f'Error - {member.mention} has more than one character in this party, please specify job.',
+                                         ephemeral=True)
+                        return
+                    try:
+                        sheets_member = next(
+                            sheets_member for sheets_member in found_characters if sheets_member.job == old_job)
+                    except StopIteration:
+                        await self._send(interaction,
+                                         f'Error - {member.mention} *{old_job}* is not in {discord_party.mention}.',
+                                         ephemeral=True)
+                        return
+
+            old_job = sheets_member.job
+            sheets_member.job = new_job
+            self.sheets_bossing.update_member(sheets_member)
+
+            # Success
+            updated_message = f'Updated {member.mention} *{old_job}* to *{new_job}* in {discord_party.mention}'
+            if sheets_party.party_thread_id:
+                updated_message += f' <#{sheets_party.party_thread_id}>'
+            elif sheets_party.status == SheetsParty.PartyStatus.lfg or sheets_party.status == SheetsParty.PartyStatus.fill:
+                updated_message += f' <#{self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id}>'
+            await self._send(interaction, updated_message, ephemeral=True, log=True)
+
+            if sheets_party.boss_list_message_id:
+                # Update bossing list message
+                bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
+                message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
+                await self.update_boss_party_list_message(message, sheets_party)
+
+            if sheets_party.party_thread_id:
+                # Update thread title, message, and send update in party thread
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                message_content = f'{member.mention} *{old_job}* has been updated to *{new_job}* in {discord_party.mention}.\n\n'
+                message_content += self.__get_boss_party_list_message(sheets_party,
+                                                                      self.sheets_bossing.parties_dict[
+                                                                          sheets_party.role_id].members)
+                await party_thread.send(message_content)
+
     async def remove(self, interaction, member, discord_party, job=''):
         # Validate that this is a bossing party role
         try:
@@ -405,31 +501,31 @@ class Bossing:
                 sheets_party.status != SheetsParty.PartyStatus.fill and
                 job == ''):
             # Party cannot have multiple characters. Since job is unspecified, assume the single member is correct
-            has_role_count = 1
+            characters_found = 1
             found_character = True
         else:
             # Either party status is lfg or fill, or job has been specified.
-            has_role_count = 0
+            characters_found = 0
             found_character = False
             for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members:
                 if sheets_member.user_id == str(member.id):
-                    has_role_count += 1
+                    characters_found += 1
                     if sheets_member.job == job:
                         found_character = True
             if job == '':
                 found_character = True
 
         # Remove role from user if only one character with role
-        if has_role_count == 1 and found_character:
+        if characters_found == 1 and found_character:
             if not left_server:
                 # Can only remove role from an existing member
                 await member.remove_roles(discord_party)
-        elif has_role_count > 1 and found_character:
+        elif characters_found > 1 and found_character:
             # Keep fill role since they will still have another character
             pass
-        elif has_role_count > 1 and not found_character and job == '':
+        elif characters_found > 1 and not found_character and job == '':
             # More than one character with fill role, job must be specified
-            raise Exception(f'Error - {member.mention} has more than one character with this role, please specify job.')
+            raise Exception(f'Error - {member.mention} has more than one character in this party, please specify job.')
         else:
             raise Exception(f'Error - {member.mention} *{job}* is not in {discord_party.mention}.')
 
@@ -455,23 +551,24 @@ class Bossing:
             message = await bossing_parties_channel.fetch_message(sheets_party.boss_list_message_id)
             await self.update_boss_party_list_message(message, sheets_party)
 
-        if not silent:
-            if sheets_party.party_thread_id:
-                # Update thread title, message, and send update in party thread
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+        if sheets_party.party_thread_id:
+            # Update thread title, message, and send update in party thread
+            party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+            if not silent:
                 message_content = f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.mention}.\n\n'
                 message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
                     sheets_party.role_id].members)
                 await party_thread.send(message_content)
-                if sheets_party.party_message_id:
-                    party_message = await party_thread.fetch_message(sheets_party.party_message_id)
-                else:
-                    party_message = None
-                await self._update_thread(party_thread, party_message, sheets_party)
+            if sheets_party.party_message_id:
+                party_message = await party_thread.fetch_message(sheets_party.party_message_id)
             else:
-                # Send LFG and Fill updates in Sign Up thread
-                sign_up_thread = self.client.get_channel(
-                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
+                party_message = None
+            await self._update_thread(party_thread, party_message, sheets_party)
+        else:
+            # Send LFG and Fill updates in Sign Up thread
+            sign_up_thread = self.client.get_channel(
+                int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
+            if not silent:
                 # Do not mention role
                 await sign_up_thread.send(
                     f'{member.mention} *{removed_sheets_member.job}* has been removed from {discord_party.name}.')
