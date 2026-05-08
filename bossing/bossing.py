@@ -1029,8 +1029,9 @@ class Bossing:
                         await self._remove(interaction, member, discord_party, '', sheets_party, silent=True)
 
                     # Update party status to retired
-                    updated_discord_party = await discord_party.edit(name=f'{discord_party.name} (Retired)',
-                                                                     mentionable=False)
+                    updated_discord_party = await discord_party.edit(
+                        name=f'{sheets_party.difficulty}{sheets_party.boss_name} Party {sheets_party.party_number} (Retired)',
+                        mentionable=False)
 
                     # Delete bossing party list messages
                     bossing_parties_channel = self.client.get_channel(config.GROVE_CHANNEL_ID_BOSSING_PARTIES)
