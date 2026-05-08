@@ -283,16 +283,21 @@ class Bossing:
             found_discord_member = None
 
         if found_discord_member:
-            # Can have multiple characters in fill
-            try:
-                found_sheets_member = next(
-                    sheets_member for sheets_member in self.sheets_bossing.parties_dict[sheets_party.role_id].members if
-                    sheets_member.user_id == str(member.id) and sheets_member.job == job)
-            except StopIteration:
-                found_sheets_member = None
+            if sheets_party.party_number == 'fill' or sheets_party.party_number == 'lfg':
+                # Can have multiple characters in fill or lfg as long as they have a different job
+                try:
+                    found_sheets_member = next(
+                        sheets_member for sheets_member in
+                        self.sheets_bossing.parties_dict[sheets_party.role_id].members if
+                        sheets_member.user_id == str(member.id) and sheets_member.job == job)
+                except StopIteration:
+                    found_sheets_member = None
 
-            if found_sheets_member:
-                raise UserWarning(f'Error - {member.mention} *{job}* is already in {discord_party.mention}.')
+                if found_sheets_member:
+                    raise UserWarning(f'Error - {member.mention} *{job}* is already in {discord_party.mention}.')
+
+            else:
+                raise UserWarning(f'Error - {member.mention} is already in {discord_party.mention}.')
 
         # Add role to user
         await member.add_roles(discord_party)
