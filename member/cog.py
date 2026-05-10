@@ -99,10 +99,11 @@ class MemberCog(commands.Cog):
     @app_commands.command(name='mod-kick-no-discord', description='Kick a guild member who has not joined Discord')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
     @app_commands.describe(ign='The character name of the guild member being kicked')
-    @app_commands.describe(reason_type='1: Left, never joined Discord | 2: Kicked for no Discord')
-    async def kick_no_discord(self, interaction, ign: str, reason_type: int):
+    @app_commands.describe(reason_type='1: Left, never joined Discord | 2: Kicked for no Discord | custom reason')
+    @app_commands.describe(user_mention='Discord mention of user (they joined and left Discord before updating sheet)')
+    async def kick_no_discord(self, interaction, ign: str, reason_type: str, user_mention: str = ''):
         await interaction.response.defer()
-        await rank.kick_member_by_ign(interaction, ign, reason_type)
+        await rank.kick_member_by_ign(interaction, ign, reason_type, user_mention)
 
     @app_commands.command(name='mod-verification', description='Create a verification thread')
     @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)

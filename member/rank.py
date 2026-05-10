@@ -218,24 +218,29 @@ async def kick_member(interaction: discord.Interaction, member: discord.Member, 
     await interaction.followup.send(f'Kicked {member.mention}\nReason: {reason}', ephemeral=True)
 
 
-async def kick_member_by_ign(interaction: discord.Interaction, ign: str, reason_type: int):
-    if reason_type == 1:
+async def kick_member_by_ign(interaction: discord.Interaction, ign: str, reason: str, user_mention: str):
+    if reason.strip() == '1':
         reason = 'Left, never joined Discord'
-    else:
+    elif reason.strip() == '2':
         reason = 'Kicked for no Discord'
+
     try:
         member = next(member for member in sheets.get_members() if
                       member.grove_igns == ign)
-        if member.discord_mention != '':
-            await interaction.followup.send(
-                f'Error - Please use the /mod-kick command for members who have joined Discord.', ephemeral=True)
-            return
-
-        removed_member = sheets.remove_member_by_ign(ign, reason)
-        if removed_member is None:
-            await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
-        else:
-            await interaction.followup.send(f'Kicked IGN: {ign}\nReason: {reason}', ephemeral=True)
-
     except StopIteration:
         await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
+        return
+
+    if member.discord_mention != '':
+        await interaction.followup.send(
+            f'Error - Please use the /mod-kick command for members who have joined Discord.', ephemeral=True)
+        return
+
+    removed_member_participation = sheets.remove_member_by_ign(ign, reason, user_mention)
+    if removed_member_participation is None:
+        await interaction.followup.send(f'Unable to find member with IGN {ign}.', ephemeral=True)
+    else:
+        message = f'Kicked IGN: {ign}\nReason: {reason}'
+        if user_mention:
+            message += f'\nDiscord: {user_mention}'
+        await interaction.followup.send(message, ephemeral=True)

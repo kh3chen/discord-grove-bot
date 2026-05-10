@@ -178,12 +178,16 @@ def remove_member_by_id(member_id: int, reason: str = ''):
     return removed_member
 
 
-def remove_member_by_ign(ign: str, reason: str = ''):
+def remove_member_by_ign(ign: str, reason: str, user_mention: str):
     service = sheets.get_service()
 
     def match_weekly_participation(mp_value):
-        return len(mp_value) > MemberParticipation.INDEX_GROVE_IGNS and mp_value[
-            MemberParticipation.INDEX_GROVE_IGNS] == ign
+        if (len(mp_value) > MemberParticipation.INDEX_GROVE_IGNS
+                and mp_value[MemberParticipation.INDEX_GROVE_IGNS] == ign):
+            # Add the Discord User mention
+            mp_value[MemberParticipation.INDEX_DISCORD_MENTION] = user_mention
+            return True
+        return False
 
     removed_member = delete_weekly_participation_row(service, match_weekly_participation, reason)
 
