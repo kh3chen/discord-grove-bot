@@ -3,13 +3,17 @@ from datetime import datetime
 from enum import Enum
 from typing import Callable, Coroutine
 
+from discord import RateLimited, DiscordServerError
+
 from bossing.sheets import Party as SheetsParty
 from utils.constants import SEVEN_DAYS_IN_SECONDS
 
 MAX_RETRIES = 5
 
 
-def log(message):
+def log(message: str):
+    message = message.replace('\n', '\n\t')
+    print(message)
     with open("bossing-service.log", "a") as f:
         f.write(f'{datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")} {message}\n')
 
@@ -28,7 +32,6 @@ class BossTimeService:
             check_in = "check_in"
             check_in_reminder = "check_in_reminder"
             requested_reminder = "requested_reminder"
-            run_start = "run_start"
             update = "update"
 
         def __init__(self, timestamp: int, update_type: Type, sheets_party: SheetsParty):
@@ -49,12 +52,10 @@ class BossTimeService:
                  on_check_in: Callable[[SheetsParty], Coroutine],
                  on_check_in_reminder: Callable[[SheetsParty], Coroutine],
                  on_requested_reminder: Callable[[SheetsParty], Coroutine],
-                 on_run_start: Callable[[SheetsParty], Coroutine],
                  on_update: Callable[[SheetsParty], Coroutine]):
         self.on_check_in = on_check_in
         self.on_check_in_reminder = on_check_in_reminder
         self.on_requested_reminder = on_requested_reminder
-        self.on_run_start = on_run_start
         self.on_update = on_update
         self.updater_task: asyncio.Task = None
         self.events: list[BossTimeService.Event] = []
@@ -94,24 +95,35 @@ class BossTimeService:
                     await self.on_check_in_reminder(event.sheets_party)
                 elif event.update_type == BossTimeService.Event.Type.requested_reminder:
                     await self.on_requested_reminder(event.sheets_party)
-                elif event.update_type == BossTimeService.Event.Type.run_start:
-                    await self.on_run_start(event.sheets_party)
                 elif event.update_type == BossTimeService.Event.Type.update:
                     await self.on_update(event.sheets_party)
                     # Add party events for next scheduled run
                     await self.add_party_events(self.events, int(datetime.timestamp(datetime.now())),
                                                 event.sheets_party)
+            except RateLimited as e:
+                error_message = f'Error - {self.events}'
+                error_message += f'\nRateLimited: {e}'
+                self.events.insert(0, event)
+                error_retry_sleep_duration = e.retry_after
+                error_message += f'\nRetry after rate limited: Sleeping for {error_retry_sleep_duration}s'
+                log(error_message)
+                await asyncio.sleep(error_retry_sleep_duration)
+            except DiscordServerError:
+                # 503 Service Unavailable
+                raise
             except Exception as e:
-                print(f'{type(e).__name__}: {e}')
-                log(f'{type(e).__name__}: {e}')
-                log(self.events)
+                error_message = f'Error - {self.events}'
+                error_message += f'\n{type(e).__name__}: {e}'
                 if retry_count < MAX_RETRIES:
                     self.events.insert(0, event)
                     retry_count += 1
-                    error_retry_sleep_duration = retry_count * retry_count
-                    log(f'Error retry #{retry_count} - Sleeping for {error_retry_sleep_duration}s')
-                    await asyncio.sleep(retry_count * retry_count)
+                    error_retry_sleep_duration = 10 * 2 ** (retry_count - 1)  # 10, 20, 40, etc.
+                    error_message += f'\nRetry ({retry_count}/{MAX_RETRIES}: Sleeping for {error_retry_sleep_duration}s'
+                    log(error_message)
+                    await asyncio.sleep(error_retry_sleep_duration)
                 else:
+                    error_message += f'\nMax retries attempted, skipping event.'
+                    log(error_message)
                     retry_count = 0
 
     async def add_party_events(self, events, now, sheets_party):

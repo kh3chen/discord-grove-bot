@@ -105,19 +105,6 @@ class Bossing:
                                 reminder_message_content += f'\n{user.mention}'
                             await party_thread.send(reminder_message_content)
 
-        async def on_run_start(sheets_party: SheetsParty):
-            if sheets_party.party_thread_id:
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                if sheets_party.check_in_message_id:
-                    # Check if run has been cancelled
-                    check_in_message = await party_thread.fetch_message(sheets_party.check_in_message_id)
-                    if await is_run_cancelled(sheets_party, check_in_message.reactions):
-                        return
-            if sheets_party.party_thread_id:
-                # Send run start message in party thread
-                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-                await party_thread.send(f'{sheets_party.mention()} run has begun!')
-
         async def on_update(sheets_party: SheetsParty):
             if sheets_party.boss_list_message_id:
                 # Update bossing list message
@@ -157,7 +144,6 @@ class Bossing:
         self.boss_time_service = BossTimeService(on_check_in,
                                                  on_check_in_reminder,
                                                  on_requested_reminder,
-                                                 on_run_start,
                                                  on_update)
 
     def _restart_service(self):
