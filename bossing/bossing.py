@@ -348,7 +348,7 @@ class Bossing:
                              ephemeral=True)
             return
 
-        if old_job is not '' and old_job not in self.JOBS:
+        if old_job != '' and old_job not in self.JOBS:
             await self._send(interaction, f'Error - `{old_job}` is not a valid job. Valid jobs are as follows:\n'
                                           f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
                              ephemeral=True)
