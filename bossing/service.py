@@ -11,11 +11,12 @@ from utils.constants import SEVEN_DAYS_IN_SECONDS
 MAX_RETRIES = 5
 
 
-def log(message: str):
-    message = message.replace('\n', '\n\t')
+def log(message):
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    message = f'{timestamp} {message}'.replace('\n', '\n' + ' ' * (len(timestamp) + 1))
     print(message)
     with open("bossing-service.log", "a") as f:
-        f.write(f'{datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")} {message}\n')
+        f.write(message)
 
 
 class BossTimeService:
@@ -81,14 +82,13 @@ class BossTimeService:
             now = int(datetime.timestamp(datetime.now()))
             sleep_duration = self.events[0].timestamp - now
             if sleep_duration > 0:
-                print(f'Bossing service sleeping for {sleep_duration} seconds.')
                 log(f'Bossing service sleeping for {sleep_duration} seconds.')
                 await asyncio.sleep(sleep_duration)
 
             # Fire event
-            event = self.events.pop(0)
-            log(event)
             try:
+                event = self.events.pop(0)
+                log(event)
                 if event.update_type == BossTimeService.Event.Type.check_in:
                     await self.on_check_in(event.sheets_party)
                 elif event.update_type == BossTimeService.Event.Type.check_in_reminder:
