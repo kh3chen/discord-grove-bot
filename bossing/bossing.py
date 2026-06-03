@@ -171,13 +171,14 @@ class Bossing:
 
         await self._send(interaction, 'Sync complete.', ephemeral=True)
 
-    async def add(self, interaction, member, discord_party, job):
+    async def add(self, interaction, discord_party, members: list[tuple[discord.Member, str]]):
         # Validate job
-        if job not in self.JOBS:
-            await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
-                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
-                             ephemeral=True)
-            return
+        for member, job in members:
+            if job not in self.JOBS:
+                await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
+                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                 ephemeral=True)
+                return
 
         async with self.lock:
             # Validate the party
@@ -190,67 +191,112 @@ class Bossing:
                                  ephemeral=True)
                 return
 
-            # Add member to the party
-            try:
-                await self._add(interaction, member, discord_party, job, sheets_party)
-            except Exception as e:
-                await self._send(interaction, str(e), ephemeral=True)
+            # Check if the party is already full
+            if sheets_party.status != SheetsParty.PartyStatus.lfg and sheets_party.status != SheetsParty.PartyStatus.fill and int(
+                    sheets_party.max_member_count) - int(sheets_party.member_count) < len(members):
+                await self._send(interaction,
+                                 f'Error - Unable to add {len(members)} to {discord_party.mention} which only has {int(sheets_party.max_member_count) - int(sheets_party.member_count)} open slots.',
+                                 ephemeral=True)
                 return
 
-            # Add/remove from fill party based on joined party status
-            fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
-                sheets_party.difficulty].fill_role_id
-            if fill_party_id:  # Fill party exists
+            # Add members
+            for member, job in members:
+                await self._add(interaction, member, discord_party, job, sheets_party, True)
 
+                # Add/remove from fill party based on joined party status
+                fill_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
+                    sheets_party.difficulty].fill_role_id
+                if fill_party_id:  # Fill party exists
+
+                    if sheets_party.status == SheetsParty.PartyStatus.lfg:
+                        # Added party status is LFG. Add to fill
+                        discord_fill_party = interaction.guild.get_role(int(fill_party_id))
+                        try:
+                            sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                                     sheets_party.role_id == fill_party_id)
+                            await self._add(interaction, member, discord_fill_party, job, sheets_fill_party,
+                                            silent=True)
+                        except StopIteration:
+                            await self._send(interaction,
+                                             f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                             ephemeral=True)
+                        except UserWarning:
+                            # Member already has the fill role
+                            pass
+
+                    elif (sheets_party.status == SheetsParty.PartyStatus.open or
+                          sheets_party.status == SheetsParty.PartyStatus.exclusive):
+                        # Added party status is Open or Exclusive. Remove from fill
+                        discord_fill_party = interaction.guild.get_role(int(fill_party_id))
+                        try:
+                            sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                                     sheets_party.role_id == fill_party_id)
+                            await self._remove(interaction, member, discord_fill_party, job, sheets_fill_party,
+                                               silent=True)
+                        except StopIteration:
+                            await self._send(interaction,
+                                             f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                             ephemeral=True)
+                        except UserWarning:
+                            # Member did not have the fill role
+                            pass
+
+                # Remove from LFG party if added to an open or exclusive party
+                if (sheets_party.status == SheetsParty.PartyStatus.open or
+                        sheets_party.status == SheetsParty.PartyStatus.exclusive):
+                    lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
+                        sheets_party.difficulty].lfg_role_id
+                    if lfg_party_id != '':
+                        discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
+                        try:
+                            sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
+                                                    sheets_party.role_id == lfg_party_id)
+                            await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
+                        except StopIteration:
+                            await self._send(interaction,
+                                             f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
+                                             ephemeral=True)
+                        except UserWarning:
+                            # Member did not have the LFG role
+                            pass
+
+            if sheets_party.party_thread_id:
+                party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
+                if len(members) == 1:
+                    member, job = members[0]
+                    message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
+                elif len(members) > 1:
+                    message_content = f'The following {len(members)} members have been added to {discord_party.mention}:\n'
+                    for member, job in members:
+                        message_content += f'{member.mention} *{job}*\n'
+                    message_content += '\n'
+                message_content += self.__get_boss_party_list_message(sheets_party,
+                                                                      self.sheets_bossing.parties_dict[
+                                                                          sheets_party.role_id].members)
+                await party_thread.send(message_content)
+            else:
+                # Send LFG and Fill updates in Sign Up thread
+                sign_up_thread = self.client.get_channel(
+                    int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
                 if sheets_party.status == SheetsParty.PartyStatus.lfg:
-                    # Added party status is LFG. Add to fill
-                    discord_fill_party = interaction.guild.get_role(int(fill_party_id))
-                    try:
-                        sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                 sheets_party.role_id == fill_party_id)
-                        await self._add(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
-                    except StopIteration:
-                        await self._send(interaction,
-                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                         ephemeral=True)
-                    except UserWarning:
-                        # Member already has the fill role
-                        pass
-
-                elif (sheets_party.status == SheetsParty.PartyStatus.open or
-                      sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                    # Added party status is Open or Exclusive. Remove from fill
-                    discord_fill_party = interaction.guild.get_role(int(fill_party_id))
-                    try:
-                        sheets_fill_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                 sheets_party.role_id == fill_party_id)
-                        await self._remove(interaction, member, discord_fill_party, job, sheets_fill_party, silent=True)
-                    except StopIteration:
-                        await self._send(interaction,
-                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                         ephemeral=True)
-                    except UserWarning:
-                        # Member did not have the fill role
-                        pass
-
-            # Remove from LFG party if added to an open or exclusive party
-            if (sheets_party.status == SheetsParty.PartyStatus.open or
-                    sheets_party.status == SheetsParty.PartyStatus.exclusive):
-                lfg_party_id = self.sheets_bossing.bosses_dict[sheets_party.boss_name].difficulties[
-                    sheets_party.difficulty].lfg_role_id
-                if lfg_party_id != '':
-                    discord_lfg_party = interaction.guild.get_role(int(lfg_party_id))
-                    try:
-                        sheets_lfg_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
-                                                sheets_party.role_id == lfg_party_id)
-                        await self._remove(interaction, member, discord_lfg_party, job, sheets_lfg_party)
-                    except StopIteration:
-                        await self._send(interaction,
-                                         f'Warning - Unable to find party {discord_party.mention} in the bossing parties data.',
-                                         ephemeral=True)
-                    except UserWarning:
-                        # Member did not have the LFG role
-                        pass
+                    # Mention role
+                    if len(members) == 1:
+                        member, job = members[0]
+                        message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
+                    elif len(members) > 1:
+                        message_content = f'The following {len(members)} members have been added to {discord_party.mention}:\n'
+                        for member, job in members:
+                            message_content += f'{member.mention} *{job}*\n'
+                        message_content += '\n'
+                    message_content += self.__get_boss_party_list_message(sheets_party,
+                                                                          self.sheets_bossing.parties_dict[
+                                                                              sheets_party.role_id].members)
+                    await sign_up_thread.send(message_content)
+                elif sheets_party.status == SheetsParty.PartyStatus.fill:
+                    # Do not mention role
+                    for member, job in members:
+                        await sign_up_thread.send(
+                            f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
 
     async def _add(self, interaction, member, discord_party, job, sheets_party: SheetsParty, silent=False):
         if sheets_party.status == SheetsParty.PartyStatus.retired:
@@ -312,33 +358,13 @@ class Bossing:
             await self.update_boss_party_list_message(message, sheets_party)
 
         if sheets_party.party_thread_id:
-            # Update thread title, message, and send update in party thread
+            # Update thread title and message
             party_thread = await self.client.fetch_channel(int(sheets_party.party_thread_id))
-            if not silent:
-                message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
-                message_content += self.__get_boss_party_list_message(sheets_party, self.sheets_bossing.parties_dict[
-                    sheets_party.role_id].members)
-                await party_thread.send(message_content)
             if sheets_party.party_message_id:
                 party_message = await party_thread.fetch_message(sheets_party.party_message_id)
             else:
                 party_message = None
             await self._update_thread(party_thread, party_message, sheets_party)
-        else:
-            # Send LFG and Fill updates in Sign Up thread
-            sign_up_thread = self.client.get_channel(
-                int(self.sheets_bossing.bosses_dict[sheets_party.boss_name].sign_up_thread_id))
-            if sheets_party.status == SheetsParty.PartyStatus.lfg:
-                # Mention role
-                message_content = f'{member.mention} *{job}* has been added to {discord_party.mention}.\n\n'
-                message_content += self.__get_boss_party_list_message(sheets_party,
-                                                                      self.sheets_bossing.parties_dict[
-                                                                          sheets_party.role_id].members)
-                await sign_up_thread.send(message_content)
-            elif sheets_party.status == SheetsParty.PartyStatus.fill and not silent:
-                # Do not mention role
-                await sign_up_thread.send(
-                    f'{member.mention} *{job}* has been added to {sheets_party.difficulty}{sheets_party.boss_name} Fill.')
 
     async def update(self, interaction, member, discord_party, new_job, old_job):
         # Validate job

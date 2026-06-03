@@ -39,10 +39,19 @@ class ModBossingGroup(app_commands.Group, name='mod-bossing', description='Mod b
 
         @app_commands.command(name='add', description='Add a bossing party role to a member')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
-        async def add(self, interaction: discord.Interaction, user: discord.Member, boss_party_role: discord.Role,
-                      job: str):
+        async def add(self, interaction: discord.Interaction, boss_party_role: discord.Role,
+                      member_one: discord.Member, job_one: str,
+                      member_two: discord.Member = None, job_two: str = None,
+                      member_three: discord.Member = None, job_three: str = None,
+                      member_four: discord.Member = None, job_four: str = None,
+                      member_five: discord.Member = None, job_five: str = None,
+                      member_six: discord.Member = None, job_six: str = None):
             await interaction.response.defer(ephemeral=True)
-            await bossing.add(interaction, user, boss_party_role, job)
+            member_job_list = [member_job for member_job in
+                               [(member_one, job_one), (member_two, job_two), (member_three, job_three),
+                                (member_four, job_four), (member_five, job_five), (member_six, job_six)] if
+                               member_job[0] is not None]
+            await bossing.add(interaction, boss_party_role, member_job_list)
 
         @app_commands.command(name='update', description='Update a bossing party member\'s job')
         @app_commands.checks.has_role(config.GROVE_ROLE_ID_JUNIOR)
