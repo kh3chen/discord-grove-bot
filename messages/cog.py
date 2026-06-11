@@ -20,6 +20,13 @@ class ModMessagesCog(commands.Cog):
 
     async def message_gains(self, interaction, message: discord.Message):
         await interaction.response.defer(ephemeral=True)
+
+        junior_role = interaction.guild.get_role(config.GROVE_ROLE_ID_JUNIOR)
+        if junior_role not in interaction.user.roles:
+            await interaction.followup.send(
+                content=f'Error - Only a Junior can perform this action.')
+            return
+
         if not message.is_forwardable():
             await interaction.followup.send(
                 content=f'Error - This message cannot be forwarded.')
