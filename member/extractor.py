@@ -38,7 +38,7 @@ async def extract(interaction: discord.Interaction, list_of_igns: list[str], cus
     for byte_image in byte_images:
         img = cv2.imdecode(np.frombuffer(byte_image, dtype=np.uint8), cv2.IMREAD_COLOR)
         # Crop image [y1:y2,x1:x2]
-        img = img[152:566, 212:651]
+        img = img[130:544, 205:644]
         # Resizing and making the images bigger
         img = cv2.resize(img, None, fx=5, fy=5)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
