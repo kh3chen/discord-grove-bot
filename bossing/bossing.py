@@ -18,7 +18,8 @@ class Bossing:
             'Dawn Warrior', 'Blaze Wizard', 'Wind Archer', 'Night Walker', 'Thunder Breaker', 'Aran', 'Evan',
             'Mercedes', 'Phantom', 'Shade', 'Luminous', 'Demon Slayer', 'Demon Avenger', 'Battle Mage', 'Wild Hunter',
             'Mechanic', 'Xenon', 'Blaster', 'Hayato', 'Kanna', 'Mihile', 'Kaiser', 'Kain', 'Cadena', 'Angelic Buster',
-            'Zero', 'Lynn', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Ren', 'Lara', 'Hoyoung', 'Mo Xuan', 'Sia']
+            'Zero', 'Lynn', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Ren', 'Lara', 'Hoyoung', 'Mo Xuan', 'Sia',
+            'Erel']
 
     def __init__(self, client):
         self.client = client
@@ -661,8 +662,8 @@ class Bossing:
                         colour=self.sheets_bossing.bosses_dict[
                             boss_name].get_role_colour(),
                         mentionable=True)
-                    await new_boss_party.edit(
-                        position=interaction.guild.get_role(int(sheets_party.role_id)).position)
+                    await new_boss_party.move(
+                        below=interaction.guild.get_role(int(sheets_party.role_id)))
                     new_sheets_party = SheetsParty.new_party(new_boss_party.id, boss_name, difficulty, party_number,
                                                              max_member_count)
                     sheets_parties.insert(sheets_parties_index, new_sheets_party)
