@@ -131,7 +131,8 @@ class BossTimeService:
         if next_scheduled_time:
             # Check-in
             check_in_time = next_scheduled_time + BossTimeService.CHECK_IN_OFFSET
-            if check_in_time - now > 0:
+            if check_in_time - now > 0 or not sheets_party.check_in_message_id and check_in_time - now <= 0:
+                # Also check-in if one does not exist within 24 hours of the boss run
                 check_in_event = BossTimeService.Event(check_in_time,
                                                        BossTimeService.Event.Type.check_in,
                                                        sheets_party)

@@ -795,8 +795,6 @@ class Bossing:
                 _self.interacted = True
                 await button_interaction.response.edit_message(view=None)
                 async with self.lock:
-                    sheets_parties = self.sheets_bossing.parties
-
                     sheets_party.weekday = weekday.name
                     sheets_party.hour = str(hour)
                     sheets_party.minute = str(minute)
