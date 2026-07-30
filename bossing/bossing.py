@@ -800,8 +800,6 @@ class Bossing:
                     sheets_party.minute = str(minute)
                     sheets_party.check_in_message_id = ''
                     self.sheets_bossing.update_parties()
-                    self._restart_service()
-                    timestamp = sheets_party.next_scheduled_time()
 
                     if sheets_party.boss_list_message_id:
                         # Update bossing list message
@@ -817,8 +815,12 @@ class Bossing:
                         else:
                             party_message = None
                         await self._update_thread(party_thread, party_message, sheets_party)
+                        next_timestamp = sheets_party.next_scheduled_time()
                         await party_thread.send(
-                            f'<@&{sheets_party.role_id}> time has been updated.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
+                            f'<@&{sheets_party.role_id}> time has been updated.'
+                            f'\n**Next run:** <t:{next_timestamp}:F> <t:{next_timestamp}:R>')
+
+                    self._restart_service()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
@@ -979,13 +981,9 @@ class Bossing:
                 _self.interacted = True
                 await button_interaction.response.edit_message(view=None)
                 async with self.lock:
-                    sheets_parties = self.sheets_bossing.parties
-
                     sheets_party.one_time = str(one_time_timestamp)
                     sheets_party.check_in_message_id = ''
                     self.sheets_bossing.update_parties()
-                    self._restart_service()
-                    timestamp = sheets_party.next_scheduled_time()
 
                     if sheets_party.boss_list_message_id:
                         # Update bossing list message
@@ -1001,8 +999,12 @@ class Bossing:
                         else:
                             party_message = None
                         await self._update_thread(party_thread, party_message, sheets_party)
+                        next_timestamp = sheets_party.next_scheduled_time()
                         await party_thread.send(
-                            f'<@&{sheets_party.role_id}> a one-time scheduled run has been set for <t:{one_time_timestamp}:F>.\n**Next run:** <t:{timestamp}:F> <t:{timestamp}:R>')
+                            f'<@&{sheets_party.role_id}> a one-time scheduled run has been set for <t:{one_time_timestamp}:F>.'
+                            f'\n**Next run:** <t:{next_timestamp}:F> <t:{next_timestamp}:R>')
+
+                    self._restart_service()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def red_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
