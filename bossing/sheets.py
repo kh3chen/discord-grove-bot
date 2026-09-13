@@ -339,11 +339,20 @@ class NoShow:
 class BossingSheets:
     SPREADSHEET_BOSS_PARTIES = config.BOSS_PARTIES_SPREADSHEET_ID  # The ID of the bossing parties spreadsheet
     SHEET_BOSS_PARTIES_MEMBERS = config.BOSS_PARTIES_SHEET_ID_MEMBERS  # The ID of the Members sheet
+    RANGE_JOBS = 'Jobs!A:A'
     RANGE_BOSSES = 'Bosses!A2:E'
     RANGE_DIFFICULTIES = 'Difficulties!A2:E'
     RANGE_PARTIES = 'Parties!A2:P'
     RANGE_MEMBERS = 'Members!A2:E'
     RANGE_NO_SHOWS = 'No Shows!A2:E'
+
+    @staticmethod
+    def __get_jobs():
+        result = sheets.get_service().spreadsheets().values().get(spreadsheetId=BossingSheets.SPREADSHEET_BOSS_PARTIES,
+                                                                  range=BossingSheets.RANGE_JOBS).execute()
+        job_values = (result.get('values', []))
+        jobs = [job for value in job_values for job in value]
+        return jobs
 
     @staticmethod
     def __get_bosses_dict():
@@ -402,6 +411,7 @@ class BossingSheets:
         return cls._instance
 
     def __init__(self):
+        self.__jobs: list[str] = []
         self.__bosses_dict: dict[str, Boss] = {}
         self.__parties: list[Party] = []
         self.__members: list[Member] = []
@@ -409,10 +419,15 @@ class BossingSheets:
         self.sync_data()
 
     def sync_data(self):
+        self.__jobs = self.__get_jobs()
         self.__bosses_dict = self.__get_bosses_dict()
         self.__parties = self.__get_parties()
         self.__members = self.__get_members()
         self.__parties_dict = self.__get_parties_dict(self.__parties, self.__members)
+
+    @property
+    def jobs(self):
+        return self.__jobs
 
     @property
     def bosses_dict(self):

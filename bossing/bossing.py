@@ -13,13 +13,6 @@ from bossing.sheets import Party as SheetsParty
 
 
 class Bossing:
-    JOBS = ['Hero', 'Paladin', 'Dark Knight', 'Arch Mage (F/P)', 'Arch Mage (I/L)', 'Bishop', 'Bowmaster', 'Marksman',
-            'Pathfinder', 'Night Lord', 'Shadower', 'Blade Master', 'Buccaneer', 'Corsair', 'Cannon Master',
-            'Dawn Warrior', 'Blaze Wizard', 'Wind Archer', 'Night Walker', 'Thunder Breaker', 'Aran', 'Evan',
-            'Mercedes', 'Phantom', 'Shade', 'Luminous', 'Demon Slayer', 'Demon Avenger', 'Battle Mage', 'Wild Hunter',
-            'Mechanic', 'Xenon', 'Blaster', 'Hayato', 'Kanna', 'Mihile', 'Kaiser', 'Kain', 'Cadena', 'Angelic Buster',
-            'Zero', 'Lynn', 'Kinesis', 'Adele', 'Illium', 'Khali', 'Ark', 'Ren', 'Lara', 'Hoyoung', 'Mo Xuan', 'Sia',
-            'Erel']
 
     def __init__(self, client):
         self.client = client
@@ -175,9 +168,9 @@ class Bossing:
     async def add(self, interaction, discord_party, members: list[tuple[discord.Member, str]]):
         # Validate job
         for member, job in members:
-            if job not in self.JOBS:
+            if job not in self.sheets_bossing.jobs:
                 await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
-                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.jobs)}`',
                                  ephemeral=True)
                 return
 
@@ -367,17 +360,17 @@ class Bossing:
                 party_message = None
             await self._update_thread(party_thread, party_message, sheets_party)
 
-    async def update(self, interaction, member, discord_party, new_job, old_job):
+    async def update(self, interaction, discord_party, member, new_job, old_job):
         # Validate job
-        if new_job not in self.JOBS:
+        if new_job not in self.sheets_bossing.jobs:
             await self._send(interaction, f'Error - `{new_job}` is not a valid job. Valid jobs are as follows:\n'
-                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.jobs)}`',
                              ephemeral=True)
             return
 
-        if old_job != '' and old_job not in self.JOBS:
+        if old_job != '' and old_job not in self.sheets_bossing.jobs:
             await self._send(interaction, f'Error - `{old_job}` is not a valid job. Valid jobs are as follows:\n'
-                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                          f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.jobs)}`',
                              ephemeral=True)
             return
 
@@ -463,7 +456,7 @@ class Bossing:
                                                                           sheets_party.role_id].members)
                 await party_thread.send(message_content)
 
-    async def remove(self, interaction, member, discord_party, job=''):
+    async def remove(self, interaction, discord_party, member, job=''):
         # Validate that this is a bossing party role
         try:
             sheets_party = next(sheets_party for sheets_party in self.sheets_bossing.parties if
@@ -624,9 +617,9 @@ class Bossing:
             return
 
         for member, job in members:
-            if job not in self.JOBS:
+            if job not in self.sheets_bossing.jobs:
                 await self._send(interaction, f'Error - `{job}` is not a valid job. Valid jobs are as follows:\n'
-                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, Bossing.JOBS)}`',
+                                              f'`{reduce(lambda acc, val: acc + (", " if acc else "") + val, self.sheets_bossing.jobs)}`',
                                  ephemeral=True)
                 return
 
